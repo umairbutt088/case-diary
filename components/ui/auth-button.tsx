@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { theme } from "@/constants/theme";
 
 type AuthButtonProps = {
   label: string;
@@ -23,7 +24,7 @@ export function AuthButton({
       accessibilityRole="button"
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={theme.colors.white} />
       ) : (
         <ThemedText style={styles.label}>{label}</ThemedText>
       )}
@@ -33,18 +34,17 @@ export function AuthButton({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#0a7ea4",
-    paddingVertical: 14,
+    backgroundColor: theme.colors.black,
+    paddingVertical: 16,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 16,
   },
   disabled: {
     opacity: 0.7,
   },
   label: {
-    color: "#fff",
+    color: theme.colors.white,
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: 20,
   },
 });

@@ -5,11 +5,12 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
 
 type AuthScreenLayoutProps = {
   title: string;
   children: ReactNode;
-  footerLink?: { label: string; href: string };
+  footerLink?: { linkHeader: string; linkLabel: string; href: string };
 };
 
 export function AuthScreenLayout({
@@ -30,11 +31,14 @@ export function AuthScreenLayout({
         </ThemedText>
         {children}
         {footerLink ? (
-          <Link href={footerLink.href as any} asChild>
-            <Pressable style={styles.footer} accessibilityRole="link">
-              <ThemedText type="link">{footerLink.label}</ThemedText>
-            </Pressable>
-          </Link>
+          <ThemedView style={styles.footer}>
+            <ThemedText>{footerLink.linkHeader} </ThemedText>
+            <Link href={footerLink.href as any} asChild>
+              <Pressable accessibilityRole="link">
+                <ThemedText type="link">{footerLink.linkLabel}</ThemedText>
+              </Pressable>
+            </Link>
+          </ThemedView>
         ) : null}
       </KeyboardAwareScrollView>
     </ThemedView>
@@ -44,17 +48,22 @@ export function AuthScreenLayout({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.light.background,
   },
   scroll: {
     flexGrow: 1,
     padding: 24,
-    paddingTop: 48,
+    justifyContent: "center",
   },
   title: {
-    marginBottom: 24,
+    marginBottom: 100,
+    textAlign: "center",
   },
   footer: {
     marginTop: 24,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
   },
 });

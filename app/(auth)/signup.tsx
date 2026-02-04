@@ -1,12 +1,15 @@
+import * as Linking from "expo-linking";
 import { useCallback, useState } from "react";
 
-import { ThemedText } from "@/components/themed-text";
-import { AuthButton } from "@/components/ui/auth-button";
-import { AuthScreenLayout } from "@/components/ui/auth-screen-layout";
-import { FormInput } from "@/components/ui/form-input";
-import { FormMessage } from "@/components/ui/form-message";
-import { PasswordInput } from "@/components/ui/password-input";
-import { TermsCheckbox } from "@/components/ui/terms-checkbox";
+import {
+  AuthButton,
+  AuthScreenLayout,
+  FormInput,
+  FormMessage,
+  PasswordInput,
+  Spacer,
+  TermsCheckbox,
+} from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -122,24 +125,12 @@ export default function SignUpScreen() {
     }
   };
 
-  const termsLabel = (
-    <>
-      I agree to the{" "}
-      <ThemedText type="link" style={{ textDecorationLine: "underline" }}>
-        Terms of Service
-      </ThemedText>{" "}
-      and{" "}
-      <ThemedText type="link" style={{ textDecorationLine: "underline" }}>
-        Privacy Policy
-      </ThemedText>
-    </>
-  );
-
   return (
     <AuthScreenLayout
       title="Sign Up"
       footerLink={{
-        label: "Already have an account? Sign In",
+        linkHeader: "Already have an account?",
+        linkLabel: "Sign In",
         href: "/(auth)/login",
       }}
     >
@@ -152,7 +143,7 @@ export default function SignUpScreen() {
         autoCapitalize="words"
         editable={!loading}
       />
-
+      <Spacer.Column numberOfSpaces={3} />
       <FormInput
         placeholder="Last name"
         value={lastName}
@@ -162,7 +153,7 @@ export default function SignUpScreen() {
         autoCapitalize="words"
         editable={!loading}
       />
-
+      <Spacer.Column numberOfSpaces={3} />
       <FormInput
         placeholder="Email"
         value={email}
@@ -177,7 +168,7 @@ export default function SignUpScreen() {
         keyboardType="email-address"
         editable={!loading}
       />
-
+      <Spacer.Column numberOfSpaces={3} />
       <PasswordInput
         placeholder={`Password (min ${MIN_PASSWORD_LENGTH} characters)`}
         value={password}
@@ -192,7 +183,7 @@ export default function SignUpScreen() {
         onClearError={() => setPasswordError(null)}
         editable={!loading}
       />
-
+      <Spacer.Column numberOfSpaces={3} />
       <PasswordInput
         placeholder="Confirm password"
         value={confirmPassword}
@@ -211,16 +202,19 @@ export default function SignUpScreen() {
           setAcceptTerms((v) => !v);
           setTermsError(null);
         }}
-        label={termsLabel}
+        termsLabel="Terms of Service"
+        privacyLabel="Privacy Policy"
+        onTermsPress={() => Linking.openURL("https://example.com/terms")}
+        onPrivacyPress={() => Linking.openURL("https://example.com/privacy")}
         error={termsError}
         disabled={loading}
       />
-
+      <Spacer.Column numberOfSpaces={3} />
       {signUpSuccessMessage ? (
         <FormMessage message={signUpSuccessMessage} type="success" />
       ) : null}
       {submitError ? <FormMessage message={submitError} /> : null}
-
+      <Spacer.Column numberOfSpaces={3} />
       <AuthButton
         label="Sign Up"
         onPress={handleSignUp}

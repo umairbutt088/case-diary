@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { theme } from "@/constants/theme";
 
 type FormMessageProps = {
   message: string;
@@ -17,11 +18,11 @@ export function FormMessage({ message, type = "error" }: FormMessageProps) {
 
 const styles = StyleSheet.create({
   text: {
-    color: "#c00",
+    color: theme.colors.themeRed,
     fontSize: 14,
     marginBottom: 8,
   },
   success: {
-    color: "#0a7ea4",
+    color: theme.colors.themeGreen,
   },
 });
