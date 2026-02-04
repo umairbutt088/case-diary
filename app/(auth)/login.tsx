@@ -1,10 +1,13 @@
 import { useCallback, useState } from "react";
 
-import { AuthButton } from "@/components/ui/auth-button";
-import { AuthScreenLayout } from "@/components/ui/auth-screen-layout";
-import { FormInput } from "@/components/ui/form-input";
-import { FormMessage } from "@/components/ui/form-message";
-import { PasswordInput } from "@/components/ui/password-input";
+import {
+  AuthButton,
+  AuthScreenLayout,
+  FormInput,
+  FormMessage,
+  PasswordInput,
+  Spacer,
+} from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -71,7 +74,8 @@ export default function LoginScreen() {
     <AuthScreenLayout
       title="Sign In"
       footerLink={{
-        label: "Don't have an account? Sign Up",
+        linkHeader: "Don't have an account?",
+        linkLabel: "Sign Up",
         href: "/(auth)/signup",
       }}
     >
@@ -89,7 +93,7 @@ export default function LoginScreen() {
         keyboardType="email-address"
         editable={!loading}
       />
-
+      <Spacer.Column numberOfSpaces={3} />
       <PasswordInput
         placeholder="Password"
         value={password}
@@ -104,6 +108,7 @@ export default function LoginScreen() {
 
       {submitError ? <FormMessage message={submitError} /> : null}
 
+      <Spacer.Column numberOfSpaces={10} />
       <AuthButton
         label="Sign In"
         onPress={handleSignIn}

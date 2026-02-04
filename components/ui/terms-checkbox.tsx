@@ -1,14 +1,17 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { Colors } from "@/constants/theme";
+import { Colors, theme } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 type TermsCheckboxProps = {
   checked: boolean;
   onToggle: () => void;
-  label: React.ReactNode;
+  termsLabel?: string;
+  privacyLabel?: string;
+  onTermsPress?: () => void;
+  onPrivacyPress?: () => void;
   error?: string | null;
   disabled?: boolean;
 };
@@ -16,7 +19,10 @@ type TermsCheckboxProps = {
 export function TermsCheckbox({
   checked,
   onToggle,
-  label,
+  termsLabel = "Terms of Service",
+  privacyLabel = "Privacy Policy",
+  onTermsPress,
+  onPrivacyPress,
   error,
   disabled,
 }: TermsCheckboxProps) {
@@ -25,20 +31,47 @@ export function TermsCheckbox({
 
   return (
     <>
-      <Pressable
-        style={styles.row}
-        onPress={onToggle}
-        disabled={disabled}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked }}
-      >
-        <MaterialIcons
-          name={checked ? "check-box" : "check-box-outline-blank"}
-          size={24}
-          color={checked ? colors.tint : colors.icon}
-        />
-        <ThemedText style={styles.label}>{label}</ThemedText>
-      </Pressable>
+      <View style={styles.row}>
+        <Pressable
+          onPress={onToggle}
+          disabled={disabled}
+          hitSlop={8}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked }}
+          accessibilityLabel="Accept terms and privacy policy"
+        >
+          <MaterialIcons
+            name={checked ? "check-box" : "check-box-outline-blank"}
+            size={24}
+            color={checked ? theme.colors.black : theme.colors.gray30}
+          />
+        </Pressable>
+        <View style={styles.labelWrap}>
+          <ThemedText style={styles.label}>I agree to the </ThemedText>
+          <Pressable
+            onPress={onTermsPress}
+            disabled={disabled}
+            accessibilityRole="link"
+            accessibilityLabel={termsLabel}
+          >
+            <ThemedText type="link" style={styles.link}>
+              {termsLabel}
+            </ThemedText>
+          </Pressable>
+          <ThemedText style={styles.label}> and </ThemedText>
+          <Pressable
+            onPress={onPrivacyPress}
+            disabled={disabled}
+            accessibilityRole="link"
+            accessibilityLabel={privacyLabel}
+          >
+            <ThemedText type="link" style={styles.link}>
+              {privacyLabel}
+            </ThemedText>
+          </Pressable>
+          <ThemedText style={styles.label}> by using this app.</ThemedText>
+        </View>
+      </View>
       {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
     </>
   );
@@ -52,8 +85,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     gap: 10,
   },
-  label: {
+  labelWrap: {
     flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  label: {
+    fontSize: 14,
+  },
+  link: {
+    textDecorationLine: "underline",
     fontSize: 14,
   },
   error: {
