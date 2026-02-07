@@ -23,6 +23,10 @@ const MAPPING = {
   "chevron.right": "chevron-right",
   "book.closed.fill": "menu-book",
   "person.fill": "person",
+  calendar: "calendar-today",
+  "list.bullet": "format-list-bulleted",
+  plus: "add",
+  "folder.fill": "folder",
 } as IconMapping;
 
 /**

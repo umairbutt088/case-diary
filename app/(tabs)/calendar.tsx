@@ -5,17 +5,11 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { theme } from "@/constants/theme";
 
-export default function DiaryScreen() {
+export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ThemedView style={styles.container}>
-        <ThemedText type="subtitle" style={styles.title}>
-          Your entries
-        </ThemedText>
-        <ThemedText style={styles.placeholder}>
-          Diary entries will appear here. Add new screens or components to list
-          and create entries.
-        </ThemedText>
+        <ThemedText type="subtitle">Calendar</ThemedText>
       </ThemedView>
     </SafeAreaView>
   );
@@ -31,11 +25,5 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 16,
     backgroundColor: theme.colors.background,
-  },
-  title: {
-    marginBottom: 12,
-  },
-  placeholder: {
-    opacity: 0.8,
   },
 });

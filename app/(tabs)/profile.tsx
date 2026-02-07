@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 
 export default function ProfileScreen() {
@@ -18,29 +20,36 @@ export default function ProfileScreen() {
       "User");
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.card}>
-        <ThemedText type="subtitle" style={styles.label}>
-          Name
-        </ThemedText>
-        <ThemedText style={styles.value}>{name}</ThemedText>
-        <ThemedText type="subtitle" style={[styles.label, styles.labelTop]}>
-          Email
-        </ThemedText>
-        <ThemedText style={styles.value}>{email}</ThemedText>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ThemedView style={styles.container}>
+        <ThemedView style={styles.card}>
+          <ThemedText type="subtitle" style={styles.label}>
+            Name
+          </ThemedText>
+          <ThemedText style={styles.value}>{name}</ThemedText>
+          <ThemedText type="subtitle" style={[styles.label, styles.labelTop]}>
+            Email
+          </ThemedText>
+          <ThemedText style={styles.value}>{email}</ThemedText>
+        </ThemedView>
+        <Pressable style={styles.signOutButton} onPress={() => signOut()}>
+          <ThemedText style={styles.signOutText}>Sign out</ThemedText>
+        </Pressable>
       </ThemedView>
-      <Pressable style={styles.signOutButton} onPress={() => signOut()}>
-        <ThemedText style={styles.signOutText}>Sign out</ThemedText>
-      </Pressable>
-    </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
     padding: 24,
     paddingTop: 16,
+    backgroundColor: theme.colors.background,
   },
   card: {
     marginBottom: 24,
