@@ -53,15 +53,22 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 24,
+    backgroundColor: theme.colors.white,
+    padding: 24,
+    borderRadius: 16,
+    ...theme.shadow,
   },
   label: {
     marginBottom: 4,
+    color: theme.colors.black,
   },
   labelTop: {
     marginTop: 16,
+    color: theme.colors.black,
   },
   value: {
     fontSize: 16,
+    color: theme.colors.black,
   },
   signOutButton: {
     paddingVertical: 14,
@@ -71,8 +78,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   signOutText: {
-    color: "#fff",
     fontWeight: "600",
     fontSize: 16,
+    color: theme.colors.white,
   },
 });

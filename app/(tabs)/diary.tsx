@@ -34,8 +34,10 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 12,
+    color: theme.colors.black,
   },
   placeholder: {
     opacity: 0.8,
+    color: theme.colors.black,
   },
 });
