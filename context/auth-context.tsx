@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const ONBOARDING_STORAGE_KEY = "@legal_diary/onboarding_completed";
 
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (isSupabaseConfigured) await supabase.auth.signOut();
   }, []);
 
   useEffect(() => {
@@ -57,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadOnboardingFlag]);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     async function initSession() {
@@ -124,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Optional: refresh session when app comes to foreground
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
     const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
       if (state === "active") {
         supabase.auth.getSession().then(({ data: { session: s } }) => {

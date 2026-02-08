@@ -42,6 +42,16 @@ To learn more about developing your project with Expo, look at the following res
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
+## EAS Build and Supabase
+
+For **EAS Build** (e.g. Android APK), the app no longer crashes if Supabase env vars are missing. To enable login and Supabase in production:
+
+1. In [expo.dev](https://expo.dev) → your project **legal-diary** → **Secrets** (or **Environment variables**).
+2. Add:
+   - `EXPO_PUBLIC_SUPABASE_URL` = your Supabase project URL
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon/public key
+3. Trigger a new build so the values are embedded. Without these, the app still opens but auth (login/signup) will not work.
+
 ## Join the community
 
 Join our community of developers creating universal apps.
