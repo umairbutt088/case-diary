@@ -9,7 +9,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "install": "cd ios/ && pod install && cd .."
+    "ios:install": "cd ios/ && pod install && cd .."
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
