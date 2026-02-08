@@ -211,6 +211,14 @@ export const Colors = {
   },
 };
 
+// Tab bar (dark bar with light icons - matches provided design)
+export const TabBarColors = {
+  background: "#1A1A1A",
+  activeTint: "#E5DCC8",
+  inactiveTint: "#9CA3AF",
+  addButtonBg: "#1A1A1A",
+};
+
 export const Fonts = Platform.select({
   ios: {
     sans: "system-ui",

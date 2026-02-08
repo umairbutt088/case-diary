@@ -25,6 +25,13 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="add-case-flow"
+              options={{
+                title: "Add New Case",
+                headerBackTitle: "Back",
+              }}
+            />
           </Stack>
         </AuthNavigator>
       </AuthProvider>
