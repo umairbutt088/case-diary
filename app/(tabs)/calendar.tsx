@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Calendar } from "react-native-calendars";
@@ -126,10 +127,7 @@ const INITIAL_MONTH = "2025-12";
 const INITIAL_DATE = "2025-12-26"; // Default selected date for demo (Dec 26 in design)
 
 export default function CalendarScreen() {
-  const today = useMemo(() => {
-    const t = new Date();
-    return t.toISOString().slice(0, 10);
-  }, []);
+  const router = useRouter();
 
   const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
   const [currentMonth, setCurrentMonth] = useState(INITIAL_MONTH);
@@ -171,9 +169,7 @@ export default function CalendarScreen() {
 
         <Pressable
           style={styles.addDateButton}
-          onPress={() => {
-            // TODO: open add date / add case flow
-          }}
+          onPress={() => router.push("/add-case-flow")}
         >
           <ThemedText style={styles.addDateButtonText}>
             + Add a date to {selectedDate}

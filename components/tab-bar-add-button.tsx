@@ -1,6 +1,7 @@
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { PlatformPressable } from "@react-navigation/elements";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import { View } from "react-native";
 
 import { TabBarColors } from "@/constants/theme";
@@ -10,6 +11,15 @@ const ADD_BUTTON_SIZE = 56;
 const ADD_ICON_SIZE = 28;
 
 export function TabBarAddButton(props: BottomTabBarButtonProps) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (process.env.EXPO_OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/add-case-flow");
+  };
+
   return (
     <View
       style={{
@@ -21,12 +31,8 @@ export function TabBarAddButton(props: BottomTabBarButtonProps) {
     >
       <PlatformPressable
         {...props}
-        onPressIn={(ev) => {
-          if (process.env.EXPO_OS === "ios") {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
-          props.onPressIn?.(ev);
-        }}
+        onPress={handlePress}
+        onPressIn={(ev) => props.onPressIn?.(ev)}
         style={{
           width: ADD_BUTTON_SIZE,
           height: ADD_BUTTON_SIZE,

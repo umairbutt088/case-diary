@@ -1,3 +1,4 @@
+import { Link, useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -9,6 +10,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 const hasCases = false; // TODO: replace with real cases state
 
 export default function HomeScreen() {
+  const router = useRouter();
   if (hasCases) {
     // TODO: render list of cases when you have data
     return (
@@ -35,15 +37,12 @@ export default function HomeScreen() {
           <ThemedText style={styles.subtext}>
             This diary has a clean record 😊
           </ThemedText>
-          <Pressable
-            style={styles.addButton}
-            onPress={() => {
-              // TODO: navigate to add case
-            }}
-          >
-            <MaterialIcons name="add" size={22} color="#fff" />
-            <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
-          </Pressable>
+          <Link href="/add-case-flow" asChild>
+            <Pressable style={styles.addButton}>
+              <MaterialIcons name="add" size={22} color="#fff" />
+              <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
+            </Pressable>
+          </Link>
         </View>
       </View>
     </SafeAreaView>
