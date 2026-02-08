@@ -134,6 +134,7 @@ const styles = StyleSheet.create({
   triggerText: {
     fontSize: 16,
     flex: 1,
+    color: theme.colors.black,
   },
   placeholder: {
     color: theme.colors.gray50,
@@ -141,6 +142,7 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 13,
     marginTop: 6,
+    color: theme.colors.black,
   },
   triggerRowError: {
     borderColor: theme.colors.themeRed,
@@ -176,6 +178,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: 18,
     fontWeight: "600",
+    color: theme.colors.black,
   },
   sheetClose: {
     fontSize: 17,
@@ -197,9 +200,10 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
+    color: theme.colors.black,
   },
   optionTextSelected: {
     fontWeight: "600",
-    color: theme.colors.themeBlack,
+    color: theme.colors.black,
   },
 });

@@ -53,5 +53,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     flex: 1,
+    color: theme.colors.black,
   },
 });

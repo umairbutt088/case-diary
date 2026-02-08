@@ -10,18 +10,23 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 type PasswordInputProps = TextInputProps & {
   error?: string | null;
   onClearError?: () => void;
+  /** Use when the input is on a light background (e.g. auth screens) so text stays visible. */
+  lightBackground?: boolean;
 };
 
 export function PasswordInput({
   error,
   onClearError,
+  lightBackground,
   onChangeText,
   style,
   ...rest
 }: PasswordInputProps) {
   const [show, setShow] = useState(false);
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const colors = lightBackground
+    ? Colors.light
+    : Colors[colorScheme ?? "light"];
 
   const handleChange = (text: string) => {
     if (onClearError) onClearError();

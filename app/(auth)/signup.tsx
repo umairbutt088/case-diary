@@ -142,6 +142,7 @@ export default function SignUpScreen() {
         onClearError={() => setFirstNameError(null)}
         autoCapitalize="words"
         editable={!loading}
+        lightBackground
       />
       <Spacer.Column numberOfSpaces={3} />
       <FormInput
@@ -152,6 +153,7 @@ export default function SignUpScreen() {
         onClearError={() => setLastNameError(null)}
         autoCapitalize="words"
         editable={!loading}
+        lightBackground
       />
       <Spacer.Column numberOfSpaces={3} />
       <FormInput
@@ -167,6 +169,7 @@ export default function SignUpScreen() {
         autoCorrect={false}
         keyboardType="email-address"
         editable={!loading}
+        lightBackground
       />
       <Spacer.Column numberOfSpaces={3} />
       <PasswordInput
@@ -182,6 +185,7 @@ export default function SignUpScreen() {
         error={passwordError}
         onClearError={() => setPasswordError(null)}
         editable={!loading}
+        lightBackground
       />
       <Spacer.Column numberOfSpaces={3} />
       <PasswordInput
@@ -194,6 +198,7 @@ export default function SignUpScreen() {
         error={confirmPasswordError}
         onClearError={() => setConfirmPasswordError(null)}
         editable={!loading}
+        lightBackground
       />
 
       <TermsCheckbox
