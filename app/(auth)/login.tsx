@@ -92,6 +92,7 @@ export default function LoginScreen() {
         autoCorrect={false}
         keyboardType="email-address"
         editable={!loading}
+        lightBackground
       />
       <Spacer.Column numberOfSpaces={3} />
       <PasswordInput
@@ -104,6 +105,7 @@ export default function LoginScreen() {
           setSubmitError(null);
         }}
         editable={!loading}
+        lightBackground
       />
 
       {submitError ? <FormMessage message={submitError} /> : null}

@@ -1,17 +1,11 @@
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Keyboard, Pressable, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ChipGroup } from "@/components/add-case/chip-group";
+import { DateField } from "@/components/add-case/date-field";
 import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
 import { RadioOption } from "@/components/add-case/radio-option";
@@ -19,16 +13,19 @@ import { SelectField } from "@/components/add-case/select-field";
 import { StepIndicator } from "@/components/add-case/step-indicator";
 import { ThemedText } from "@/components/themed-text";
 import {
-  CASE_STATUSES,
   CASE_TYPES,
   COURT_TIERS,
+  CURRENT_STATUS_OPTIONS,
+  getCaseSubTypesForType,
   getCourtNamesForTier,
   getDerivedCaseTitle,
   initialAddCaseFormState,
+  NEXT_STATUS_OPTIONS,
   type AddCaseFormState,
-  type CaseStatus,
   type CaseType,
   type CourtTier,
+  type CurrentCaseStatus,
+  type NextCaseStatus,
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 
@@ -65,9 +62,16 @@ export default function AddCaseFlowScreen() {
     if (!form.respondentName.trim())
       e.respondentName = "Respondent name is required";
     if (!form.caseType) e.caseType = "Please select a case type";
+    if (form.caseType && !form.caseSubType.trim())
+      e.caseSubType = "Please select type of case";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
-  }, [form.petitionerName, form.respondentName, form.caseType]);
+  }, [
+    form.petitionerName,
+    form.respondentName,
+    form.caseType,
+    form.caseSubType,
+  ]);
 
   const validateStep2 = useCallback((): boolean => {
     const e: typeof errors = {};
@@ -117,273 +121,299 @@ export default function AddCaseFlowScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <KeyboardAvoidingView
-        style={styles.keyboard}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+      <StepIndicator currentStep={step} />
+      <KeyboardAwareScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={24}
+        enableAutomaticScroll={true}
+        keyboardOpeningTime={0}
       >
-        <StepIndicator currentStep={step} />
-
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Step 1 of 4: Petitioner, Respondent (case title derived), Case Number, Case Type */}
-          {step === 1 && (
-            <>
-              <FormFieldWithHint
-                label="Petitioner Name"
-                required
-                value={form.petitionerName}
-                onChangeText={(v) => update({ petitionerName: v })}
-                placeholder="Enter First and Last Name"
-                hint="Add Petitioner's / Plaintiff's full name"
-                error={errors.petitionerName}
+        {/* Step 1 of 4: Petitioner, Respondent (case title derived), Case Number, Case Type */}
+        {step === 1 && (
+          <>
+            <FormFieldWithHint
+              label="First Party Name"
+              required
+              value={form.petitionerName}
+              onChangeText={(v) => update({ petitionerName: v })}
+              placeholder="Enter First and Last Name"
+              hint="Add First Party's full name"
+              error={errors.petitionerName}
+            />
+            <FormFieldWithHint
+              label="Second Party Name"
+              required
+              value={form.respondentName}
+              onChangeText={(v) => update({ respondentName: v })}
+              placeholder="Enter First and Last Name"
+              hint="Add Second Party's full name"
+              error={errors.respondentName}
+            />
+            <FormFieldWithHint
+              label="Case Number"
+              value={form.caseNumber}
+              onChangeText={(v) => update({ caseNumber: v })}
+              placeholder="12345/2025"
+              hint="Enter Case Number"
+            />
+            <FormField label="Case Type" required>
+              <ChipGroup
+                options={[...CASE_TYPES]}
+                value={form.caseType}
+                onChange={(v) =>
+                  update({ caseType: v as CaseType, caseSubType: "" })
+                }
               />
-              <FormFieldWithHint
-                label="Respondent Name"
-                required
-                value={form.respondentName}
-                onChangeText={(v) => update({ respondentName: v })}
-                placeholder="Enter First and Last Name"
-                hint="Add Respondent's / Defendant's full name"
-                error={errors.respondentName}
-              />
-              <FormFieldWithHint
-                label="Case Number"
-                value={form.caseNumber}
-                onChangeText={(v) => update({ caseNumber: v })}
-                placeholder="12345/2025"
-                hint="Enter Case Number"
-              />
-              <FormField label="Case Type" required>
+              {errors.caseType ? (
+                <ThemedText style={styles.fieldError}>
+                  {errors.caseType}
+                </ThemedText>
+              ) : null}
+            </FormField>
+            {form.caseType ? (
+              <FormField label="Type of case" required>
                 <ChipGroup
-                  options={[...CASE_TYPES]}
-                  value={form.caseType}
-                  onChange={(v) => update({ caseType: v as CaseType })}
+                  options={getCaseSubTypesForType(form.caseType)}
+                  value={form.caseSubType}
+                  onChange={(v) => update({ caseSubType: v })}
                 />
-                {errors.caseType ? (
+                {errors.caseSubType ? (
                   <ThemedText style={styles.fieldError}>
-                    {errors.caseType}
+                    {errors.caseSubType}
                   </ThemedText>
                 ) : null}
               </FormField>
-              <Pressable style={styles.nextButton} onPress={onNext}>
-                <ThemedText style={styles.nextButtonText}>Next →</ThemedText>
-              </Pressable>
-            </>
-          )}
+            ) : null}
+            <Pressable style={styles.nextButton} onPress={onNext}>
+              <ThemedText style={styles.nextButtonText}>Next →</ThemedText>
+            </Pressable>
+          </>
+        )}
 
-          {/* Step 2 of 4 */}
-          {step === 2 && (
-            <>
-              <FormField label="Court Tier" required>
-                {errors.courtTier ? (
-                  <ThemedText style={styles.fieldError}>
-                    {errors.courtTier}
-                  </ThemedText>
-                ) : null}
-                {COURT_TIERS.map(({ value, label }) => (
+        {/* Step 2 of 4 */}
+        {step === 2 && (
+          <>
+            <FormField label="Court Tier" required>
+              {errors.courtTier ? (
+                <ThemedText style={styles.fieldError}>
+                  {errors.courtTier}
+                </ThemedText>
+              ) : null}
+              {COURT_TIERS.map(({ value, label }) => (
+                <RadioOption
+                  key={value}
+                  label={label}
+                  selected={form.courtTier === value}
+                  onSelect={() =>
+                    update({ courtTier: value as CourtTier, courtName: "" })
+                  }
+                />
+              ))}
+            </FormField>
+            <SelectField
+              label="Court Name"
+              required
+              value={form.courtName}
+              options={courtOptions}
+              onChange={(v) => update({ courtName: v })}
+              placeholder={
+                form.courtTier
+                  ? "Lahore High Court ▾"
+                  : "Select court tier first"
+              }
+              disabled={!form.courtTier || courtOptions.length === 0}
+              hint="Select the court where the case is filed"
+              error={errors.courtName}
+            />
+            <FormFieldWithHint
+              label="Court Room/Board #"
+              value={form.courtRoom}
+              onChangeText={(v) => update({ courtRoom: v })}
+              placeholder="Courtroom 5"
+              hint="Enter court room or board number"
+            />
+            <FormFieldWithHint
+              label="Judge Name"
+              value={form.judgeName}
+              onChangeText={(v) => update({ judgeName: v })}
+              placeholder="Justice A. Rahman"
+              hint="Enter presiding judge name"
+            />
+            <View style={styles.buttons}>
+              <Pressable
+                style={[styles.btn, styles.btnSecondary]}
+                onPress={onBack}
+              >
+                <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
+              </Pressable>
+              <Pressable
+                style={[styles.btn, styles.btnPrimary]}
+                onPress={onNext}
+              >
+                <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
+              </Pressable>
+            </View>
+          </>
+        )}
+
+        {/* Step 3 of 4: My Client, Link/Create Client */}
+        {step === 3 && (
+          <>
+            <FormField label="My Client is" required>
+              {errors.myClientIs ? (
+                <ThemedText style={styles.fieldError}>
+                  {errors.myClientIs}
+                </ThemedText>
+              ) : null}
+              <RadioOption
+                label="Petitioner"
+                selected={form.myClientIs === "petitioner"}
+                onSelect={() => update({ myClientIs: "petitioner" })}
+              />
+              <RadioOption
+                label="Respondent"
+                selected={form.myClientIs === "respondent"}
+                onSelect={() => update({ myClientIs: "respondent" })}
+              />
+            </FormField>
+            <FormField label="Link Existing Client">
+              <View
+                style={[
+                  styles.clientOptionRow,
+                  form.clientOption === "link" &&
+                    styles.clientOptionRowSelected,
+                ]}
+              >
+                <FormFieldWithHint
+                  label=""
+                  value={form.linkedClientSearch}
+                  onChangeText={(v) =>
+                    update({ linkedClientSearch: v, clientOption: "link" })
+                  }
+                  placeholder="Search client... 🔍"
+                  hint="Search and link an existing client"
+                  onFocus={() => update({ clientOption: "link" })}
+                />
+              </View>
+            </FormField>
+            <FormField label="OR Create New Client">
+              <Pressable
+                style={[
+                  styles.addClientBtn,
+                  form.clientOption === "new" && styles.addClientBtnSelected,
+                ]}
+                onPress={() => update({ clientOption: "new" })}
+              >
+                <ThemedText
+                  style={[
+                    styles.addClientText,
+                    form.clientOption === "new" && styles.addClientTextSelected,
+                  ]}
+                >
+                  + Add New Client
+                </ThemedText>
+              </Pressable>
+            </FormField>
+            <View style={styles.buttons}>
+              <Pressable
+                style={[styles.btn, styles.btnSecondary]}
+                onPress={onBack}
+              >
+                <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
+              </Pressable>
+              <Pressable
+                style={[styles.btn, styles.btnPrimary]}
+                onPress={onNext}
+              >
+                <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
+              </Pressable>
+            </View>
+          </>
+        )}
+
+        {/* Step 4 of 4 */}
+        {step === 4 && (
+          <>
+            <DateField
+              label="Date of Filing"
+              value={form.dateOfFiling}
+              onChange={(v) => update({ dateOfFiling: v })}
+              placeholder="e.g. 08/09/2025"
+              hint="Enter date of filing"
+            />
+            <DateField
+              label="Next Hearing Date"
+              required
+              value={form.nextHearingDate}
+              onChange={(v) => update({ nextHearingDate: v })}
+              placeholder="e.g. 08/09/2025"
+              hint="Enter next hearing date"
+              error={errors.nextHearingDate}
+            />
+            <FormField
+              label="Current status"
+              hint="Status of the case as of today or from the last hearing (if any)"
+            >
+              <View style={styles.statusColumn}>
+                {CURRENT_STATUS_OPTIONS.map(({ value, label }) => (
                   <RadioOption
                     key={value}
                     label={label}
-                    selected={form.courtTier === value}
+                    selected={form.caseStatus === value}
                     onSelect={() =>
-                      update({ courtTier: value as CourtTier, courtName: "" })
+                      update({ caseStatus: value as CurrentCaseStatus })
                     }
                   />
                 ))}
-              </FormField>
-              <SelectField
-                label="Court Name"
-                required
-                value={form.courtName}
-                options={courtOptions}
-                onChange={(v) => update({ courtName: v })}
-                placeholder={
-                  form.courtTier
-                    ? "Lahore High Court ▾"
-                    : "Select court tier first"
-                }
-                disabled={!form.courtTier || courtOptions.length === 0}
-                hint="Select the court where the case is filed"
-                error={errors.courtName}
-              />
-              <FormFieldWithHint
-                label="Court Room/Board #"
-                value={form.courtRoom}
-                onChangeText={(v) => update({ courtRoom: v })}
-                placeholder="Courtroom 5"
-                hint="Enter court room or board number"
-              />
-              <FormFieldWithHint
-                label="Judge Name"
-                value={form.judgeName}
-                onChangeText={(v) => update({ judgeName: v })}
-                placeholder="Justice A. Rahman"
-                hint="Enter presiding judge name"
-              />
-              <View style={styles.buttons}>
-                <Pressable
-                  style={[styles.btn, styles.btnSecondary]}
-                  onPress={onBack}
-                >
-                  <ThemedText style={styles.btnSecondaryText}>
-                    ← Back
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.btn, styles.btnPrimary]}
-                  onPress={onNext}
-                >
-                  <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
-                </Pressable>
               </View>
-            </>
-          )}
-
-          {/* Step 3 of 4: My Client, Link/Create Client */}
-          {step === 3 && (
-            <>
-              <FormField label="My Client is" required>
-                {errors.myClientIs ? (
-                  <ThemedText style={styles.fieldError}>
-                    {errors.myClientIs}
-                  </ThemedText>
-                ) : null}
-                <RadioOption
-                  label="Petitioner"
-                  selected={form.myClientIs === "petitioner"}
-                  onSelect={() => update({ myClientIs: "petitioner" })}
-                />
-                <RadioOption
-                  label="Respondent"
-                  selected={form.myClientIs === "respondent"}
-                  onSelect={() => update({ myClientIs: "respondent" })}
-                />
-              </FormField>
-              <FormField label="Link Existing Client">
-                <View
-                  style={[
-                    styles.clientOptionRow,
-                    form.clientOption === "link" &&
-                      styles.clientOptionRowSelected,
-                  ]}
-                >
-                  <FormFieldWithHint
-                    label=""
-                    value={form.linkedClientSearch}
-                    onChangeText={(v) =>
-                      update({ linkedClientSearch: v, clientOption: "link" })
+            </FormField>
+            <FormField
+              label="Next status"
+              hint="What is coming up next in this case"
+            >
+              <View style={styles.statusColumn}>
+                {NEXT_STATUS_OPTIONS.map(({ value, label }) => (
+                  <RadioOption
+                    key={value}
+                    label={label}
+                    selected={form.nextStatus === value}
+                    onSelect={() =>
+                      update({ nextStatus: value as NextCaseStatus })
                     }
-                    placeholder="Search client... 🔍"
-                    hint="Search and link an existing client"
-                    onFocus={() => update({ clientOption: "link" })}
                   />
-                </View>
-              </FormField>
-              <FormField label="OR Create New Client">
-                <Pressable
-                  style={[
-                    styles.addClientBtn,
-                    form.clientOption === "new" && styles.addClientBtnSelected,
-                  ]}
-                  onPress={() => update({ clientOption: "new" })}
-                >
-                  <ThemedText
-                    style={[
-                      styles.addClientText,
-                      form.clientOption === "new" &&
-                        styles.addClientTextSelected,
-                    ]}
-                  >
-                    + Add New Client
-                  </ThemedText>
-                </Pressable>
-              </FormField>
-              <View style={styles.buttons}>
-                <Pressable
-                  style={[styles.btn, styles.btnSecondary]}
-                  onPress={onBack}
-                >
-                  <ThemedText style={styles.btnSecondaryText}>
-                    ← Back
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.btn, styles.btnPrimary]}
-                  onPress={onNext}
-                >
-                  <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
-                </Pressable>
+                ))}
               </View>
-            </>
-          )}
-
-          {/* Step 4 of 4 */}
-          {step === 4 && (
-            <>
-              <FormFieldWithHint
-                label="Date of Filing"
-                value={form.dateOfFiling}
-                onChangeText={(v) => update({ dateOfFiling: v })}
-                placeholder="15 Nov 2025"
-                hint="Enter date of filing"
-              />
-              <FormFieldWithHint
-                label="Next Hearing Date"
-                required
-                value={form.nextHearingDate}
-                onChangeText={(v) => update({ nextHearingDate: v })}
-                placeholder="20 Nov 2025"
-                hint="Enter next hearing date"
-                error={errors.nextHearingDate}
-              />
-              <FormField label="Case Status">
-                <View style={styles.statusRow}>
-                  {CASE_STATUSES.map(({ value, label }) => (
-                    <RadioOption
-                      key={value}
-                      label={label}
-                      selected={form.caseStatus === value}
-                      onSelect={() =>
-                        update({ caseStatus: value as CaseStatus })
-                      }
-                    />
-                  ))}
-                </View>
-              </FormField>
-              <FormFieldWithHint
-                label="Notes (Optional)"
-                value={form.notes}
-                onChangeText={(v) => update({ notes: v })}
-                placeholder="Brief description..."
-                hint="Add any additional notes"
-                multiline
-                numberOfLines={4}
-              />
-              <View style={styles.buttons}>
-                <Pressable
-                  style={[styles.btn, styles.btnSecondary]}
-                  onPress={onBack}
-                >
-                  <ThemedText style={styles.btnSecondaryText}>
-                    ← Back
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.btn, styles.btnPrimary]}
-                  onPress={onSave}
-                >
-                  <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
-                </Pressable>
-              </View>
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+            </FormField>
+            <FormFieldWithHint
+              label="Notes (Optional)"
+              value={form.notes}
+              onChangeText={(v) => update({ notes: v })}
+              placeholder="Brief description..."
+              hint="Add any additional notes"
+              multiline
+              numberOfLines={4}
+            />
+            <View style={styles.buttons}>
+              <Pressable
+                style={[styles.btn, styles.btnSecondary]}
+                onPress={onBack}
+              >
+                <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
+              </Pressable>
+              <Pressable
+                style={[styles.btn, styles.btnPrimary]}
+                onPress={onSave}
+              >
+                <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
+              </Pressable>
+            </View>
+          </>
+        )}
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -392,9 +422,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#ffffff",
-  },
-  keyboard: {
-    flex: 1,
   },
   scroll: {
     flex: 1,
@@ -447,6 +474,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  statusColumn: {
+    gap: 4,
   },
   fieldError: {
     color: theme.colors.themeRed,
