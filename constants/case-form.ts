@@ -13,10 +13,63 @@ export const CASE_TYPES = [
 export type CaseType = (typeof CASE_TYPES)[number];
 
 /**
- * Court tiers from your outline.
+ * Case sub-types / categories shown after user selects a case type.
+ */
+export const CASE_SUB_TYPES: Record<CaseType, readonly string[]> = {
+  Civil: [
+    "Appeal",
+    "Writ",
+    "Suit",
+    "Execution",
+    "Injunction",
+    "Specific Performance",
+    "Declaration",
+    "Other",
+  ],
+  Criminal: [
+    "Appeal",
+    "Writ",
+    "Bail (Pre-arrest)",
+    "Bail (Post-arrest)",
+    "Revision",
+    "Quashment",
+    "Trial",
+    "Other",
+  ],
+  Family: [
+    "Appeal",
+    "Writ",
+    "Divorce",
+    "Custody",
+    "Maintenance",
+    "Guardianship",
+    "Other",
+  ],
+  Revenue: ["Appeal", "Writ", "Assessment", "Revision", "Other"],
+  Tax: ["Appeal", "Writ", "Assessment", "Refund", "Revision", "Other"],
+  Service: [
+    "Appeal",
+    "Writ",
+    "Service Matter",
+    "Pension",
+    "Dismissal/Removal",
+    "Other",
+  ],
+};
+
+export function getCaseSubTypesForType(caseType: CaseType | ""): string[] {
+  if (!caseType) return [];
+  return [...CASE_SUB_TYPES[caseType as CaseType]];
+}
+
+/**
+ * Court tiers: lower courts (civil, criminal), district, tribunals, high, supreme.
  */
 export const COURT_TIERS = [
+  { value: "civil", label: "Civil Court" },
+  { value: "criminal", label: "Criminal Court" },
   { value: "district", label: "District Court" },
+  { value: "tribunal", label: "Tribunal" },
   { value: "high", label: "High Court" },
   { value: "supreme", label: "Supreme Court" },
 ] as const;
@@ -49,24 +102,98 @@ export const COMMON_DISTRICT_COURTS = [
   "District & Sessions Court, Gujranwala",
 ];
 
+/** Civil (lower) courts. */
+export const CIVIL_COURTS = [
+  "Civil Judge Court (Class I)",
+  "Civil Judge Court (Class II)",
+  "Civil Judge Court (Class III)",
+  "Senior Civil Judge Court",
+  "Court of Small Causes",
+  "Civil Judge & Judicial Magistrate Court",
+  "Additional District Judge (Civil)",
+];
+
+/** Criminal (lower) courts. */
+export const CRIMINAL_COURTS = [
+  "Judicial Magistrate (First Class)",
+  "Judicial Magistrate (Second Class)",
+  "Judicial Magistrate (Third Class)",
+  "Executive Magistrate",
+  "Special Magistrate Court",
+  "Additional Sessions Judge Court",
+  "Court of Session",
+];
+
+/** Tribunals. */
+export const TRIBUNALS = [
+  "Federal Service Tribunal",
+  "Provincial Service Tribunal (Punjab)",
+  "Provincial Service Tribunal (Sindh)",
+  "Provincial Service Tribunal (KPK)",
+  "Provincial Service Tribunal (Balochistan)",
+  "Income Tax Appellate Tribunal",
+  "Customs Appellate Tribunal",
+  "Appellate Tribunal Inland Revenue",
+  "National Accountability Bureau (NAB) Court",
+  "Anti-Corruption Court",
+  "Banking Court",
+  "Competition Appellate Tribunal",
+  "Environmental Tribunal",
+  "Labour Court",
+  "Labour Appellate Tribunal",
+  "Consumer Protection Tribunal",
+  "Special Court (Customs, Taxation & Anti-Smuggling)",
+  "Drug Court",
+  "Anti-Terrorism Court",
+  "Other Tribunal",
+];
+
 export function getCourtNamesForTier(tier: CourtTier | ""): string[] {
   if (tier === "supreme") return [SUPREME_COURT];
   if (tier === "high") return HIGH_COURTS;
   if (tier === "district") return COMMON_DISTRICT_COURTS;
+  if (tier === "civil") return CIVIL_COURTS;
+  if (tier === "criminal") return CRIMINAL_COURTS;
+  if (tier === "tribunal") return TRIBUNALS;
   return [];
 }
 
 /**
- * Case status from your outline.
+ * Current status of the case (as of today or from the last hearing).
  */
-export const CASE_STATUSES = [
+export const CURRENT_STATUS_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "pending", label: "Pending" },
-  { value: "concluded", label: "Concluded" },
+  { value: "listed", label: "Listed (for hearing)" },
+  { value: "heard", label: "Heard" },
+  { value: "order_reserved", label: "Order reserved" },
   { value: "adjourned", label: "Adjourned" },
+  { value: "concluded", label: "Concluded" },
+  { value: "other", label: "Other" },
 ] as const;
 
-export type CaseStatus = (typeof CASE_STATUSES)[number]["value"];
+export type CurrentCaseStatus =
+  (typeof CURRENT_STATUS_OPTIONS)[number]["value"];
+
+/**
+ * What is coming up next in the case (next step / next status).
+ */
+export const NEXT_STATUS_OPTIONS = [
+  { value: "next_hearing", label: "Next hearing" },
+  { value: "arguments", label: "Arguments" },
+  { value: "judgment", label: "Judgment" },
+  { value: "order_to_be_passed", label: "Order to be passed" },
+  { value: "filing", label: "Filing" },
+  { value: "evidence", label: "Evidence" },
+  { value: "summoning", label: "Summoning" },
+  { value: "other", label: "Other" },
+] as const;
+
+export type NextCaseStatus = (typeof NEXT_STATUS_OPTIONS)[number]["value"];
+
+/** @deprecated Use CURRENT_STATUS_OPTIONS and CurrentCaseStatus */
+export const CASE_STATUSES = CURRENT_STATUS_OPTIONS;
+export type CaseStatus = CurrentCaseStatus;
 
 /** Whether user is linking an existing client or creating a new one (Step 3). */
 export type ClientOption = "link" | "new" | "";
@@ -74,6 +201,7 @@ export type ClientOption = "link" | "new" | "";
 export type AddCaseFormState = {
   caseNumber: string;
   caseType: CaseType | "";
+  caseSubType: string;
   courtTier: CourtTier | "";
   courtName: string;
   courtRoom: string;
@@ -86,13 +214,15 @@ export type AddCaseFormState = {
   linkedClientId: string | null;
   dateOfFiling: string;
   nextHearingDate: string;
-  caseStatus: CaseStatus | "";
+  caseStatus: CurrentCaseStatus | "";
+  nextStatus: NextCaseStatus | "";
   notes: string;
 };
 
 export const initialAddCaseFormState: AddCaseFormState = {
   caseNumber: "",
   caseType: "",
+  caseSubType: "",
   courtTier: "",
   courtName: "",
   courtRoom: "",
@@ -106,6 +236,7 @@ export const initialAddCaseFormState: AddCaseFormState = {
   dateOfFiling: "",
   nextHearingDate: "",
   caseStatus: "",
+  nextStatus: "",
   notes: "",
 };
 
