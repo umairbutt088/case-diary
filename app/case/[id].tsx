@@ -68,7 +68,7 @@ export default function CaseDetailScreen() {
     return (
       <SafeAreaView style={detailStyles.safeArea} edges={["top"]}>
         <View style={detailStyles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
       </SafeAreaView>
     );
@@ -194,7 +194,7 @@ const detailStyles = StyleSheet.create({
   pageTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.black,
     marginBottom: 24,
   },
   sectionTitle: {

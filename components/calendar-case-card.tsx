@@ -1,4 +1,5 @@
-import { StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Pressable, StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
@@ -15,11 +16,17 @@ type Props = {
 };
 
 export function CalendarCaseCard({ caseItem }: Props) {
+  const router = useRouter();
+
+  const openCase = () => {
+    router.push(`/case/${caseItem.id}`);
+  };
+
   return (
-    <View style={styles.card}>
+    <Pressable style={styles.card} onPress={openCase}>
       <ThemedText style={styles.title}>{caseItem.title}</ThemedText>
       <ThemedText style={styles.subtitle}>{caseItem.subtitle}</ThemedText>
-    </View>
+    </Pressable>
   );
 }
 

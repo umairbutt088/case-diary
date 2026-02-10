@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.black,
     flex: 1,
     marginRight: 8,
   },

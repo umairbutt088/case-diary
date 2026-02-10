@@ -48,7 +48,7 @@ export default function DiaryScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
       </SafeAreaView>
     );

@@ -39,3 +39,12 @@ export function formatCaseDate(isoDate: string | null): string {
   const [y, m, d] = isoDate.slice(0, 10).split("-");
   return `${d}/${m}/${y}`;
 }
+
+/** Today's date in YYYY-MM-DD (local time) for DB comparisons */
+export function getTodayISO(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
