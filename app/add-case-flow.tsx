@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Keyboard, Pressable, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -28,16 +34,21 @@ import {
   type NextCaseStatus,
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
+import { useAuth } from "@/context/auth-context";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const STEPS = 4;
 
 export default function AddCaseFlowScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<AddCaseFormState>(initialAddCaseFormState);
   const [errors, setErrors] = useState<
     Partial<Record<keyof AddCaseFormState, string>>
   >({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const update = useCallback((updates: Partial<AddCaseFormState>) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -109,15 +120,60 @@ export default function AddCaseFlowScreen() {
     else router.back();
   }, [step, router]);
 
-  const onSave = useCallback(() => {
+  const onSave = useCallback(async () => {
     if (!validateStep4()) return;
+    setSaveError(null);
+
+    const userId = session?.user?.id;
+    if (!userId) {
+      setSaveError("You must be signed in to save a case.");
+      return;
+    }
+    if (!isSupabaseConfigured) {
+      setSaveError("Supabase is not configured. Cannot save case.");
+      return;
+    }
+
     const caseTitle = getDerivedCaseTitle(
       form.petitionerName,
       form.respondentName
     );
-    console.log("Add case payload:", { ...form, caseTitle });
+
+    const row = {
+      user_id: userId,
+      case_title: caseTitle || null,
+      case_number: form.caseNumber.trim() || null,
+      case_type: form.caseType || null,
+      case_sub_type: form.caseSubType.trim() || null,
+      petitioner_name: form.petitionerName.trim() || "",
+      respondent_name: form.respondentName.trim() || "",
+      court_tier: form.courtTier || null,
+      court_name: form.courtName.trim() || null,
+      court_room: form.courtRoom.trim() || null,
+      judge_name: form.judgeName.trim() || null,
+      my_client_is: form.myClientIs || null,
+      linked_client_id: form.linkedClientId ?? null,
+      date_of_filing: form.dateOfFiling.trim() || null,
+      next_hearing_date: form.nextHearingDate.trim() || null,
+      current_status: form.caseStatus || null,
+      next_status: form.nextStatus || null,
+      notes: form.notes.trim() || null,
+    };
+
+    setSaving(true);
+    const { error } = await supabase
+      .from("cases")
+      .insert(row)
+      .select()
+      .single();
+    setSaving(false);
+
+    if (error) {
+      setSaveError(error.message || "Failed to save case.");
+      return;
+    }
     router.back();
-  }, [form, validateStep4, router]);
+  }, [form, session?.user?.id, validateStep4, router]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -397,18 +453,30 @@ export default function AddCaseFlowScreen() {
               multiline
               numberOfLines={4}
             />
+            {saveError ? (
+              <ThemedText style={styles.saveError}>{saveError}</ThemedText>
+            ) : null}
             <View style={styles.buttons}>
               <Pressable
                 style={[styles.btn, styles.btnSecondary]}
                 onPress={onBack}
+                disabled={saving}
               >
                 <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
               </Pressable>
               <Pressable
                 style={[styles.btn, styles.btnPrimary]}
                 onPress={onSave}
+                disabled={saving}
               >
-                <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
+                {saving ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.pureWhite}
+                  />
+                ) : (
+                  <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
+                )}
               </Pressable>
             </View>
           </>
@@ -477,6 +545,11 @@ const styles = StyleSheet.create({
   },
   statusColumn: {
     gap: 4,
+  },
+  saveError: {
+    color: theme.colors.themeRed,
+    fontSize: 14,
+    marginBottom: 12,
   },
   fieldError: {
     color: theme.colors.themeRed,

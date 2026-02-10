@@ -32,6 +32,12 @@ export default function RootLayout() {
                 headerBackTitle: "Back",
               }}
             />
+            <Stack.Screen
+              name="case/[id]"
+              options={{
+                headerShown: false,
+              }}
+            />
           </Stack>
         </AuthNavigator>
       </AuthProvider>
