@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   sheetClose: {
     fontSize: 17,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: theme.colors.black,
   },
   list: {
     minHeight: 120,
