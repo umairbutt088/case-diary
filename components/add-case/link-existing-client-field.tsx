@@ -23,7 +23,7 @@ type Props = {
 };
 
 /** Distinct party names (petitioner + respondent) from the user's cases */
-function getDistinctClientNames(
+function getDistinctNamesFromCases(
   rows: { petitioner_name: string; respondent_name: string }[],
 ): string[] {
   const set = new Set<string>();
@@ -33,6 +33,17 @@ function getDistinctClientNames(
     const res = r.respondent_name?.trim();
     if (res) set.add(res);
   }
+  return Array.from(set);
+}
+
+/** Merge case party names + client names, dedupe, sort */
+function mergeAndSortNames(
+  fromCases: string[],
+  fromClients: string[],
+): string[] {
+  const set = new Set<string>();
+  for (const n of fromCases) if (n) set.add(n);
+  for (const n of fromClients) if (n?.trim()) set.add(n.trim());
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
@@ -49,30 +60,38 @@ export function LinkExistingClientField({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
-  const fetchFromCases = useCallback(async () => {
+  const fetchNames = useCallback(async () => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setNames([]);
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
-      .from("cases")
-      .select("petitioner_name, respondent_name")
-      .eq("user_id", session.user.id);
+    const [casesRes, clientsRes] = await Promise.all([
+      supabase
+        .from("cases")
+        .select("petitioner_name, respondent_name")
+        .eq("user_id", session.user.id),
+      supabase
+        .from("clients")
+        .select("name")
+        .eq("user_id", session.user.id),
+    ]);
     setLoading(false);
-    if (error) {
-      setNames([]);
-      return;
-    }
-    setNames(getDistinctClientNames((data ?? []) as { petitioner_name: string; respondent_name: string }[]));
+    const fromCases = getDistinctNamesFromCases(
+      (casesRes.data ?? []) as { petitioner_name: string; respondent_name: string }[]
+    );
+    const fromClients = (clientsRes.data ?? [])
+      .map((r: { name: string }) => r.name?.trim())
+      .filter(Boolean);
+    setNames(mergeAndSortNames(fromCases, fromClients));
   }, [session?.user?.id]);
 
   useEffect(() => {
     if (open) {
-      fetchFromCases();
+      fetchNames();
       setSearch("");
     }
-  }, [open, fetchFromCases]);
+  }, [open, fetchNames]);
 
   const filteredNames = useMemo(() => {
     if (!search.trim()) return names;
@@ -141,7 +160,7 @@ export function LinkExistingClientField({
               />
             </View>
             <ThemedText style={styles.listLabel}>
-              Parties from your cases
+              Parties from your cases & saved clients
             </ThemedText>
             {loading ? (
               <View style={styles.loadingWrap}>
@@ -161,7 +180,7 @@ export function LinkExistingClientField({
               >
                 {search.trim()
                   ? "No names match."
-                  : "No existing cases yet. Add cases to link clients."}
+                  : "No parties or clients yet. Add a case or add a new client."}
               </ThemedText>
             ) : (
               <ScrollView

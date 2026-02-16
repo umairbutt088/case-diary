@@ -292,19 +292,6 @@ export default function ProfileScreen() {
                 numberOfLines={3}
               />
 
-              <SectionTitle title="Profile picture" />
-              <ThemedText style={styles.inputLabel}>
-                Or paste image URL (optional)
-              </ThemedText>
-              <TextInput
-                style={styles.input}
-                value={form.avatar_url}
-                onChangeText={(v) => updateForm({ avatar_url: v })}
-                placeholder="https://..."
-                placeholderTextColor={theme.colors.gray50}
-                autoCapitalize="none"
-              />
-
               {saveError ? (
                 <ThemedText style={styles.saveError}>{saveError}</ThemedText>
               ) : null}
