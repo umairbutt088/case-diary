@@ -9,6 +9,8 @@ type Props = {
   required?: boolean;
   hint?: string;
   error?: string | null;
+  /** Optional style for the TextInput (e.g. minHeight for multiline) */
+  inputStyle?: TextInputProps["style"];
 } & Pick<
   TextInputProps,
   | "value"
@@ -34,6 +36,7 @@ export function FormFieldWithHint({
   numberOfLines,
   placeholderTextColor = theme.colors.gray50,
   onFocus,
+  inputStyle,
 }: Props) {
   return (
     <View style={styles.wrap}>
@@ -43,9 +46,15 @@ export function FormFieldWithHint({
           {required ? " *" : ""}
         </ThemedText>
       ) : null}
-      <View style={[styles.inputRow, error && styles.inputRowError]}>
+      <View
+        style={[
+          styles.inputRow,
+          multiline && styles.inputRowMultiline,
+          error && styles.inputRowError,
+        ]}
+      >
         <TextInput
-          style={styles.input}
+          style={[styles.input, multiline && styles.inputMultiline, inputStyle]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -91,6 +100,10 @@ const styles = StyleSheet.create({
     paddingRight: 14,
     minHeight: 48,
   },
+  inputRowMultiline: {
+    alignItems: "flex-start",
+    minHeight: 100,
+  },
   inputRowError: {
     borderColor: theme.colors.themeRed,
   },
@@ -101,6 +114,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     minHeight: 44,
     maxHeight: 120,
+  },
+  inputMultiline: {
+    minHeight: 100,
+    maxHeight: 200,
   },
   hint: {
     fontSize: 13,

@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import type { ClientRow } from "@/types/client";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle } from "@/types/case";
 
@@ -35,6 +36,7 @@ export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
+  const [linkedClient, setLinkedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +65,28 @@ export default function CaseDetailScreen() {
       cancelled = true;
     };
   }, [id]);
+
+  useEffect(() => {
+    const clientId = caseData?.linked_client_id;
+    if (!clientId) {
+      setLinkedClient(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error: e } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", clientId)
+        .single();
+      if (cancelled) return;
+      if (!e && data) setLinkedClient(data as ClientRow);
+      else setLinkedClient(null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [caseData?.linked_client_id]);
 
   if (loading) {
     return (
@@ -119,7 +143,7 @@ export default function CaseDetailScreen() {
         <ThemedText style={detailStyles.sectionTitle}>Court</ThemedText>
         <DetailRow label="Court tier" value={caseData.court_tier} />
         <DetailRow label="Court name" value={caseData.court_name} />
-        <DetailRow label="Court room" value={caseData.court_room} />
+        <DetailRow label="Court room location" value={caseData.court_room} />
         <DetailRow label="Judge name" value={caseData.judge_name} />
 
         <ThemedText style={detailStyles.sectionTitle}>Client</ThemedText>
@@ -129,10 +153,29 @@ export default function CaseDetailScreen() {
             caseData.my_client_is === "petitioner"
               ? "Petitioner"
               : caseData.my_client_is === "respondent"
-              ? "Respondent"
-              : null
+                ? "Respondent"
+                : null
           }
         />
+        {linkedClient ? (
+          <>
+            <DetailRow label="Client name" value={linkedClient.name} />
+            {linkedClient.care_of?.trim() ? (
+              <DetailRow label="Care of" value={linkedClient.care_of} />
+            ) : null}
+            {linkedClient.address?.trim() ? (
+              <DetailRow label="Address" value={linkedClient.address} />
+            ) : null}
+            {linkedClient.phone?.trim() ? (
+              <DetailRow label="Phone" value={linkedClient.phone} />
+            ) : null}
+            {linkedClient.email?.trim() ? (
+              <DetailRow label="Email" value={linkedClient.email} />
+            ) : null}
+          </>
+        ) : caseData.linked_client_name ? (
+          <DetailRow label="Linked client" value={caseData.linked_client_name} />
+        ) : null}
 
         <ThemedText style={detailStyles.sectionTitle}>
           Dates & status
