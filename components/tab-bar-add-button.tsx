@@ -4,7 +4,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { View } from "react-native";
 
-import { TabBarColors } from "@/constants/theme";
+import { theme, TabBarColors } from "@/constants/theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 const ADD_BUTTON_SIZE = 56;
@@ -44,7 +44,7 @@ export function TabBarAddButton(props: BottomTabBarButtonProps) {
           borderColor: "rgba(255,255,255,0.12)",
         }}
       >
-        <MaterialIcons name="add" size={ADD_ICON_SIZE} color="#fff" />
+        <MaterialIcons name="add" size={ADD_ICON_SIZE} color={theme.colors.pureWhite} />
       </PlatformPressable>
     </View>
   );

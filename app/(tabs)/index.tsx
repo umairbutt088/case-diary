@@ -3,6 +3,7 @@ import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -86,6 +87,33 @@ export default function HomeScreen() {
     useCallback(() => {
       fetchCases();
     }, [fetchCases]),
+  );
+
+  const handleDeleteCase = useCallback(
+    (caseId: string) => {
+      Alert.alert(
+        "Delete case?",
+        "This cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              if (!session?.user?.id) return;
+              const { error: e } = await supabase
+                .from("cases")
+                .delete()
+                .eq("id", caseId)
+                .eq("user_id", session.user.id);
+              if (e) Alert.alert("Error", e.message);
+              else fetchCases();
+            },
+          },
+        ]
+      );
+    },
+    [session?.user?.id, fetchCases]
   );
 
   const { hearingsToday, filedToday } = getTodayCases(cases, today);
@@ -183,7 +211,7 @@ export default function HomeScreen() {
             </ThemedText>
             <Link href="/add-case-flow" asChild>
               <Pressable style={styles.addButton}>
-                <MaterialIcons name="add" size={22} color="#fff" />
+                <MaterialIcons name="add" size={22} color={theme.colors.pureWhite} />
                 <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
               </Pressable>
             </Link>
@@ -271,7 +299,12 @@ export default function HomeScreen() {
               </ThemedText>
               <Spacer.Column numberOfSpaces={5} />
               {section.data.map((caseItem) => (
-                <CaseCard key={caseItem.id} caseItem={caseItem} />
+                <CaseCard
+                  key={caseItem.id}
+                  caseItem={caseItem}
+                  onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
+                  onDelete={handleDeleteCase}
+                />
               ))}
             </View>
           )}
@@ -367,7 +400,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#E8EEF7",
+    backgroundColor: theme.colors.gray100,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,

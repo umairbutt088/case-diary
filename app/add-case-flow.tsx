@@ -476,7 +476,7 @@ export default function AddCaseFlowScreen() {
                 {saving ? (
                   <ActivityIndicator
                     size="small"
-                    color={theme.colors.pureWhite}
+                    color={theme.colors.black}
                   />
                 ) : (
                   <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
@@ -493,7 +493,7 @@ export default function AddCaseFlowScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.colors.background,
   },
   scroll: {
     flex: 1,

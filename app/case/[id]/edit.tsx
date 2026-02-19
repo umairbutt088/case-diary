@@ -195,7 +195,7 @@ export default function EditCaseScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
       </SafeAreaView>
     );
@@ -451,7 +451,7 @@ export default function EditCaseScreen() {
             {saving ? (
               <ActivityIndicator
                 size="small"
-                color={theme.colors.pureWhite}
+                color={theme.colors.black}
               />
             ) : (
               <ThemedText style={styles.btnPrimaryText}>Save changes</ThemedText>

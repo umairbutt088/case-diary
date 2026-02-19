@@ -33,6 +33,10 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="add-date-to-case"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="case/[id]"
               options={{
                 headerShown: false,

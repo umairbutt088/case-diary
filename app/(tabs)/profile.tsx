@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
   Pressable,
   ScrollView,
@@ -210,7 +211,7 @@ export default function ProfileScreen() {
                   <View style={styles.avatarOverlay}>
                     <ActivityIndicator
                       size="large"
-                      color={theme.colors.pureWhite}
+                      color={theme.colors.black}
                     />
                   </View>
                 )}
@@ -313,7 +314,7 @@ export default function ProfileScreen() {
                   {saving ? (
                     <ActivityIndicator
                       size="small"
-                      color={theme.colors.pureWhite}
+                      color={theme.colors.black}
                     />
                   ) : (
                     <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
@@ -347,7 +348,19 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <Pressable style={styles.signOutButton} onPress={() => signOut()}>
+      <Pressable
+        style={styles.signOutButton}
+        onPress={() =>
+          Alert.alert(
+            "Sign out?",
+            "You can sign in again anytime.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Sign out", style: "destructive", onPress: signOut },
+            ]
+          )
+        }
+      >
         <ThemedText style={styles.signOutText}>Sign out</ThemedText>
       </Pressable>
     </>
@@ -357,7 +370,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
       </SafeAreaView>
     );

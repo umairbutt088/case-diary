@@ -24,7 +24,7 @@ export function AuthButton({
       accessibilityRole="button"
     >
       {loading ? (
-        <ActivityIndicator color={theme.colors.white} />
+        <ActivityIndicator color={theme.colors.black} />
       ) : (
         <ThemedText style={styles.label}>{label}</ThemedText>
       )}

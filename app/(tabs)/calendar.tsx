@@ -68,7 +68,7 @@ function buildDateToCount(cases: CaseRow[]): Record<string, number> {
 function getMarkedDates(
   selectedDate: string,
   currentMonth: string,
-  dateToCount: Record<string, number>
+  dateToCount: Record<string, number>,
 ) {
   const [year, month] = currentMonth.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -76,7 +76,7 @@ function getMarkedDates(
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateString = `${year}-${String(month).padStart(2, "0")}-${String(
-      d
+      d,
     ).padStart(2, "0")}`;
     const dayOfWeek = new Date(year, month - 1, d).getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -295,14 +295,14 @@ export default function CalendarScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchCases();
-    }, [fetchCases])
+    }, [fetchCases]),
   );
 
   const dateToCount = useMemo(() => buildDateToCount(cases), [cases]);
 
   const markedDates = useMemo(
     () => getMarkedDates(selectedDate, currentMonth, dateToCount),
-    [selectedDate, currentMonth, dateToCount]
+    [selectedDate, currentMonth, dateToCount],
   );
 
   const casesForSelectedDate = useMemo(() => {
@@ -310,7 +310,7 @@ export default function CalendarScreen() {
       .filter(
         (c) =>
           c.next_hearing_date?.slice(0, 10) === selectedDate ||
-          c.date_of_filing?.slice(0, 10) === selectedDate
+          c.date_of_filing?.slice(0, 10) === selectedDate,
       )
       .map((c) => caseToCalendarItem(c, selectedDate));
   }, [cases, selectedDate]);
@@ -341,14 +341,29 @@ export default function CalendarScreen() {
           />
         </View>
 
-        <Pressable
-          style={styles.addDateButton}
-          onPress={() => router.push("/add-case-flow")}
-        >
-          <ThemedText style={styles.addDateButtonText}>
-            + Add a date to {selectedDate}
+        <View style={styles.addDateSection}>
+          <Pressable
+            style={styles.addDateButton}
+            onPress={() =>
+              router.push({
+                pathname: "/add-date-to-case",
+                params: { date: selectedDate },
+              })
+            }
+          >
+            <ThemedText style={styles.addDateButtonText}>
+              + Add a date to {selectedDate}
+            </ThemedText>
+          </Pressable>
+          <ThemedText
+            style={styles.addDateHint}
+            lightColor={theme.colors.gray50}
+            darkColor={theme.colors.gray50}
+          >
+            Select a date to add it as next date to a case and then click the
+            add button and follow the steps to add the date to the case.
           </ThemedText>
-        </Pressable>
+        </View>
 
         <View style={styles.caseList}>
           <ThemedText style={styles.caseListTitle}>
@@ -386,10 +401,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pureWhite,
     paddingHorizontal: 8,
   },
-  addDateButton: {
-    backgroundColor: theme.colors.themeBlack,
+  addDateSection: {
     marginHorizontal: 20,
     marginTop: 16,
+  },
+  addDateButton: {
+    backgroundColor: theme.colors.themeBlack,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -399,6 +416,12 @@ const styles = StyleSheet.create({
     color: theme.colors.pureWhite,
     fontSize: 15,
     fontWeight: "600",
+  },
+  addDateHint: {
+    fontSize: 13,
+    marginTop: 8,
+    paddingHorizontal: 4,
+    textAlign: "center",
   },
   caseList: {
     marginTop: 20,

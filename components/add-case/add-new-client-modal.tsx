@@ -185,7 +185,7 @@ export function AddNewClientModal({
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                  <ActivityIndicator size="small" color={theme.colors.black} />
                 ) : (
                   <ThemedText style={styles.btnPrimaryText}>Save Client</ThemedText>
                 )}

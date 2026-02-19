@@ -53,7 +53,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="diary"
         options={{
-          title: "List",
+          title: "All Cases",
           tabBarButton: HapticTab,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={24} name="list.bullet" color={color} />

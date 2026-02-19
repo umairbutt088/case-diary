@@ -20,7 +20,7 @@ export default function AddCasePlaceholderScreen() {
           style={styles.button}
           onPress={() => router.push("/add-case-flow" as const)}
         >
-          <MaterialIcons name="add" size={24} color="#fff" />
+          <MaterialIcons name="add" size={24} color={theme.colors.pureWhite} />
           <ThemedText style={styles.buttonText}>Open Add Case Form</ThemedText>
         </Pressable>
       </View>
@@ -31,7 +31,7 @@ export default function AddCasePlaceholderScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
