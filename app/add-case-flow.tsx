@@ -14,24 +14,23 @@ import { ChipGroup } from "@/components/add-case/chip-group";
 import { DateField } from "@/components/add-case/date-field";
 import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
+import { JudgeNameField } from "@/components/add-case/judge-name-field";
+import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
+import { LinkExistingClientField } from "@/components/add-case/link-existing-client-field";
 import { RadioOption } from "@/components/add-case/radio-option";
-import { SelectField } from "@/components/add-case/select-field";
+import { SearchableSelectField } from "@/components/add-case/searchable-select-field";
 import { StepIndicator } from "@/components/add-case/step-indicator";
 import { ThemedText } from "@/components/themed-text";
 import {
   CASE_TYPES,
   COURT_TIERS,
-  CURRENT_STATUS_OPTIONS,
   getCaseSubTypesForType,
   getCourtNamesForTier,
   getDerivedCaseTitle,
   initialAddCaseFormState,
-  NEXT_STATUS_OPTIONS,
   type AddCaseFormState,
   type CaseType,
   type CourtTier,
-  type CurrentCaseStatus,
-  type NextCaseStatus,
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
@@ -49,6 +48,7 @@ export default function AddCaseFlowScreen() {
   >({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
 
   const update = useCallback((updates: Partial<AddCaseFormState>) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -87,10 +87,11 @@ export default function AddCaseFlowScreen() {
   const validateStep2 = useCallback((): boolean => {
     const e: typeof errors = {};
     if (!form.courtTier) e.courtTier = "Please select court tier";
-    if (!form.courtName.trim()) e.courtName = "Court name is required";
+    // Court name field commented out for now – uncomment when re-enabling "Which court?"
+    // if (!form.courtName.trim()) e.courtName = "Court name is required";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
-  }, [form.courtTier, form.courtName]);
+  }, [form.courtTier]);
 
   const validateStep3 = useCallback((): boolean => {
     const e: typeof errors = {};
@@ -153,6 +154,7 @@ export default function AddCaseFlowScreen() {
       judge_name: form.judgeName.trim() || null,
       my_client_is: form.myClientIs || null,
       linked_client_id: form.linkedClientId ?? null,
+      linked_client_name: form.linkedClientName.trim() || null,
       date_of_filing: form.dateOfFiling.trim() || null,
       next_hearing_date: form.nextHearingDate.trim() || null,
       current_status: form.caseStatus || null,
@@ -270,34 +272,36 @@ export default function AddCaseFlowScreen() {
                 />
               ))}
             </FormField>
-            <SelectField
-              label="Court Name"
+            {/* Which court? – commented out; Step 2 currently uses court tier + judge + location only */}
+            {/* <SearchableSelectField
+              label="Which court?"
               required
               value={form.courtName}
               options={courtOptions}
               onChange={(v) => update({ courtName: v })}
               placeholder={
                 form.courtTier
-                  ? "Lahore High Court ▾"
-                  : "Select court tier first"
+                  ? "Select or search court..."
+                  : "Select court type first"
               }
+              searchPlaceholder="Search court name..."
               disabled={!form.courtTier || courtOptions.length === 0}
-              hint="Select the court where the case is filed"
+              hint="Search or scroll to find the court where the case is filed"
               error={errors.courtName}
-            />
-            <FormFieldWithHint
-              label="Court Room/Board #"
-              value={form.courtRoom}
-              onChangeText={(v) => update({ courtRoom: v })}
-              placeholder="Courtroom 5"
-              hint="Enter court room or board number"
-            />
-            <FormFieldWithHint
+            /> */}
+            <JudgeNameField
               label="Judge Name"
               value={form.judgeName}
-              onChangeText={(v) => update({ judgeName: v })}
-              placeholder="Justice A. Rahman"
-              hint="Enter presiding judge name"
+              onChange={(v) => update({ judgeName: v })}
+              placeholder="Select or add judge name"
+              hint="Pick from saved judges or add a new name for future use"
+            />
+            <FormFieldWithHint
+              label="Court room location"
+              value={form.courtRoom}
+              onChangeText={(v) => update({ courtRoom: v })}
+              placeholder="e.g. Building A, 2nd Floor"
+              hint="Enter court room location or address"
             />
             <View style={styles.buttons}>
               <Pressable
@@ -336,33 +340,28 @@ export default function AddCaseFlowScreen() {
                 onSelect={() => update({ myClientIs: "respondent" })}
               />
             </FormField>
-            <FormField label="Link Existing Client">
-              <View
-                style={[
-                  styles.clientOptionRow,
-                  form.clientOption === "link" &&
-                    styles.clientOptionRowSelected,
-                ]}
-              >
-                <FormFieldWithHint
-                  label=""
-                  value={form.linkedClientSearch}
-                  onChangeText={(v) =>
-                    update({ linkedClientSearch: v, clientOption: "link" })
-                  }
-                  placeholder="Search client... 🔍"
-                  hint="Search and link an existing client"
-                  onFocus={() => update({ clientOption: "link" })}
-                />
-              </View>
-            </FormField>
-            <FormField label="OR Create New Client">
+            <LinkExistingClientField
+              label="Link Existing Client"
+              value={form.linkedClientName}
+              onChange={(name) =>
+                update({
+                  linkedClientName: name ?? "",
+                  clientOption: name ? "link" : form.clientOption,
+                })
+              }
+              placeholder="Select from your existing cases"
+              hint="Parties from your cases — select to link this case to that client"
+            />
+            <FormField label="OR Add New Client">
               <Pressable
                 style={[
                   styles.addClientBtn,
                   form.clientOption === "new" && styles.addClientBtnSelected,
                 ]}
-                onPress={() => update({ clientOption: "new" })}
+                onPress={() => {
+                  update({ clientOption: "new" });
+                  setShowAddClientModal(true);
+                }}
               >
                 <ThemedText
                   style={[
@@ -374,6 +373,25 @@ export default function AddCaseFlowScreen() {
                 </ThemedText>
               </Pressable>
             </FormField>
+            <AddNewClientModal
+              visible={showAddClientModal}
+              initialName={
+                form.myClientIs === "petitioner"
+                  ? form.petitionerName
+                  : form.myClientIs === "respondent"
+                    ? form.respondentName
+                    : ""
+              }
+              onClose={() => setShowAddClientModal(false)}
+              onSaved={(clientId) => {
+                update({
+                  linkedClientId: clientId,
+                  linkedClientName: "",
+                  clientOption: "new",
+                });
+                setShowAddClientModal(false);
+              }}
+            />
             <View style={styles.buttons}>
               <Pressable
                 style={[styles.btn, styles.btnSecondary]}
@@ -401,6 +419,16 @@ export default function AddCaseFlowScreen() {
               placeholder="e.g. 08/09/2025"
               hint="Enter date of filing"
             />
+            <FormFieldWithHint
+              label="Current status"
+              value={form.caseStatus}
+              onChangeText={(v) => update({ caseStatus: v })}
+              placeholder="e.g. Listed, Heard, Adjourned"
+              hint="Status of the case as of today or from the last hearing"
+              multiline
+              numberOfLines={4}
+              inputStyle={styles.statusInput}
+            />
             <DateField
               label="Next Hearing Date"
               required
@@ -410,40 +438,16 @@ export default function AddCaseFlowScreen() {
               hint="Enter next hearing date"
               error={errors.nextHearingDate}
             />
-            <FormField
-              label="Current status"
-              hint="Status of the case as of today or from the last hearing (if any)"
-            >
-              <View style={styles.statusColumn}>
-                {CURRENT_STATUS_OPTIONS.map(({ value, label }) => (
-                  <RadioOption
-                    key={value}
-                    label={label}
-                    selected={form.caseStatus === value}
-                    onSelect={() =>
-                      update({ caseStatus: value as CurrentCaseStatus })
-                    }
-                  />
-                ))}
-              </View>
-            </FormField>
-            <FormField
+            <FormFieldWithHint
               label="Next status"
+              value={form.nextStatus}
+              onChangeText={(v) => update({ nextStatus: v })}
+              placeholder="e.g. Arguments, Judgment, Next hearing"
               hint="What is coming up next in this case"
-            >
-              <View style={styles.statusColumn}>
-                {NEXT_STATUS_OPTIONS.map(({ value, label }) => (
-                  <RadioOption
-                    key={value}
-                    label={label}
-                    selected={form.nextStatus === value}
-                    onSelect={() =>
-                      update({ nextStatus: value as NextCaseStatus })
-                    }
-                  />
-                ))}
-              </View>
-            </FormField>
+              multiline
+              numberOfLines={4}
+              inputStyle={styles.statusInput}
+            />
             <FormFieldWithHint
               label="Notes (Optional)"
               value={form.notes}
@@ -543,8 +547,8 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
-  statusColumn: {
-    gap: 4,
+  statusInput: {
+    minHeight: 100,
   },
   saveError: {
     color: theme.colors.themeRed,

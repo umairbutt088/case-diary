@@ -12,23 +12,41 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CaseCard } from "@/components/case-card";
 import { ThemedText } from "@/components/themed-text";
+import { Spacer } from "@/components/ui";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
-import { getTodayISO } from "@/types/case";
+import { getTodayISO, getWeekBounds } from "@/types/case";
+
+type HomeFilter = "today" | "weekly";
 
 function getTodayCases(
   cases: CaseRow[],
-  today: string
+  today: string,
 ): { hearingsToday: CaseRow[]; filedToday: CaseRow[] } {
   const hearingsToday = cases.filter(
-    (c) => c.next_hearing_date && c.next_hearing_date.slice(0, 10) === today
+    (c) => c.next_hearing_date && c.next_hearing_date.slice(0, 10) === today,
   );
   const filedToday = cases.filter(
-    (c) => c.date_of_filing && c.date_of_filing.slice(0, 10) === today
+    (c) => c.date_of_filing && c.date_of_filing.slice(0, 10) === today,
   );
   return { hearingsToday, filedToday };
+}
+
+function getWeeklyCases(
+  cases: CaseRow[],
+  weekStart: string,
+  weekEnd: string,
+): { hearingsThisWeek: CaseRow[]; filedThisWeek: CaseRow[] } {
+  const inRange = (date: string | null) => {
+    if (!date || date.length < 10) return false;
+    const d = date.slice(0, 10);
+    return d >= weekStart && d <= weekEnd;
+  };
+  const hearingsThisWeek = cases.filter((c) => inRange(c.next_hearing_date));
+  const filedThisWeek = cases.filter((c) => inRange(c.date_of_filing));
+  return { hearingsThisWeek, filedThisWeek };
 }
 
 export default function HomeScreen() {
@@ -37,10 +55,12 @@ export default function HomeScreen() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<HomeFilter>("today");
 
   const today = getTodayISO();
+  const { weekStart, weekEnd } = getWeekBounds();
 
-  const fetchTodayCases = useCallback(async () => {
+  const fetchCases = useCallback(async () => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
@@ -52,7 +72,7 @@ export default function HomeScreen() {
       .from("cases")
       .select("*")
       .eq("user_id", session.user.id)
-      .or(`next_hearing_date.eq.${today},date_of_filing.eq.${today}`);
+      .order("next_hearing_date", { ascending: true, nullsFirst: false });
     setLoading(false);
     if (e) {
       setError(e.message);
@@ -60,16 +80,25 @@ export default function HomeScreen() {
       return;
     }
     setCases((data as CaseRow[]) ?? []);
-  }, [session?.user?.id, today]);
+  }, [session?.user?.id]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchTodayCases();
-    }, [fetchTodayCases])
+      fetchCases();
+    }, [fetchCases]),
   );
 
   const { hearingsToday, filedToday } = getTodayCases(cases, today);
-  const hasAny = hearingsToday.length > 0 || filedToday.length > 0;
+  const { hearingsThisWeek, filedThisWeek } = getWeeklyCases(
+    cases,
+    weekStart,
+    weekEnd,
+  );
+
+  const isTodayFilter = filter === "today";
+  const hasAnyToday = hearingsToday.length > 0 || filedToday.length > 0;
+  const hasAnyWeekly = hearingsThisWeek.length > 0 || filedThisWeek.length > 0;
+  const hasAny = isTodayFilter ? hasAnyToday : hasAnyWeekly;
 
   if (loading && cases.length === 0) {
     return (
@@ -98,6 +127,44 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.container}>
+          <ThemedText type="subtitle" style={styles.title}>
+            {isTodayFilter ? "Today" : "This week"}
+          </ThemedText>
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[
+                styles.filterBtn,
+                isTodayFilter && styles.filterBtnActive,
+              ]}
+              onPress={() => setFilter("today")}
+            >
+              <ThemedText
+                style={[
+                  styles.filterBtnText,
+                  isTodayFilter && styles.filterBtnTextActive,
+                ]}
+              >
+                Today
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.filterBtn,
+                !isTodayFilter && styles.filterBtnActive,
+              ]}
+              onPress={() => setFilter("weekly")}
+            >
+              <ThemedText
+                style={[
+                  styles.filterBtnText,
+                  !isTodayFilter && styles.filterBtnTextActive,
+                ]}
+              >
+                Weekly
+              </ThemedText>
+            </Pressable>
+          </View>
+          <Spacer.Column numberOfSpaces={10} />
           <View style={styles.card}>
             <View style={styles.iconCircle}>
               <MaterialIcons
@@ -106,9 +173,13 @@ export default function HomeScreen() {
                 color={theme.colors.zodiacColour}
               />
             </View>
-            <ThemedText style={styles.heading}>Nothing for today</ThemedText>
+            <ThemedText style={styles.heading}>
+              {isTodayFilter ? "Nothing for today" : "Nothing this week"}
+            </ThemedText>
             <ThemedText style={styles.subtext}>
-              Cases with a hearing today or filed today will appear here.
+              {isTodayFilter
+                ? "Cases with a hearing today or filed today will appear here."
+                : "Cases with a hearing or filing this week will appear here."}
             </ThemedText>
             <Link href="/add-case-flow" asChild>
               <Pressable style={styles.addButton}>
@@ -136,19 +207,60 @@ export default function HomeScreen() {
   }
 
   const sections: { title: string; data: CaseRow[] }[] = [];
-  if (hearingsToday.length > 0) {
-    sections.push({ title: "Hearings today", data: hearingsToday });
-  }
-  if (filedToday.length > 0) {
-    sections.push({ title: "Filed today", data: filedToday });
+  if (isTodayFilter) {
+    if (hearingsToday.length > 0) {
+      sections.push({ title: "Hearings today", data: hearingsToday });
+    }
+    if (filedToday.length > 0) {
+      sections.push({ title: "Filed today", data: filedToday });
+    }
+  } else {
+    if (hearingsThisWeek.length > 0) {
+      sections.push({ title: "Hearings this week", data: hearingsThisWeek });
+    }
+    if (filedThisWeek.length > 0) {
+      sections.push({ title: "Filed this week", data: filedThisWeek });
+    }
   }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.container}>
+        <Spacer.Column numberOfSpaces={1} />
         <ThemedText type="subtitle" style={styles.title}>
-          Today
+          {isTodayFilter ? "Today Cases" : "This week Cases"}
         </ThemedText>
+        <Spacer.Column numberOfSpaces={4} />
+
+        <View style={styles.filterRow}>
+          <Pressable
+            style={[styles.filterBtn, isTodayFilter && styles.filterBtnActive]}
+            onPress={() => setFilter("today")}
+          >
+            <ThemedText
+              style={[
+                styles.filterBtnText,
+                isTodayFilter && styles.filterBtnTextActive,
+              ]}
+            >
+              Today
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={[styles.filterBtn, !isTodayFilter && styles.filterBtnActive]}
+            onPress={() => setFilter("weekly")}
+          >
+            <ThemedText
+              style={[
+                styles.filterBtnText,
+                !isTodayFilter && styles.filterBtnTextActive,
+              ]}
+            >
+              Weekly
+            </ThemedText>
+          </Pressable>
+        </View>
+        <Spacer.Column numberOfSpaces={5} />
         <FlatList
           data={sections}
           keyExtractor={(item) => item.title}
@@ -157,6 +269,7 @@ export default function HomeScreen() {
               <ThemedText style={styles.sectionTitle}>
                 {section.title}
               </ThemedText>
+              <Spacer.Column numberOfSpaces={5} />
               {section.data.map((caseItem) => (
                 <CaseCard key={caseItem.id} caseItem={caseItem} />
               ))}
@@ -188,7 +301,40 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 12,
+    alignSelf: "center",
     color: theme.colors.black,
+    backgroundColor: theme.colors.background,
+  },
+  filterRow: {
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    width: "100%",
+    paddingVertical: 10,
+    justifyContent: "space-around",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+  },
+  filterBtn: {
+    paddingVertical: 10,
+    width: "45%",
+    alignItems: "center",
+    borderRadius: 12,
+    backgroundColor: theme.colors.grey100,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  filterBtnActive: {
+    backgroundColor: theme.colors.themeBlack,
+    borderColor: theme.colors.themeBlack,
+  },
+  filterBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.gray50,
+  },
+  filterBtnTextActive: {
+    color: theme.colors.pureWhite,
   },
   section: {
     marginBottom: 20,

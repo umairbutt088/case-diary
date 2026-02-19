@@ -16,6 +16,7 @@ export type CaseRow = {
   judge_name: string | null;
   my_client_is: string | null;
   linked_client_id: string | null;
+  linked_client_name: string | null;
   date_of_filing: string | null;
   next_hearing_date: string | null;
   current_status: string | null;
@@ -47,4 +48,21 @@ export function getTodayISO(): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Current week bounds (Sunday–Saturday) in YYYY-MM-DD */
+export function getWeekBounds(): { weekStart: string; weekEnd: string } {
+  const d = new Date();
+  const dayOfWeek = d.getDay();
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() - dayOfWeek);
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  const toISO = (x: Date) => {
+    const y = x.getFullYear();
+    const m = String(x.getMonth() + 1).padStart(2, "0");
+    const day = String(x.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  return { weekStart: toISO(sunday), weekEnd: toISO(saturday) };
 }

@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.usamabutt.legal-diary"
+      "bundleIdentifier": "com.usamabutt.legal-diary",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Legal Diary uses your photo library to set your profile picture."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -41,7 +44,14 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Legal Diary uses your photos to set your profile picture.",
+          "cameraPermission": "Legal Diary uses the camera to take your profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

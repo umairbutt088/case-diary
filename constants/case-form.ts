@@ -212,10 +212,11 @@ export type AddCaseFormState = {
   clientOption: ClientOption;
   linkedClientSearch: string;
   linkedClientId: string | null;
+  linkedClientName: string;
   dateOfFiling: string;
   nextHearingDate: string;
-  caseStatus: CurrentCaseStatus | "";
-  nextStatus: NextCaseStatus | "";
+  caseStatus: string;
+  nextStatus: string;
   notes: string;
 };
 
@@ -233,6 +234,7 @@ export const initialAddCaseFormState: AddCaseFormState = {
   clientOption: "",
   linkedClientSearch: "",
   linkedClientId: null,
+  linkedClientName: "",
   dateOfFiling: "",
   nextHearingDate: "",
   caseStatus: "",
