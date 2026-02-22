@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   StyleSheet,
   View,
 } from "react-native";
@@ -125,6 +126,14 @@ export default function DiaryScreen() {
         <FlatList
           data={cases}
           keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchCases}
+              colors={[theme.colors.black]}
+              tintColor={theme.colors.black}
+            />
+          }
           renderItem={({ item }) => (
           <CaseCard
             caseItem={item}

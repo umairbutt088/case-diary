@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   View,
 } from "react-native";
@@ -292,6 +293,14 @@ export default function HomeScreen() {
         <FlatList
           data={sections}
           keyExtractor={(item) => item.title}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchCases}
+              colors={[theme.colors.black]}
+              tintColor={theme.colors.black}
+            />
+          }
           renderItem={({ item: section }) => (
             <View style={styles.section}>
               <ThemedText style={styles.sectionTitle}>

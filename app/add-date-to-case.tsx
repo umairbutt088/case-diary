@@ -101,6 +101,7 @@ export default function AddDateToCaseScreen() {
         setError(e.message);
         return;
       }
+      setError(null);
       router.back();
     },
     [selectedDate, session?.user?.id, router]

@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ import {
   type CalendarCaseItem,
 } from "@/components/calendar-case-card";
 import { ThemedText } from "@/components/themed-text";
+import { Spacer } from "@/components/ui";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -270,6 +272,8 @@ export default function CalendarScreen() {
   const [currentMonth, setCurrentMonth] = useState(today.slice(0, 7));
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { session } = useAuth();
 
@@ -277,16 +281,19 @@ export default function CalendarScreen() {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
+      setError(null);
       return;
     }
+    setError(null);
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error: e } = await supabase
       .from("cases")
       .select("*")
       .eq("user_id", session.user.id);
     setLoading(false);
-    if (error) {
+    if (e) {
       setCases([]);
+      setError(e.message);
       return;
     }
     setCases((data as CaseRow[]) ?? []);
@@ -319,12 +326,26 @@ export default function CalendarScreen() {
     setCurrentMonth(date.dateString.slice(0, 7));
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchCases();
+    setRefreshing(false);
+  }, [fetchCases]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.black]}
+            tintColor={theme.colors.black}
+          />
+        }
       >
         <View style={styles.calendarWrap}>
           <Calendar
@@ -340,8 +361,12 @@ export default function CalendarScreen() {
             dayComponent={(props) => <CalendarDayWithBadge {...props} />}
           />
         </View>
-
+        <Spacer.Column numberOfSpaces={5} />
         <View style={styles.addDateSection}>
+          <Text style={styles.addDateSectionTitle}>
+            Add this date {`"${selectedDate}"`} as next hearing date to a case
+          </Text>
+          <Spacer.Column numberOfSpaces={5} />
           <Pressable
             style={styles.addDateButton}
             onPress={() =>
@@ -352,7 +377,7 @@ export default function CalendarScreen() {
             }
           >
             <ThemedText style={styles.addDateButtonText}>
-              + Add a date to {selectedDate}
+              + Add as next hearing date
             </ThemedText>
           </Pressable>
           <ThemedText
@@ -360,8 +385,8 @@ export default function CalendarScreen() {
             lightColor={theme.colors.gray50}
             darkColor={theme.colors.gray50}
           >
-            Select a date to add it as next date to a case and then click the
-            add button and follow the steps to add the date to the case.
+            Pick a case from the list.{"\n"}Its next hearing date will be set to
+            this day.
           </ThemedText>
         </View>
 
@@ -369,7 +394,20 @@ export default function CalendarScreen() {
           <ThemedText style={styles.caseListTitle}>
             Cases on {selectedDate}
           </ThemedText>
-          {loading ? (
+          {error ? (
+            <View style={styles.errorWrap}>
+              <ThemedText style={styles.errorText}>{error}</ThemedText>
+              <Pressable
+                style={styles.retryButton}
+                onPress={() => {
+                  setError(null);
+                  fetchCases();
+                }}
+              >
+                <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
+              </Pressable>
+            </View>
+          ) : loading && !refreshing ? (
             <ThemedText style={styles.noCases}>Loading…</ThemedText>
           ) : casesForSelectedDate.length === 0 ? (
             <ThemedText style={styles.noCases}>
@@ -427,6 +465,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingHorizontal: 20,
   },
+  addDateSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.black,
+    marginBottom: 12,
+    textAlign: "center",
+  },
   caseListTitle: {
     fontSize: 16,
     fontWeight: "600",
@@ -436,5 +481,25 @@ const styles = StyleSheet.create({
   noCases: {
     fontSize: 14,
     color: theme.colors.gray50,
+  },
+  errorWrap: {
+    marginTop: 4,
+  },
+  errorText: {
+    fontSize: 14,
+    color: theme.colors.themeRed,
+    marginBottom: 12,
+  },
+  retryButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.btnBlue,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.pureWhite,
   },
 });
