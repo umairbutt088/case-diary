@@ -181,9 +181,9 @@ export default function ProfileScreen() {
 
   const content = (
     <>
-      <ThemedText type="subtitle" style={styles.title}>
+      {/* <ThemedText type="subtitle" style={styles.title}>
         Profile
-      </ThemedText>
+      </ThemedText> */}
 
       {error && !profile ? (
         <ThemedText style={styles.errorText}>{error}</ThemedText>
@@ -193,8 +193,8 @@ export default function ProfileScreen() {
           <View style={styles.avatarSection}>
             <Pressable
               style={styles.avatarPressable}
-              onPress={pickImage}
-              disabled={uploading}
+              onPress={editing ? pickImage : undefined}
+              disabled={uploading || !editing}
             >
               <View style={styles.avatarWrap}>
                 {displayAvatarUrl ? (
@@ -215,7 +215,7 @@ export default function ProfileScreen() {
                     />
                   </View>
                 )}
-                {!uploading && (
+                {!uploading && !displayAvatarUrl && (
                   <View style={styles.avatarEditBadge}>
                     <MaterialIcons
                       name="edit"
@@ -326,15 +326,11 @@ export default function ProfileScreen() {
             <>
               <SectionTitle title="Personal" />
               <FieldRow label="Name" value={displayName || null} />
-              <FieldRow label="Role" value={profile?.role ?? null} />
-
               <SectionTitle title="Contact" />
               <FieldRow label="Email" value={profile?.email} />
               <FieldRow label="Mobile number" value={profile?.phone} />
-
               <SectionTitle title="Address" />
               <FieldRow label="Address" value={profile?.address} />
-
               <Pressable
                 style={styles.editButton}
                 onPress={() => setEditing(true)}
@@ -351,14 +347,10 @@ export default function ProfileScreen() {
       <Pressable
         style={styles.signOutButton}
         onPress={() =>
-          Alert.alert(
-            "Sign out?",
-            "You can sign in again anytime.",
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Sign out", style: "destructive", onPress: signOut },
-            ]
-          )
+          Alert.alert("Sign out?", "You can sign in again anytime.", [
+            { text: "Cancel", style: "cancel" },
+            { text: "Sign out", style: "destructive", onPress: signOut },
+          ])
         }
       >
         <ThemedText style={styles.signOutText}>Sign out</ThemedText>
@@ -567,7 +559,7 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.btnBlue,
+    color: theme.colors.black,
   },
   errorText: {
     fontSize: 15,

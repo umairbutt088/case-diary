@@ -10,15 +10,14 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { DateField } from "@/components/add-case/date-field";
 import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
 import { JudgeNameField } from "@/components/add-case/judge-name-field";
-import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { LinkExistingClientField } from "@/components/add-case/link-existing-client-field";
 import { RadioOption } from "@/components/add-case/radio-option";
-import { SearchableSelectField } from "@/components/add-case/searchable-select-field";
 import { StepIndicator } from "@/components/add-case/step-indicator";
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -55,7 +54,7 @@ export default function AddCaseFlowScreen() {
     setErrors((prev) => {
       const next = { ...prev };
       Object.keys(updates).forEach(
-        (k) => delete next[k as keyof AddCaseFormState]
+        (k) => delete next[k as keyof AddCaseFormState],
       );
       return next;
     });
@@ -63,7 +62,7 @@ export default function AddCaseFlowScreen() {
 
   const courtOptions = useMemo(
     () => getCourtNamesForTier(form.courtTier),
-    [form.courtTier]
+    [form.courtTier],
   );
 
   const validateStep1 = useCallback((): boolean => {
@@ -137,7 +136,7 @@ export default function AddCaseFlowScreen() {
 
     const caseTitle = getDerivedCaseTitle(
       form.petitionerName,
-      form.respondentName
+      form.respondentName,
     );
 
     const row = {
@@ -178,7 +177,7 @@ export default function AddCaseFlowScreen() {
   }, [form, session?.user?.id, validateStep4, router]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <StepIndicator currentStep={step} />
       <KeyboardAwareScrollView
         style={styles.scroll}
@@ -474,10 +473,7 @@ export default function AddCaseFlowScreen() {
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.black}
-                  />
+                  <ActivityIndicator size="small" color={theme.colors.white} />
                 ) : (
                   <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
                 )}
@@ -508,6 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     marginTop: 8,
+    marginBottom: 24,
   },
   nextButtonText: {
     color: theme.colors.pureWhite,
@@ -565,6 +562,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginTop: 24,
+    marginBottom: 24,
   },
   btn: {
     flex: 1,

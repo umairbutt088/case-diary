@@ -38,14 +38,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
+    backgroundColor: "#FFFFFF",
   },
   title: {
     textAlign: "center",
     marginBottom: 12,
+    color: "#000000",
   },
   subtitle: {
     textAlign: "center",
     marginBottom: 32,
+    color: "#000000",
   },
   cta: {
     paddingVertical: 12,

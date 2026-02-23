@@ -37,7 +37,7 @@ export default function RootLayout() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="case/[id]"
+              name="case"
               options={{
                 headerShown: false,
               }}

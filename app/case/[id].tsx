@@ -142,20 +142,18 @@ export default function CaseDetailScreen() {
   const title = getCaseDisplayTitle(caseData);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons
             name="arrow-back"
             size={24}
-            color={theme.colors.btnBlue}
+            color={theme.colors.black}
           />
         </Pressable>
         <Pressable
           style={styles.headerTitleWrap}
-          onLongPress={() =>
-            Alert.alert("Case title", title, [{ text: "OK" }])
-          }
+          onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
           accessibilityLabel={title}
           accessibilityHint="Long press to show full title"
         >
@@ -172,7 +170,7 @@ export default function CaseDetailScreen() {
           style={styles.editBtn}
           onPress={() => router.push(`/case/${id}/edit`)}
         >
-          <MaterialIcons name="edit" size={22} color={theme.colors.btnBlue} />
+          <MaterialIcons name="edit" size={22} color={theme.colors.black} />
           <ThemedText style={styles.editBtnText}>Edit</ThemedText>
         </Pressable>
       </View>
@@ -282,7 +280,7 @@ export default function CaseDetailScreen() {
                     router.replace("/(tabs)");
                   },
                 },
-              ]
+              ],
             );
           }}
           disabled={deleting}
@@ -336,7 +334,7 @@ const styles = StyleSheet.create({
   editBtnText: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.btnBlue,
+    color: theme.colors.black,
   },
   scroll: {
     flex: 1,

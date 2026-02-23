@@ -45,9 +45,7 @@ export function CaseCard({ caseItem, onEdit, onDelete }: CaseCardProps) {
       <View style={styles.cardTop}>
         <Pressable
           style={styles.titleWrap}
-          onLongPress={() =>
-            Alert.alert("Case title", title, [{ text: "OK" }])
-          }
+          onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
           accessibilityLabel={title}
           accessibilityHint="Long press to show full title"
         >
@@ -114,7 +112,7 @@ export function CaseCard({ caseItem, onEdit, onDelete }: CaseCardProps) {
             </Pressable>
           ) : null}
           <Pressable
-            onPress={openDetails}
+            onPress={() => router.push(`/calendar`)}
             style={styles.iconButton}
             hitSlop={8}
             accessibilityLabel="View next date / calendar"

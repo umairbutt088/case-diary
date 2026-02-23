@@ -24,7 +24,6 @@ import {
   CASE_TYPES,
   COURT_TIERS,
   getCaseSubTypesForType,
-  getCourtNamesForTier,
   getDerivedCaseTitle,
   initialAddCaseFormState,
   type AddCaseFormState,
@@ -53,7 +52,11 @@ function caseRowToFormState(row: CaseRow): AddCaseFormState {
         : row.my_client_is === "respondent"
           ? "respondent"
           : "",
-    clientOption: row.linked_client_id ? "new" : row.linked_client_name ? "link" : "",
+    clientOption: row.linked_client_id
+      ? "new"
+      : row.linked_client_name
+        ? "link"
+        : "",
     linkedClientSearch: "",
     linkedClientId: row.linked_client_id ?? null,
     linkedClientName: row.linked_client_name ?? "",
@@ -113,7 +116,7 @@ export default function EditCaseScreen() {
     setErrors((prev) => {
       const next = { ...prev };
       Object.keys(updates).forEach(
-        (k) => delete next[k as keyof AddCaseFormState]
+        (k) => delete next[k as keyof AddCaseFormState],
       );
       return next;
     });
@@ -122,13 +125,17 @@ export default function EditCaseScreen() {
 
   const validate = useCallback((): boolean => {
     const e: typeof errors = {};
-    if (!form.petitionerName.trim()) e.petitionerName = "Petitioner name is required";
-    if (!form.respondentName.trim()) e.respondentName = "Respondent name is required";
+    if (!form.petitionerName.trim())
+      e.petitionerName = "Petitioner name is required";
+    if (!form.respondentName.trim())
+      e.respondentName = "Respondent name is required";
     if (!form.caseType) e.caseType = "Please select a case type";
-    if (form.caseType && !form.caseSubType.trim()) e.caseSubType = "Please select type of case";
+    if (form.caseType && !form.caseSubType.trim())
+      e.caseSubType = "Please select type of case";
     if (!form.courtTier) e.courtTier = "Please select court tier";
     if (!form.myClientIs) e.myClientIs = "Please select who your client is";
-    if (!form.nextHearingDate.trim()) e.nextHearingDate = "Next hearing date is required";
+    if (!form.nextHearingDate.trim())
+      e.nextHearingDate = "Next hearing date is required";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
   }, [
@@ -151,7 +158,7 @@ export default function EditCaseScreen() {
 
     const caseTitle = getDerivedCaseTitle(
       form.petitionerName,
-      form.respondentName
+      form.respondentName,
     );
 
     const row = {
@@ -193,7 +200,7 @@ export default function EditCaseScreen() {
 
   if (loading || (!caseData && !error)) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={styles.safeArea} edges={[]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
@@ -206,25 +213,35 @@ export default function EditCaseScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <MaterialIcons name="arrow-back" size={24} color={theme.colors.btnBlue} />
+            <MaterialIcons
+              name="arrow-back"
+              size={24}
+              color={theme.colors.black}
+            />
           </Pressable>
           <ThemedText style={styles.headerTitle}>Edit case</ThemedText>
         </View>
         <View style={styles.centered}>
-          <ThemedText style={styles.errorText}>{error || "Case not found"}</ThemedText>
+          <ThemedText style={styles.errorText}>
+            {error || "Case not found"}
+          </ThemedText>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
+      {/* <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons name="arrow-back" size={24} color={theme.colors.btnBlue} />
+          <MaterialIcons
+            name="arrow-back"
+            size={24}
+            color={theme.colors.btnBlue}
+          />
         </Pressable>
         <ThemedText style={styles.headerTitle}>Edit case</ThemedText>
-      </View>
+      </View> */}
       <KeyboardAwareScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -288,7 +305,9 @@ export default function EditCaseScreen() {
         <ThemedText style={styles.sectionTitle}>Court</ThemedText>
         <FormField label="Court Tier" required>
           {errors.courtTier ? (
-            <ThemedText style={styles.fieldError}>{errors.courtTier}</ThemedText>
+            <ThemedText style={styles.fieldError}>
+              {errors.courtTier}
+            </ThemedText>
           ) : null}
           {COURT_TIERS.map(({ value, label }) => (
             <RadioOption
@@ -319,7 +338,9 @@ export default function EditCaseScreen() {
         <ThemedText style={styles.sectionTitle}>Client</ThemedText>
         <FormField label="My Client is" required>
           {errors.myClientIs ? (
-            <ThemedText style={styles.fieldError}>{errors.myClientIs}</ThemedText>
+            <ThemedText style={styles.fieldError}>
+              {errors.myClientIs}
+            </ThemedText>
           ) : null}
           <RadioOption
             label="Petitioner"
@@ -449,12 +470,11 @@ export default function EditCaseScreen() {
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator
-                size="small"
-                color={theme.colors.black}
-              />
+              <ActivityIndicator size="small" color={theme.colors.black} />
             ) : (
-              <ThemedText style={styles.btnPrimaryText}>Save changes</ThemedText>
+              <ThemedText style={styles.btnPrimaryText}>
+                Save changes
+              </ThemedText>
             )}
           </Pressable>
         </View>
@@ -498,7 +518,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: theme.colors.gray50,
-    marginTop: 24,
     marginBottom: 12,
     textTransform: "uppercase",
     letterSpacing: 0.5,

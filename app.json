@@ -41,7 +41,10 @@
           "imageHeight": 300,
           "backgroundColor": "#FFFFFF",
           "dark": {
-            "backgroundColor": "#1A1A1A"
+            "backgroundColor": "#FFFFFF"
+          },
+          "android": {
+            "backgroundColor": "#FFFFFF"
           }
         }
       ],

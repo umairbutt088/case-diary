@@ -92,29 +92,25 @@ export default function HomeScreen() {
 
   const handleDeleteCase = useCallback(
     (caseId: string) => {
-      Alert.alert(
-        "Delete case?",
-        "This cannot be undone.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              if (!session?.user?.id) return;
-              const { error: e } = await supabase
-                .from("cases")
-                .delete()
-                .eq("id", caseId)
-                .eq("user_id", session.user.id);
-              if (e) Alert.alert("Error", e.message);
-              else fetchCases();
-            },
+      Alert.alert("Delete case?", "This cannot be undone.", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (!session?.user?.id) return;
+            const { error: e } = await supabase
+              .from("cases")
+              .delete()
+              .eq("id", caseId)
+              .eq("user_id", session.user.id);
+            if (e) Alert.alert("Error", e.message);
+            else fetchCases();
           },
-        ]
-      );
+        },
+      ]);
     },
-    [session?.user?.id, fetchCases]
+    [session?.user?.id, fetchCases],
   );
 
   const { hearingsToday, filedToday } = getTodayCases(cases, today);
@@ -212,7 +208,11 @@ export default function HomeScreen() {
             </ThemedText>
             <Link href="/add-case-flow" asChild>
               <Pressable style={styles.addButton}>
-                <MaterialIcons name="add" size={22} color={theme.colors.pureWhite} />
+                <MaterialIcons
+                  name="add"
+                  size={22}
+                  color={theme.colors.pureWhite}
+                />
                 <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
               </Pressable>
             </Link>

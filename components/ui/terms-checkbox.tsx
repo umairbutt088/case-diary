@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
+    color: theme.colors.black,
   },
   link: {
     textDecorationLine: "underline",
