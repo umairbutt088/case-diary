@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
+import { useAuth } from "@/context/auth-context";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle } from "@/types/case";
@@ -51,10 +53,12 @@ function SectionCard({
 export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { session } = useAuth();
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
   const [linkedClient, setLinkedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -108,7 +112,7 @@ export default function CaseDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
       </SafeAreaView>
     );
@@ -138,23 +142,35 @@ export default function CaseDetailScreen() {
   const title = getCaseDisplayTitle(caseData);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons
             name="arrow-back"
             size={24}
-            color={theme.colors.btnBlue}
+            color={theme.colors.black}
           />
         </Pressable>
-        <ThemedText style={styles.headerTitle} numberOfLines={1}>
-          {title}
-        </ThemedText>
+        <Pressable
+          style={styles.headerTitleWrap}
+          onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
+          accessibilityLabel={title}
+          accessibilityHint="Long press to show full title"
+        >
+          <ThemedText
+            style={styles.headerTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+          >
+            {title}
+          </ThemedText>
+        </Pressable>
         <Pressable
           style={styles.editBtn}
           onPress={() => router.push(`/case/${id}/edit`)}
         >
-          <MaterialIcons name="edit" size={22} color={theme.colors.btnBlue} />
+          <MaterialIcons name="edit" size={22} color={theme.colors.black} />
           <ThemedText style={styles.editBtnText}>Edit</ThemedText>
         </Pressable>
       </View>
@@ -236,6 +252,45 @@ export default function CaseDetailScreen() {
         <SectionCard title="Notes">
           <DetailRow label="Notes" value={caseData.notes} />
         </SectionCard>
+
+        <Pressable
+          style={styles.deleteButton}
+          onPress={() => {
+            Alert.alert(
+              "Delete case?",
+              "This cannot be undone. The case and its details will be permanently removed.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: async () => {
+                    if (!id || !session?.user?.id) return;
+                    setDeleting(true);
+                    const { error: e } = await supabase
+                      .from("cases")
+                      .delete()
+                      .eq("id", id)
+                      .eq("user_id", session.user.id);
+                    setDeleting(false);
+                    if (e) {
+                      Alert.alert("Error", e.message);
+                      return;
+                    }
+                    router.replace("/(tabs)");
+                  },
+                },
+              ],
+            );
+          }}
+          disabled={deleting}
+        >
+          {deleting ? (
+            <ThemedText style={styles.deleteButtonText}>Deleting…</ThemedText>
+          ) : (
+            <ThemedText style={styles.deleteButtonText}>Delete case</ThemedText>
+          )}
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -259,8 +314,12 @@ const styles = StyleSheet.create({
     padding: 4,
     marginRight: 8,
   },
-  headerTitle: {
+  headerTitleWrap: {
     flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  headerTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: theme.colors.black,
@@ -275,7 +334,7 @@ const styles = StyleSheet.create({
   editBtnText: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.btnBlue,
+    color: theme.colors.black,
   },
   scroll: {
     flex: 1,
@@ -320,5 +379,20 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.themeRed,
     fontSize: 16,
+  },
+  deleteButton: {
+    marginTop: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: theme.colors.themeRed,
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.themeRed,
   },
 });

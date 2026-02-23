@@ -151,7 +151,7 @@ export function JudgeNameField({
                 {adding ? (
                   <ActivityIndicator
                     size="small"
-                    color={theme.colors.pureWhite}
+                    color={theme.colors.black}
                   />
                 ) : (
                   <ThemedText style={styles.addBtnText}>Add</ThemedText>

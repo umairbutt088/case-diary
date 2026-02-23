@@ -32,7 +32,9 @@ export function AuthScreenLayout({
         {children}
         {footerLink ? (
           <ThemedView style={styles.footer}>
-            <ThemedText>{footerLink.linkHeader} </ThemedText>
+            <ThemedText style={styles.footerLinkHeader}>
+              {footerLink.linkHeader}{" "}
+            </ThemedText>
             <Link href={footerLink.href as any} asChild>
               <Pressable accessibilityRole="link">
                 <ThemedText type="link">{footerLink.linkLabel}</ThemedText>
@@ -58,6 +60,8 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: 100,
     textAlign: "center",
+    color: theme.colors.black,
+    fontWeight: "900",
   },
   footer: {
     marginTop: 24,
@@ -65,6 +69,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexWrap: "wrap",
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.background,
+  },
+  footerLinkHeader: {
+    color: theme.colors.black,
   },
 });

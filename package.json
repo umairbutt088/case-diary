@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "ios:install": "cd ios/ && pod install && cd ..",
+    "prebuild:clean": "expo prebuild --clean",
     "build:android": "eas build --profile preview --platform android"
   },
   "dependencies": {

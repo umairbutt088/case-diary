@@ -1,6 +1,13 @@
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CaseCard } from "@/components/case-card";
@@ -11,6 +18,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 
 export default function DiaryScreen() {
+  const router = useRouter();
   const { session } = useAuth();
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +50,33 @@ export default function DiaryScreen() {
     useCallback(() => {
       fetchCases();
     }, [fetchCases])
+  );
+
+  const handleDeleteCase = useCallback(
+    (caseId: string) => {
+      Alert.alert(
+        "Delete case?",
+        "This cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              if (!session?.user?.id) return;
+              const { error: e } = await supabase
+                .from("cases")
+                .delete()
+                .eq("id", caseId)
+                .eq("user_id", session.user.id);
+              if (e) Alert.alert("Error", e.message);
+              else fetchCases();
+            },
+          },
+        ]
+      );
+    },
+    [session?.user?.id, fetchCases]
   );
 
   if (loading && cases.length === 0) {
@@ -91,7 +126,21 @@ export default function DiaryScreen() {
         <FlatList
           data={cases}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <CaseCard caseItem={item} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchCases}
+              colors={[theme.colors.black]}
+              tintColor={theme.colors.black}
+            />
+          }
+          renderItem={({ item }) => (
+          <CaseCard
+            caseItem={item}
+            onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
+            onDelete={handleDeleteCase}
+          />
+        )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />

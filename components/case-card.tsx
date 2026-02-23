@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
@@ -43,9 +43,21 @@ export function CaseCard({ caseItem, onEdit, onDelete }: CaseCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
-        <ThemedText style={styles.title} numberOfLines={1}>
-          {title}
-        </ThemedText>
+        <Pressable
+          style={styles.titleWrap}
+          onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
+          accessibilityLabel={title}
+          accessibilityHint="Long press to show full title"
+        >
+          <ThemedText
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+          >
+            {title}
+          </ThemedText>
+        </Pressable>
         <Pressable
           onPress={openDetails}
           style={styles.detailsButton}
@@ -95,12 +107,12 @@ export function CaseCard({ caseItem, onEdit, onDelete }: CaseCardProps) {
               <MaterialIcons
                 name="delete-outline"
                 size={22}
-                color={theme.colors.gray50}
+                color={theme.colors.themeRed}
               />
             </Pressable>
           ) : null}
           <Pressable
-            onPress={openDetails}
+            onPress={() => router.push(`/calendar`)}
             style={styles.iconButton}
             hitSlop={8}
             accessibilityLabel="View next date / calendar"
@@ -141,12 +153,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
+  titleWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
   title: {
     fontSize: 17,
     fontWeight: "700",
     color: theme.colors.black,
-    flex: 1,
-    marginRight: 8,
   },
   detailsButton: {
     flexDirection: "row",

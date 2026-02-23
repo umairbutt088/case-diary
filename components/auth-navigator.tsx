@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 
 /**
@@ -43,7 +44,7 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.colors.black} />
         <ThemedText style={styles.loadingText}>Loading…</ThemedText>
       </ThemedView>
     );
