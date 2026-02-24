@@ -4,14 +4,15 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
-  View,
+  View
 } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
+import { Bounceable } from "@/components/ui/bounceable";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -122,13 +123,13 @@ export default function CaseDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Bounceable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialIcons
               name="arrow-back"
               size={24}
-              color={theme.colors.btnBlue}
+              color={theme.colors.black}
             />
-          </Pressable>
+          </Bounceable>
         </View>
         <View style={styles.centered}>
           <ThemedText style={styles.errorText}>
@@ -142,16 +143,16 @@ export default function CaseDetailScreen() {
   const title = getCaseDisplayTitle(caseData);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Bounceable onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons
             name="arrow-back"
             size={24}
             color={theme.colors.black}
           />
-        </Pressable>
-        <Pressable
+        </Bounceable>
+        <Bounceable
           style={styles.headerTitleWrap}
           onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
           accessibilityLabel={title}
@@ -165,132 +166,134 @@ export default function CaseDetailScreen() {
           >
             {title}
           </ThemedText>
-        </Pressable>
-        <Pressable
+        </Bounceable>
+        <Bounceable
           style={styles.editBtn}
           onPress={() => router.push(`/case/${id}/edit`)}
         >
           <MaterialIcons name="edit" size={22} color={theme.colors.black} />
           <ThemedText style={styles.editBtnText}>Edit</ThemedText>
-        </Pressable>
+        </Bounceable>
       </View>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <SectionCard title="Parties & type">
-          <DetailRow label="Petitioner" value={caseData.petitioner_name} />
-          <DetailRow label="Respondent" value={caseData.respondent_name} />
-          <DetailRow label="Case number" value={caseData.case_number} />
-          <DetailRow label="Case type" value={caseData.case_type} />
-          <DetailRow label="Type of case" value={caseData.case_sub_type} />
-        </SectionCard>
+        <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
+          <SectionCard title="Parties & type">
+            <DetailRow label="Petitioner" value={caseData.petitioner_name} />
+            <DetailRow label="Respondent" value={caseData.respondent_name} />
+            <DetailRow label="Case number" value={caseData.case_number} />
+            <DetailRow label="Case type" value={caseData.case_type} />
+            <DetailRow label="Type of case" value={caseData.case_sub_type} />
+          </SectionCard>
 
-        <SectionCard title="Court">
-          <DetailRow label="Court tier" value={caseData.court_tier} />
-          <DetailRow label="Court room location" value={caseData.court_room} />
-          <DetailRow label="Judge name" value={caseData.judge_name} />
-        </SectionCard>
+          <SectionCard title="Court">
+            <DetailRow label="Court tier" value={caseData.court_tier} />
+            <DetailRow label="Court room location" value={caseData.court_room} />
+            <DetailRow label="Judge name" value={caseData.judge_name} />
+          </SectionCard>
 
-        <SectionCard title="Client">
-          <DetailRow
-            label="My client is"
-            value={
-              caseData.my_client_is === "petitioner"
-                ? "Petitioner"
-                : caseData.my_client_is === "respondent"
-                  ? "Respondent"
-                  : null
-            }
-          />
-          {linkedClient ? (
-            <>
-              <DetailRow label="Client name" value={linkedClient.name} />
-              {linkedClient.care_of?.trim() ? (
-                <DetailRow label="Care of" value={linkedClient.care_of} />
-              ) : null}
-              {linkedClient.address?.trim() ? (
-                <DetailRow label="Address" value={linkedClient.address} />
-              ) : null}
-              {linkedClient.phone?.trim() ? (
-                <DetailRow label="Phone" value={linkedClient.phone} />
-              ) : null}
-              {linkedClient.email?.trim() ? (
-                <DetailRow label="Email" value={linkedClient.email} />
-              ) : null}
-            </>
-          ) : caseData.linked_client_name ? (
+          <SectionCard title="Client">
             <DetailRow
-              label="Linked client"
-              value={caseData.linked_client_name}
+              label="My client is"
+              value={
+                caseData.my_client_is === "petitioner"
+                  ? "Petitioner"
+                  : caseData.my_client_is === "respondent"
+                    ? "Respondent"
+                    : null
+              }
             />
-          ) : null}
-        </SectionCard>
+            {linkedClient ? (
+              <>
+                <DetailRow label="Client name" value={linkedClient.name} />
+                {linkedClient.care_of?.trim() ? (
+                  <DetailRow label="Care of" value={linkedClient.care_of} />
+                ) : null}
+                {linkedClient.address?.trim() ? (
+                  <DetailRow label="Address" value={linkedClient.address} />
+                ) : null}
+                {linkedClient.phone?.trim() ? (
+                  <DetailRow label="Phone" value={linkedClient.phone} />
+                ) : null}
+                {linkedClient.email?.trim() ? (
+                  <DetailRow label="Email" value={linkedClient.email} />
+                ) : null}
+              </>
+            ) : caseData.linked_client_name ? (
+              <DetailRow
+                label="Linked client"
+                value={caseData.linked_client_name}
+              />
+            ) : null}
+          </SectionCard>
 
-        <SectionCard title="Dates & status">
-          <DetailRow
-            label="Date of filing"
-            value={
-              caseData.date_of_filing
-                ? formatCaseDate(caseData.date_of_filing)
-                : null
-            }
-          />
-          <DetailRow
-            label="Next hearing date"
-            value={
-              caseData.next_hearing_date
-                ? formatCaseDate(caseData.next_hearing_date)
-                : null
-            }
-          />
-          <DetailRow label="Current status" value={caseData.current_status} />
-          <DetailRow label="Next status" value={caseData.next_status} />
-        </SectionCard>
+          <SectionCard title="Dates & status">
+            <DetailRow
+              label="Date of filing"
+              value={
+                caseData.date_of_filing
+                  ? formatCaseDate(caseData.date_of_filing)
+                  : null
+              }
+            />
+            <DetailRow
+              label="Next hearing date"
+              value={
+                caseData.next_hearing_date
+                  ? formatCaseDate(caseData.next_hearing_date)
+                  : null
+              }
+            />
+            <DetailRow label="Current status" value={caseData.current_status} />
+            <DetailRow label="Next status" value={caseData.next_status} />
+          </SectionCard>
 
-        <SectionCard title="Notes">
-          <DetailRow label="Notes" value={caseData.notes} />
-        </SectionCard>
+          <SectionCard title="Notes">
+            <DetailRow label="Notes" value={caseData.notes} />
+          </SectionCard>
 
-        <Pressable
-          style={styles.deleteButton}
-          onPress={() => {
-            Alert.alert(
-              "Delete case?",
-              "This cannot be undone. The case and its details will be permanently removed.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: async () => {
-                    if (!id || !session?.user?.id) return;
-                    setDeleting(true);
-                    const { error: e } = await supabase
-                      .from("cases")
-                      .delete()
-                      .eq("id", id)
-                      .eq("user_id", session.user.id);
-                    setDeleting(false);
-                    if (e) {
-                      Alert.alert("Error", e.message);
-                      return;
-                    }
-                    router.replace("/(tabs)");
+          <Bounceable
+            style={styles.deleteButton}
+            onPress={() => {
+              Alert.alert(
+                "Delete case?",
+                "This cannot be undone. The case and its details will be permanently removed.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                      if (!id || !session?.user?.id) return;
+                      setDeleting(true);
+                      const { error: e } = await supabase
+                        .from("cases")
+                        .delete()
+                        .eq("id", id)
+                        .eq("user_id", session.user.id);
+                      setDeleting(false);
+                      if (e) {
+                        Alert.alert("Error", e.message);
+                        return;
+                      }
+                      router.replace("/(tabs)");
+                    },
                   },
-                },
-              ],
-            );
-          }}
-          disabled={deleting}
-        >
-          {deleting ? (
-            <ThemedText style={styles.deleteButtonText}>Deleting…</ThemedText>
-          ) : (
-            <ThemedText style={styles.deleteButtonText}>Delete case</ThemedText>
-          )}
-        </Pressable>
+                ],
+              );
+            }}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ThemedText style={styles.deleteButtonText}>Deleting…</ThemedText>
+            ) : (
+              <ThemedText style={styles.deleteButtonText}>Delete case</ThemedText>
+            )}
+          </Bounceable>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -308,7 +311,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.themeGray3,
-    backgroundColor: theme.colors.pureWhite,
+    backgroundColor: theme.colors.background,
   },
   backBtn: {
     padding: 4,

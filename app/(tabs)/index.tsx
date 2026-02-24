@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CaseCard } from "@/components/case-card";
 import { ThemedText } from "@/components/themed-text";
-import { Spacer } from "@/components/ui";
+import { Bounceable, Spacer } from "@/components/ui";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -207,16 +207,16 @@ export default function HomeScreen() {
                 : "Cases with a hearing or filing this week will appear here."}
             </ThemedText>
             <Link href="/add-case-flow" asChild>
-              <Pressable style={styles.addButton}>
+              <Bounceable style={styles.addButton}>
                 <MaterialIcons
                   name="add"
                   size={22}
                   color={theme.colors.pureWhite}
                 />
                 <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
-              </Pressable>
+              </Bounceable>
             </Link>
-            <Pressable
+            <Bounceable
               style={styles.diaryLink}
               onPress={() => router.push("/(tabs)/diary")}
             >
@@ -228,7 +228,7 @@ export default function HomeScreen() {
                 size={20}
                 color={theme.colors.black}
               />
-            </Pressable>
+            </Bounceable>
           </View>
         </View>
       </SafeAreaView>
@@ -301,22 +301,30 @@ export default function HomeScreen() {
               tintColor={theme.colors.black}
             />
           }
-          renderItem={({ item: section }) => (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>
-                {section.title}
-              </ThemedText>
-              <Spacer.Column numberOfSpaces={5} />
-              {section.data.map((caseItem) => (
-                <CaseCard
-                  key={caseItem.id}
-                  caseItem={caseItem}
-                  onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
-                  onDelete={handleDeleteCase}
-                />
-              ))}
-            </View>
-          )}
+          renderItem={({ item: section, index: sectionIndex }) => {
+            // Calculate starting index for this section to keep staggered delay consistent
+            const previousItemsCount = sections
+              .slice(0, sectionIndex)
+              .reduce((acc, s) => acc + s.data.length, 0);
+
+            return (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>
+                  {section.title}
+                </ThemedText>
+                <Spacer.Column numberOfSpaces={5} />
+                {section.data.map((caseItem, itemIndex) => (
+                  <CaseCard
+                    key={caseItem.id}
+                    index={previousItemsCount + itemIndex}
+                    caseItem={caseItem}
+                    onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
+                    onDelete={handleDeleteCase}
+                  />
+                ))}
+              </View>
+            );
+          }}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />

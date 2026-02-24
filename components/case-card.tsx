@@ -1,6 +1,12 @@
+import { Bounceable } from "@/components/ui/bounceable";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
+import Animated, {
+  FadeInUp,
+  FadeOut,
+  LinearTransition
+} from "react-native-reanimated";
 
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
@@ -26,11 +32,12 @@ function getCaseDetailsSnippet(row: CaseRow): string {
 
 type CaseCardProps = {
   caseItem: CaseRow;
+  index?: number;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 };
 
-export function CaseCard({ caseItem, onEdit, onDelete }: CaseCardProps) {
+export function CaseCard({ caseItem, index = 0, onEdit, onDelete }: CaseCardProps) {
   const router = useRouter();
   const title = getCaseDisplayTitle(caseItem);
   const snippet = getCaseDetailsSnippet(caseItem);
@@ -41,101 +48,108 @@ export function CaseCard({ caseItem, onEdit, onDelete }: CaseCardProps) {
   };
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <Pressable
-          style={styles.titleWrap}
-          onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
-          accessibilityLabel={title}
-          accessibilityHint="Long press to show full title"
-        >
-          <ThemedText
-            style={styles.title}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.65}
-          >
-            {title}
-          </ThemedText>
-        </Pressable>
-        <Pressable
-          onPress={openDetails}
-          style={styles.detailsButton}
-          hitSlop={8}
-          accessibilityLabel="View case details"
-        >
-          <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
-          <MaterialIcons
-            name="chevron-right"
-            size={20}
-            color={theme.colors.gray50}
-          />
-        </Pressable>
-      </View>
-      <ThemedText
-        style={styles.snippet}
-        numberOfLines={2}
-        lightColor={theme.colors.gray50}
-        darkColor={theme.colors.gray50}
+    <Animated.View
+      entering={FadeInUp.delay(index * 50).springify()}
+      exiting={FadeOut.duration(200)}
+      layout={LinearTransition.springify()}
+    >
+      <Bounceable
+        onPress={openDetails}
+        activeScale={0.98}
+        style={styles.card}
       >
-        {snippet}
-      </ThemedText>
-      <View style={styles.footer}>
-        <View style={styles.nextDateRow}>
-          <MaterialIcons
-            name="event"
-            size={18}
-            color={theme.colors.gray50}
-            style={styles.nextDateIcon}
-          />
-          <ThemedText
-            style={styles.nextDateText}
-            lightColor={theme.colors.gray50}
-            darkColor={theme.colors.gray50}
+        <View style={styles.cardTop}>
+          <Bounceable
+            style={styles.titleWrap}
+            onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
+            accessibilityLabel={title}
+            accessibilityHint="Long press to show full title"
           >
-            Next: {nextDate}
-          </ThemedText>
+            <ThemedText
+              style={styles.title}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.65}
+            >
+              {title}
+            </ThemedText>
+          </Bounceable>
+          <View
+            style={styles.detailsButton}
+          >
+            <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
+            <MaterialIcons
+              name="chevron-right"
+              size={20}
+              color={theme.colors.gray50}
+            />
+          </View>
         </View>
-        <View style={styles.actions}>
-          {onDelete ? (
-            <Pressable
-              onPress={() => onDelete(caseItem.id)}
+        <ThemedText
+          style={styles.snippet}
+          numberOfLines={2}
+          lightColor={theme.colors.gray50}
+          darkColor={theme.colors.gray50}
+        >
+          {snippet}
+        </ThemedText>
+        <View style={styles.footer}>
+          <View style={styles.nextDateRow}>
+            <MaterialIcons
+              name="event"
+              size={18}
+              color={theme.colors.gray50}
+              style={styles.nextDateIcon}
+            />
+            <ThemedText
+              style={styles.nextDateText}
+              lightColor={theme.colors.gray50}
+              darkColor={theme.colors.gray50}
+            >
+              Next: {nextDate}
+            </ThemedText>
+          </View>
+          <View style={styles.actions}>
+            {onDelete ? (
+              <Bounceable
+                onPress={() => onDelete(caseItem.id)}
+                style={styles.iconButton}
+                hitSlop={8}
+                accessibilityLabel="Delete case"
+              >
+                <MaterialIcons
+                  name="delete-outline"
+                  size={22}
+                  color={theme.colors.themeRed}
+                />
+              </Bounceable>
+            ) : null}
+            <Bounceable
+              onPress={() => router.push(`/calendar`)}
               style={styles.iconButton}
               hitSlop={8}
-              accessibilityLabel="Delete case"
+              accessibilityLabel="View next date / calendar"
             >
-              <MaterialIcons
-                name="delete-outline"
-                size={22}
-                color={theme.colors.themeRed}
-              />
-            </Pressable>
-          ) : null}
-          <Pressable
-            onPress={() => router.push(`/calendar`)}
-            style={styles.iconButton}
-            hitSlop={8}
-            accessibilityLabel="View next date / calendar"
-          >
-            <MaterialIcons name="event" size={22} color={theme.colors.gray50} />
-          </Pressable>
-          {onEdit ? (
-            <Pressable
-              onPress={() => onEdit(caseItem.id)}
-              style={styles.iconButton}
-              hitSlop={8}
-              accessibilityLabel="Edit case"
-            >
-              <MaterialIcons
-                name="edit"
-                size={22}
-                color={theme.colors.gray50}
-              />
-            </Pressable>
-          ) : null}
+              <MaterialIcons name="event" size={22} color={theme.colors.gray50} />
+            </Bounceable>
+            {onEdit ? (
+              <Bounceable
+                onPress={() => onEdit(caseItem.id)}
+                style={styles.iconButton}
+                hitSlop={8}
+                accessibilityLabel="Edit case"
+              >
+                <MaterialIcons
+                  name="edit"
+                  size={22}
+                  color={theme.colors.gray50}
+                />
+              </Bounceable>
+            ) : null}
+          </View>
         </View>
-      </View>
-    </View>
+      </Bounceable>
+    </Animated.View>
   );
 }
 

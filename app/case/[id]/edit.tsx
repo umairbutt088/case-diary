@@ -20,6 +20,7 @@ import { JudgeNameField } from "@/components/add-case/judge-name-field";
 import { LinkExistingClientField } from "@/components/add-case/link-existing-client-field";
 import { RadioOption } from "@/components/add-case/radio-option";
 import { ThemedText } from "@/components/themed-text";
+import { Bounceable } from "@/components/ui/bounceable";
 import {
   CASE_TYPES,
   COURT_TIERS,
@@ -200,7 +201,7 @@ export default function EditCaseScreen() {
 
   if (loading || (!caseData && !error)) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={[]}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
@@ -231,17 +232,19 @@ export default function EditCaseScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
-      {/* <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.header}>
+        <Bounceable onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons
             name="arrow-back"
             size={24}
-            color={theme.colors.btnBlue}
+            color={theme.colors.black}
           />
-        </Pressable>
+        </Bounceable>
         <ThemedText style={styles.headerTitle}>Edit case</ThemedText>
-      </View> */}
+      </View>
+      
+      
       <KeyboardAwareScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -366,7 +369,7 @@ export default function EditCaseScreen() {
           hint="Parties from your cases"
         />
         <FormField label="OR Add New Client">
-          <Pressable
+          <Bounceable
             style={[
               styles.addClientBtn,
               form.clientOption === "new" && styles.addClientBtnSelected,
@@ -384,7 +387,7 @@ export default function EditCaseScreen() {
             >
               + Add New Client
             </ThemedText>
-          </Pressable>
+          </Bounceable>
         </FormField>
         <AddNewClientModal
           visible={showAddClientModal}
@@ -457,26 +460,26 @@ export default function EditCaseScreen() {
           <ThemedText style={styles.saveError}>{saveError}</ThemedText>
         ) : null}
         <View style={styles.buttons}>
-          <Pressable
+          <Bounceable
             style={[styles.btn, styles.btnSecondary]}
             onPress={() => router.back()}
             disabled={saving}
           >
             <ThemedText style={styles.btnSecondaryText}>Cancel</ThemedText>
-          </Pressable>
-          <Pressable
+          </Bounceable>
+          <Bounceable
             style={[styles.btn, styles.btnPrimary]}
             onPress={onSave}
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator size="small" color={theme.colors.black} />
+              <ActivityIndicator size="small" color={theme.colors.pureWhite} />
             ) : (
               <ThemedText style={styles.btnPrimaryText}>
                 Save changes
               </ThemedText>
             )}
-          </Pressable>
+          </Bounceable>
         </View>
       </KeyboardAwareScrollView>
     </SafeAreaView>
@@ -495,7 +498,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.themeGray3,
-    backgroundColor: theme.colors.pureWhite,
+    backgroundColor: theme.colors.background,
   },
   backBtn: {
     padding: 4,
