@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
+import { Bounceable } from "./bounceable";
 
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
@@ -17,10 +18,11 @@ export function AuthButton({
   disabled = false,
 }: AuthButtonProps) {
   return (
-    <Pressable
+    <Bounceable
       style={[styles.button, (loading || disabled) && styles.disabled]}
       onPress={onPress}
       disabled={disabled || loading}
+      activeScale={0.97}
       accessibilityRole="button"
     >
       {loading ? (
@@ -28,7 +30,7 @@ export function AuthButton({
       ) : (
         <ThemedText style={styles.label}>{label}</ThemedText>
       )}
-    </Pressable>
+    </Bounceable>
   );
 }
 

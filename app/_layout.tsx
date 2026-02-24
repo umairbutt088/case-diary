@@ -28,8 +28,7 @@ export default function RootLayout() {
             <Stack.Screen
               name="add-case-flow"
               options={{
-                title: "Add New Case",
-                headerBackTitle: "Back",
+                headerShown: false,
               }}
             />
             <Stack.Screen
@@ -38,6 +37,18 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="case"
+              options={{
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="case/[id]"
+              options={{
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="case/[id]/edit"
               options={{
                 headerShown: false,
               }}

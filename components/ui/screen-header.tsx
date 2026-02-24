@@ -1,0 +1,106 @@
+import { ThemedText } from "@/components/themed-text";
+import { theme } from "@/constants/theme";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import { Bounceable } from "./bounceable";
+
+interface ScreenHeaderProps {
+  title: string;
+  showBack?: boolean;
+  onBack?: () => void;
+  rightComponent?: React.ReactNode;
+  onTitleLongPress?: () => void;
+  titleAccessibilityLabel?: string;
+}
+
+export function ScreenHeader({
+  title,
+  showBack = true,
+  onBack,
+  rightComponent,
+  onTitleLongPress,
+  titleAccessibilityLabel,
+}: ScreenHeaderProps) {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      router.back();
+    }
+  };
+
+  const titleContent = (
+    <ThemedText
+      style={styles.headerTitle}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.65}
+    >
+      {title}
+    </ThemedText>
+  );
+
+  return (
+    <View style={styles.header}>
+      {showBack && (
+        <Bounceable onPress={handleBack} style={styles.backBtn} activeScale={0.9}>
+          <MaterialIcons name="arrow-back" size={24} color={theme.colors.black} />
+        </Bounceable>
+      )}
+
+      {onTitleLongPress ? (
+        <Bounceable
+          style={styles.headerTitleWrap}
+          onLongPress={onTitleLongPress}
+          accessibilityLabel={titleAccessibilityLabel || title}
+          accessibilityHint="Long press for full title"
+          activeScale={0.98}
+        >
+          {titleContent}
+        </Bounceable>
+      ) : (
+        <View style={styles.headerTitleWrap}>
+          {titleContent}
+        </View>
+      )}
+
+      {rightComponent && (
+        <View style={styles.rightWrap}>{rightComponent}</View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.themeGray3,
+    backgroundColor: theme.colors.background,
+  },
+  backBtn: {
+    padding: 4,
+    marginRight: 8,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.black,
+  },
+  rightWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+});

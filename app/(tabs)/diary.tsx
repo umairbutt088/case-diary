@@ -8,10 +8,12 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CaseCard } from "@/components/case-card";
 import { ThemedText } from "@/components/themed-text";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -24,13 +26,17 @@ export default function DiaryScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCases = useCallback(async () => {
+  const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    
+    // Only show loading if not silent
+    if (!isSilent) {
+      setLoading(true);
+    }
     setError(null);
     const { data, error: e } = await supabase
       .from("cases")
@@ -48,7 +54,7 @@ export default function DiaryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCases();
+      fetchCases(true);
     }, [fetchCases])
   );
 
@@ -82,6 +88,7 @@ export default function DiaryScreen() {
   if (loading && cases.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title="Your cases" showBack={false} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
@@ -92,10 +99,8 @@ export default function DiaryScreen() {
   if (error && cases.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title="Your cases" showBack={false} />
         <View style={styles.container}>
-          <ThemedText type="subtitle" style={styles.title}>
-            Your cases
-          </ThemedText>
           <ThemedText style={styles.errorText}>{error}</ThemedText>
         </View>
       </SafeAreaView>
@@ -105,10 +110,8 @@ export default function DiaryScreen() {
   if (cases.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title="Your cases" showBack={false} />
         <View style={styles.container}>
-          <ThemedText type="subtitle" style={styles.title}>
-            Your cases
-          </ThemedText>
           <ThemedText style={styles.placeholder}>
             No cases yet. Add a case from the Add button or Home.
           </ThemedText>
@@ -119,32 +122,35 @@ export default function DiaryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.container}>
-        <ThemedText type="subtitle" style={styles.title}>
-          Your cases
-        </ThemedText>
-        <FlatList
-          data={cases}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={fetchCases}
-              colors={[theme.colors.black]}
-              tintColor={theme.colors.black}
+      <ScreenHeader title="Your cases" showBack={false} />
+      <Animated.View 
+        style={{ flex: 1 }}
+        entering={FadeInUp.duration(400).springify().damping(20)}
+      >
+        <View style={styles.container}>
+          <FlatList
+            data={cases}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={fetchCases}
+                colors={[theme.colors.black]}
+                tintColor={theme.colors.black}
+              />
+            }
+            renderItem={({ item }) => (
+            <CaseCard
+              caseItem={item}
+              onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
+              onDelete={handleDeleteCase}
             />
-          }
-          renderItem={({ item }) => (
-          <CaseCard
-            caseItem={item}
-            onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
-            onDelete={handleDeleteCase}
+          )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
           />
-        )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+        </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

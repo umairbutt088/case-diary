@@ -3,11 +3,11 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
-  Pressable,
   StyleSheet,
-  View,
+  View
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import Animated, { FadeInUp, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
@@ -20,6 +20,8 @@ import { LinkExistingClientField } from "@/components/add-case/link-existing-cli
 import { RadioOption } from "@/components/add-case/radio-option";
 import { StepIndicator } from "@/components/add-case/step-indicator";
 import { ThemedText } from "@/components/themed-text";
+import { Bounceable } from "@/components/ui/bounceable";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   CASE_TYPES,
   COURT_TIERS,
@@ -86,8 +88,6 @@ export default function AddCaseFlowScreen() {
   const validateStep2 = useCallback((): boolean => {
     const e: typeof errors = {};
     if (!form.courtTier) e.courtTier = "Please select court tier";
-    // Court name field commented out for now – uncomment when re-enabling "Which court?"
-    // if (!form.courtName.trim()) e.courtName = "Court name is required";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
   }, [form.courtTier]);
@@ -176,8 +176,12 @@ export default function AddCaseFlowScreen() {
     router.back();
   }, [form, session?.user?.id, validateStep4, router]);
 
+  const stepEntering = FadeInUp.duration(400).springify().damping(20);
+  const stepExiting = FadeOut.duration(200);
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScreenHeader title="Add New Case" onBack={onBack} />
       <StepIndicator currentStep={step} />
       <KeyboardAwareScrollView
         style={styles.scroll}
@@ -189,9 +193,13 @@ export default function AddCaseFlowScreen() {
         enableAutomaticScroll={true}
         keyboardOpeningTime={0}
       >
-        {/* Step 1 of 4: Petitioner, Respondent (case title derived), Case Number, Case Type */}
+        {/* Step 1 of 4 */}
         {step === 1 && (
-          <>
+          <Animated.View 
+            key="step1" 
+            entering={stepEntering}
+            exiting={stepExiting}
+          >
             <FormFieldWithHint
               label="First Party Name"
               required
@@ -245,15 +253,19 @@ export default function AddCaseFlowScreen() {
                 ) : null}
               </FormField>
             ) : null}
-            <Pressable style={styles.nextButton} onPress={onNext}>
+            <Bounceable style={styles.nextButton} onPress={onNext}>
               <ThemedText style={styles.nextButtonText}>Next →</ThemedText>
-            </Pressable>
-          </>
+            </Bounceable>
+          </Animated.View>
         )}
 
         {/* Step 2 of 4 */}
         {step === 2 && (
-          <>
+          <Animated.View 
+            key="step2" 
+            entering={stepEntering}
+            exiting={stepExiting}
+          >
             <FormField label="Court Tier" required>
               {errors.courtTier ? (
                 <ThemedText style={styles.fieldError}>
@@ -271,23 +283,6 @@ export default function AddCaseFlowScreen() {
                 />
               ))}
             </FormField>
-            {/* Which court? – commented out; Step 2 currently uses court tier + judge + location only */}
-            {/* <SearchableSelectField
-              label="Which court?"
-              required
-              value={form.courtName}
-              options={courtOptions}
-              onChange={(v) => update({ courtName: v })}
-              placeholder={
-                form.courtTier
-                  ? "Select or search court..."
-                  : "Select court type first"
-              }
-              searchPlaceholder="Search court name..."
-              disabled={!form.courtTier || courtOptions.length === 0}
-              hint="Search or scroll to find the court where the case is filed"
-              error={errors.courtName}
-            /> */}
             <JudgeNameField
               label="Judge Name"
               value={form.judgeName}
@@ -303,25 +298,29 @@ export default function AddCaseFlowScreen() {
               hint="Enter court room location or address"
             />
             <View style={styles.buttons}>
-              <Pressable
+              <Bounceable
                 style={[styles.btn, styles.btnSecondary]}
                 onPress={onBack}
               >
                 <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
-              </Pressable>
-              <Pressable
+              </Bounceable>
+              <Bounceable
                 style={[styles.btn, styles.btnPrimary]}
                 onPress={onNext}
               >
                 <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
-              </Pressable>
+              </Bounceable>
             </View>
-          </>
+          </Animated.View>
         )}
 
-        {/* Step 3 of 4: My Client, Link/Create Client */}
+        {/* Step 3 of 4 */}
         {step === 3 && (
-          <>
+          <Animated.View 
+            key="step3" 
+            entering={stepEntering}
+            exiting={stepExiting}
+          >
             <FormField label="My Client is" required>
               {errors.myClientIs ? (
                 <ThemedText style={styles.fieldError}>
@@ -352,7 +351,7 @@ export default function AddCaseFlowScreen() {
               hint="Parties from your cases — select to link this case to that client"
             />
             <FormField label="OR Add New Client">
-              <Pressable
+              <Bounceable
                 style={[
                   styles.addClientBtn,
                   form.clientOption === "new" && styles.addClientBtnSelected,
@@ -370,7 +369,7 @@ export default function AddCaseFlowScreen() {
                 >
                   + Add New Client
                 </ThemedText>
-              </Pressable>
+              </Bounceable>
             </FormField>
             <AddNewClientModal
               visible={showAddClientModal}
@@ -392,25 +391,29 @@ export default function AddCaseFlowScreen() {
               }}
             />
             <View style={styles.buttons}>
-              <Pressable
+              <Bounceable
                 style={[styles.btn, styles.btnSecondary]}
                 onPress={onBack}
               >
                 <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
-              </Pressable>
-              <Pressable
+              </Bounceable>
+              <Bounceable
                 style={[styles.btn, styles.btnPrimary]}
                 onPress={onNext}
               >
                 <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
-              </Pressable>
+              </Bounceable>
             </View>
-          </>
+          </Animated.View>
         )}
 
         {/* Step 4 of 4 */}
         {step === 4 && (
-          <>
+          <Animated.View 
+            key="step4" 
+            entering={stepEntering}
+            exiting={stepExiting}
+          >
             <DateField
               label="Date of Filing"
               value={form.dateOfFiling}
@@ -460,26 +463,26 @@ export default function AddCaseFlowScreen() {
               <ThemedText style={styles.saveError}>{saveError}</ThemedText>
             ) : null}
             <View style={styles.buttons}>
-              <Pressable
+              <Bounceable
                 style={[styles.btn, styles.btnSecondary]}
                 onPress={onBack}
                 disabled={saving}
               >
                 <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
-              </Pressable>
-              <Pressable
+              </Bounceable>
+              <Bounceable
                 style={[styles.btn, styles.btnPrimary]}
                 onPress={onSave}
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color={theme.colors.white} />
+                  <ActivityIndicator size="small" color={theme.colors.pureWhite} />
                 ) : (
                   <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
                 )}
-              </Pressable>
+              </Bounceable>
             </View>
-          </>
+          </Animated.View>
         )}
       </KeyboardAwareScrollView>
     </SafeAreaView>
@@ -586,5 +589,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: theme.colors.pureWhite,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
   },
 });

@@ -10,11 +10,13 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CaseCard } from "@/components/case-card";
 import { ThemedText } from "@/components/themed-text";
-import { Spacer } from "@/components/ui";
+import { Bounceable, Spacer } from "@/components/ui";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -62,19 +64,24 @@ export default function HomeScreen() {
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
 
-  const fetchCases = useCallback(async () => {
+  const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    
+    // Only show loading if not silent
+    if (!isSilent) {
+      setLoading(true);
+    }
     setError(null);
     const { data, error: e } = await supabase
       .from("cases")
       .select("*")
       .eq("user_id", session.user.id)
       .order("next_hearing_date", { ascending: true, nullsFirst: false });
+    
     setLoading(false);
     if (e) {
       setError(e.message);
@@ -86,7 +93,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCases();
+      fetchCases(true);
     }, [fetchCases]),
   );
 
@@ -128,6 +135,7 @@ export default function HomeScreen() {
   if (loading && cases.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title="Home" showBack={false} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
@@ -138,10 +146,8 @@ export default function HomeScreen() {
   if (error && cases.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title="Home" showBack={false} />
         <View style={styles.container}>
-          <ThemedText type="subtitle" style={styles.title}>
-            Today
-          </ThemedText>
           <ThemedText style={styles.errorText}>{error}</ThemedText>
         </View>
       </SafeAreaView>
@@ -151,10 +157,8 @@ export default function HomeScreen() {
   if (!hasAny) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title={isTodayFilter ? "Today" : "This week"} showBack={false} />
         <View style={styles.container}>
-          <ThemedText type="subtitle" style={styles.title}>
-            {isTodayFilter ? "Today" : "This week"}
-          </ThemedText>
           <View style={styles.filterRow}>
             <Pressable
               style={[
@@ -207,16 +211,16 @@ export default function HomeScreen() {
                 : "Cases with a hearing or filing this week will appear here."}
             </ThemedText>
             <Link href="/add-case-flow" asChild>
-              <Pressable style={styles.addButton}>
+              <Bounceable style={styles.addButton}>
                 <MaterialIcons
                   name="add"
                   size={22}
                   color={theme.colors.pureWhite}
                 />
                 <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
-              </Pressable>
+              </Bounceable>
             </Link>
-            <Pressable
+            <Bounceable
               style={styles.diaryLink}
               onPress={() => router.push("/(tabs)/diary")}
             >
@@ -228,7 +232,7 @@ export default function HomeScreen() {
                 size={20}
                 color={theme.colors.black}
               />
-            </Pressable>
+            </Bounceable>
           </View>
         </View>
       </SafeAreaView>
@@ -254,73 +258,83 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.container}>
-        <Spacer.Column numberOfSpaces={1} />
-        <ThemedText type="subtitle" style={styles.title}>
-          {isTodayFilter ? "Today Cases" : "This week Cases"}
-        </ThemedText>
-        <Spacer.Column numberOfSpaces={4} />
+      <ScreenHeader title={isTodayFilter ? "Today Cases" : "This week Cases"} showBack={false} />
+      <Animated.View 
+        style={{ flex: 1 }}
+        entering={FadeInUp.duration(400).springify().damping(20)}
+      >
+        <View style={styles.container}>
+          <Spacer.Column numberOfSpaces={4} />
 
-        <View style={styles.filterRow}>
-          <Pressable
-            style={[styles.filterBtn, isTodayFilter && styles.filterBtnActive]}
-            onPress={() => setFilter("today")}
-          >
-            <ThemedText
-              style={[
-                styles.filterBtnText,
-                isTodayFilter && styles.filterBtnTextActive,
-              ]}
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterBtn, isTodayFilter && styles.filterBtnActive]}
+              onPress={() => setFilter("today")}
             >
-              Today
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            style={[styles.filterBtn, !isTodayFilter && styles.filterBtnActive]}
-            onPress={() => setFilter("weekly")}
-          >
-            <ThemedText
-              style={[
-                styles.filterBtnText,
-                !isTodayFilter && styles.filterBtnTextActive,
-              ]}
-            >
-              Weekly
-            </ThemedText>
-          </Pressable>
-        </View>
-        <Spacer.Column numberOfSpaces={5} />
-        <FlatList
-          data={sections}
-          keyExtractor={(item) => item.title}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={fetchCases}
-              colors={[theme.colors.black]}
-              tintColor={theme.colors.black}
-            />
-          }
-          renderItem={({ item: section }) => (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>
-                {section.title}
+              <ThemedText
+                style={[
+                  styles.filterBtnText,
+                  isTodayFilter && styles.filterBtnTextActive,
+                ]}
+              >
+                Today
               </ThemedText>
-              <Spacer.Column numberOfSpaces={5} />
-              {section.data.map((caseItem) => (
-                <CaseCard
-                  key={caseItem.id}
-                  caseItem={caseItem}
-                  onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
-                  onDelete={handleDeleteCase}
-                />
-              ))}
-            </View>
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+            </Pressable>
+            <Pressable
+              style={[styles.filterBtn, !isTodayFilter && styles.filterBtnActive]}
+              onPress={() => setFilter("weekly")}
+            >
+              <ThemedText
+                style={[
+                  styles.filterBtnText,
+                  !isTodayFilter && styles.filterBtnTextActive,
+                ]}
+              >
+                Weekly
+              </ThemedText>
+            </Pressable>
+          </View>
+          <Spacer.Column numberOfSpaces={5} />
+          <FlatList
+            data={sections}
+            keyExtractor={(item) => item.title}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={fetchCases}
+                colors={[theme.colors.black]}
+                tintColor={theme.colors.black}
+              />
+            }
+            renderItem={({ item: section, index: sectionIndex }) => {
+              // Calculate starting index for this section to keep staggered delay consistent
+              const previousItemsCount = sections
+                .slice(0, sectionIndex)
+                .reduce((acc, s) => acc + s.data.length, 0);
+
+              return (
+                <View style={styles.section}>
+                  <ThemedText style={styles.sectionTitle}>
+                    {section.title}
+                  </ThemedText>
+                  <Spacer.Column numberOfSpaces={5} />
+                  {section.data.map((caseItem, itemIndex) => (
+                    <CaseCard
+                      key={caseItem.id}
+                      index={previousItemsCount + itemIndex}
+                      caseItem={caseItem}
+                      onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
+                      onDelete={handleDeleteCase}
+                    />
+                  ))}
+                </View>
+              );
+            }}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

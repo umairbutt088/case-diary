@@ -1,14 +1,13 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
-  Pressable,
   StyleSheet,
-  View,
+  View
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
@@ -20,6 +19,8 @@ import { JudgeNameField } from "@/components/add-case/judge-name-field";
 import { LinkExistingClientField } from "@/components/add-case/link-existing-client-field";
 import { RadioOption } from "@/components/add-case/radio-option";
 import { ThemedText } from "@/components/themed-text";
+import { Bounceable } from "@/components/ui/bounceable";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   CASE_TYPES,
   COURT_TIERS,
@@ -200,7 +201,7 @@ export default function EditCaseScreen() {
 
   if (loading || (!caseData && !error)) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={[]}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
@@ -211,16 +212,7 @@ export default function EditCaseScreen() {
   if (error || !caseData) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <MaterialIcons
-              name="arrow-back"
-              size={24}
-              color={theme.colors.black}
-            />
-          </Pressable>
-          <ThemedText style={styles.headerTitle}>Edit case</ThemedText>
-        </View>
+        <ScreenHeader title="Edit case" />
         <View style={styles.centered}>
           <ThemedText style={styles.errorText}>
             {error || "Case not found"}
@@ -231,17 +223,10 @@ export default function EditCaseScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
-      {/* <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.btnBlue}
-          />
-        </Pressable>
-        <ThemedText style={styles.headerTitle}>Edit case</ThemedText>
-      </View> */}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScreenHeader title="Edit case" />
+      
+      
       <KeyboardAwareScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -249,235 +234,237 @@ export default function EditCaseScreen() {
         showsVerticalScrollIndicator={false}
         extraScrollHeight={24}
       >
-        <ThemedText style={styles.sectionTitle}>Parties & type</ThemedText>
-        <FormFieldWithHint
-          label="First Party Name"
-          required
-          value={form.petitionerName}
-          onChangeText={(v) => update({ petitionerName: v })}
-          placeholder="Enter First and Last Name"
-          hint="Add First Party's full name"
-          error={errors.petitionerName}
-        />
-        <FormFieldWithHint
-          label="Second Party Name"
-          required
-          value={form.respondentName}
-          onChangeText={(v) => update({ respondentName: v })}
-          placeholder="Enter First and Last Name"
-          hint="Add Second Party's full name"
-          error={errors.respondentName}
-        />
-        <FormFieldWithHint
-          label="Case Number"
-          value={form.caseNumber}
-          onChangeText={(v) => update({ caseNumber: v })}
-          placeholder="12345/2025"
-          hint="Enter Case Number"
-        />
-        <FormField label="Case Type" required>
-          <ChipGroup
-            options={[...CASE_TYPES]}
-            value={form.caseType}
-            onChange={(v) =>
-              update({ caseType: v as CaseType, caseSubType: "" })
-            }
+        <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
+          <ThemedText style={styles.sectionTitle}>Parties & type</ThemedText>
+          <FormFieldWithHint
+            label="First Party Name"
+            required
+            value={form.petitionerName}
+            onChangeText={(v) => update({ petitionerName: v })}
+            placeholder="Enter First and Last Name"
+            hint="Add First Party's full name"
+            error={errors.petitionerName}
           />
-          {errors.caseType ? (
-            <ThemedText style={styles.fieldError}>{errors.caseType}</ThemedText>
-          ) : null}
-        </FormField>
-        {form.caseType ? (
-          <FormField label="Type of case" required>
+          <FormFieldWithHint
+            label="Second Party Name"
+            required
+            value={form.respondentName}
+            onChangeText={(v) => update({ respondentName: v })}
+            placeholder="Enter First and Last Name"
+            hint="Add Second Party's full name"
+            error={errors.respondentName}
+          />
+          <FormFieldWithHint
+            label="Case Number"
+            value={form.caseNumber}
+            onChangeText={(v) => update({ caseNumber: v })}
+            placeholder="12345/2025"
+            hint="Enter Case Number"
+          />
+          <FormField label="Case Type" required>
             <ChipGroup
-              options={getCaseSubTypesForType(form.caseType)}
-              value={form.caseSubType}
-              onChange={(v) => update({ caseSubType: v })}
-            />
-            {errors.caseSubType ? (
-              <ThemedText style={styles.fieldError}>
-                {errors.caseSubType}
-              </ThemedText>
-            ) : null}
-          </FormField>
-        ) : null}
-
-        <ThemedText style={styles.sectionTitle}>Court</ThemedText>
-        <FormField label="Court Tier" required>
-          {errors.courtTier ? (
-            <ThemedText style={styles.fieldError}>
-              {errors.courtTier}
-            </ThemedText>
-          ) : null}
-          {COURT_TIERS.map(({ value, label }) => (
-            <RadioOption
-              key={value}
-              label={label}
-              selected={form.courtTier === value}
-              onSelect={() =>
-                update({ courtTier: value as CourtTier, courtName: "" })
+              options={[...CASE_TYPES]}
+              value={form.caseType}
+              onChange={(v) =>
+                update({ caseType: v as CaseType, caseSubType: "" })
               }
             />
-          ))}
-        </FormField>
-        <JudgeNameField
-          label="Judge Name"
-          value={form.judgeName}
-          onChange={(v) => update({ judgeName: v })}
-          placeholder="Select or add judge name"
-          hint="Pick from saved judges or add a new name"
-        />
-        <FormFieldWithHint
-          label="Court room location"
-          value={form.courtRoom}
-          onChangeText={(v) => update({ courtRoom: v })}
-          placeholder="e.g. Building A, 2nd Floor"
-          hint="Enter court room location"
-        />
-
-        <ThemedText style={styles.sectionTitle}>Client</ThemedText>
-        <FormField label="My Client is" required>
-          {errors.myClientIs ? (
-            <ThemedText style={styles.fieldError}>
-              {errors.myClientIs}
-            </ThemedText>
+            {errors.caseType ? (
+              <ThemedText style={styles.fieldError}>{errors.caseType}</ThemedText>
+            ) : null}
+          </FormField>
+          {form.caseType ? (
+            <FormField label="Type of case" required>
+              <ChipGroup
+                options={getCaseSubTypesForType(form.caseType)}
+                value={form.caseSubType}
+                onChange={(v) => update({ caseSubType: v })}
+              />
+              {errors.caseSubType ? (
+                <ThemedText style={styles.fieldError}>
+                  {errors.caseSubType}
+                </ThemedText>
+              ) : null}
+            </FormField>
           ) : null}
-          <RadioOption
-            label="Petitioner"
-            selected={form.myClientIs === "petitioner"}
-            onSelect={() => update({ myClientIs: "petitioner" })}
-          />
-          <RadioOption
-            label="Respondent"
-            selected={form.myClientIs === "respondent"}
-            onSelect={() => update({ myClientIs: "respondent" })}
-          />
-        </FormField>
-        <LinkExistingClientField
-          label="Link Existing Client"
-          value={form.linkedClientName}
-          onChange={(name) =>
-            update({
-              linkedClientName: name ?? "",
-              clientOption: name ? "link" : form.clientOption,
-            })
-          }
-          placeholder="Select from your existing cases"
-          hint="Parties from your cases"
-        />
-        <FormField label="OR Add New Client">
-          <Pressable
-            style={[
-              styles.addClientBtn,
-              form.clientOption === "new" && styles.addClientBtnSelected,
-            ]}
-            onPress={() => {
-              update({ clientOption: "new" });
-              setShowAddClientModal(true);
-            }}
-          >
-            <ThemedText
-              style={[
-                styles.addClientText,
-                form.clientOption === "new" && styles.addClientTextSelected,
-              ]}
-            >
-              + Add New Client
-            </ThemedText>
-          </Pressable>
-        </FormField>
-        <AddNewClientModal
-          visible={showAddClientModal}
-          initialName={
-            form.myClientIs === "petitioner"
-              ? form.petitionerName
-              : form.myClientIs === "respondent"
-                ? form.respondentName
-                : ""
-          }
-          onClose={() => setShowAddClientModal(false)}
-          onSaved={(clientId) => {
-            update({
-              linkedClientId: clientId,
-              linkedClientName: "",
-              clientOption: "new",
-            });
-            setShowAddClientModal(false);
-          }}
-        />
 
-        <ThemedText style={styles.sectionTitle}>Dates & status</ThemedText>
-        <DateField
-          label="Date of Filing"
-          value={form.dateOfFiling}
-          onChange={(v) => update({ dateOfFiling: v })}
-          placeholder="e.g. 08/09/2025"
-          hint="Enter date of filing"
-        />
-        <FormFieldWithHint
-          label="Current status"
-          value={form.caseStatus}
-          onChangeText={(v) => update({ caseStatus: v })}
-          placeholder="e.g. Listed, Heard, Adjourned"
-          hint="Status of the case"
-          multiline
-          numberOfLines={4}
-          inputStyle={styles.statusInput}
-        />
-        <DateField
-          label="Next Hearing Date"
-          required
-          value={form.nextHearingDate}
-          onChange={(v) => update({ nextHearingDate: v })}
-          placeholder="e.g. 08/09/2025"
-          hint="Enter next hearing date"
-          error={errors.nextHearingDate}
-        />
-        <FormFieldWithHint
-          label="Next status"
-          value={form.nextStatus}
-          onChangeText={(v) => update({ nextStatus: v })}
-          placeholder="e.g. Arguments, Judgment"
-          hint="What is coming up next"
-          multiline
-          numberOfLines={4}
-          inputStyle={styles.statusInput}
-        />
-        <FormFieldWithHint
-          label="Notes (Optional)"
-          value={form.notes}
-          onChangeText={(v) => update({ notes: v })}
-          placeholder="Brief description..."
-          hint="Additional notes"
-          multiline
-          numberOfLines={4}
-        />
-
-        {saveError ? (
-          <ThemedText style={styles.saveError}>{saveError}</ThemedText>
-        ) : null}
-        <View style={styles.buttons}>
-          <Pressable
-            style={[styles.btn, styles.btnSecondary]}
-            onPress={() => router.back()}
-            disabled={saving}
-          >
-            <ThemedText style={styles.btnSecondaryText}>Cancel</ThemedText>
-          </Pressable>
-          <Pressable
-            style={[styles.btn, styles.btnPrimary]}
-            onPress={onSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color={theme.colors.black} />
-            ) : (
-              <ThemedText style={styles.btnPrimaryText}>
-                Save changes
+          <ThemedText style={styles.sectionTitle}>Court</ThemedText>
+          <FormField label="Court Tier" required>
+            {errors.courtTier ? (
+              <ThemedText style={styles.fieldError}>
+                {errors.courtTier}
               </ThemedText>
-            )}
-          </Pressable>
-        </View>
+            ) : null}
+            {COURT_TIERS.map(({ value, label }) => (
+              <RadioOption
+                key={value}
+                label={label}
+                selected={form.courtTier === value}
+                onSelect={() =>
+                  update({ courtTier: value as CourtTier, courtName: "" })
+                }
+              />
+            ))}
+          </FormField>
+          <JudgeNameField
+            label="Judge Name"
+            value={form.judgeName}
+            onChange={(v) => update({ judgeName: v })}
+            placeholder="Select or add judge name"
+            hint="Pick from saved judges or add a new name"
+          />
+          <FormFieldWithHint
+            label="Court room location"
+            value={form.courtRoom}
+            onChangeText={(v) => update({ courtRoom: v })}
+            placeholder="e.g. Building A, 2nd Floor"
+            hint="Enter court room location"
+          />
+
+          <ThemedText style={styles.sectionTitle}>Client</ThemedText>
+          <FormField label="My Client is" required>
+            {errors.myClientIs ? (
+              <ThemedText style={styles.fieldError}>
+                {errors.myClientIs}
+              </ThemedText>
+            ) : null}
+            <RadioOption
+              label="Petitioner"
+              selected={form.myClientIs === "petitioner"}
+              onSelect={() => update({ myClientIs: "petitioner" })}
+            />
+            <RadioOption
+              label="Respondent"
+              selected={form.myClientIs === "respondent"}
+              onSelect={() => update({ myClientIs: "respondent" })}
+            />
+          </FormField>
+          <LinkExistingClientField
+            label="Link Existing Client"
+            value={form.linkedClientName}
+            onChange={(name) =>
+              update({
+                linkedClientName: name ?? "",
+                clientOption: name ? "link" : form.clientOption,
+              })
+            }
+            placeholder="Select from your existing cases"
+            hint="Parties from your cases"
+          />
+          <FormField label="OR Add New Client">
+            <Bounceable
+              style={[
+                styles.addClientBtn,
+                form.clientOption === "new" && styles.addClientBtnSelected,
+              ]}
+              onPress={() => {
+                update({ clientOption: "new" });
+                setShowAddClientModal(true);
+              }}
+            >
+              <ThemedText
+                style={[
+                  styles.addClientText,
+                  form.clientOption === "new" && styles.addClientTextSelected,
+                ]}
+              >
+                + Add New Client
+              </ThemedText>
+            </Bounceable>
+          </FormField>
+          <AddNewClientModal
+            visible={showAddClientModal}
+            initialName={
+              form.myClientIs === "petitioner"
+                ? form.petitionerName
+                : form.myClientIs === "respondent"
+                  ? form.respondentName
+                  : ""
+            }
+            onClose={() => setShowAddClientModal(false)}
+            onSaved={(clientId) => {
+              update({
+                linkedClientId: clientId,
+                linkedClientName: "",
+                clientOption: "new",
+              });
+              setShowAddClientModal(false);
+            }}
+          />
+
+          <ThemedText style={styles.sectionTitle}>Dates & status</ThemedText>
+          <DateField
+            label="Date of Filing"
+            value={form.dateOfFiling}
+            onChange={(v) => update({ dateOfFiling: v })}
+            placeholder="e.g. 08/09/2025"
+            hint="Enter date of filing"
+          />
+          <FormFieldWithHint
+            label="Current status"
+            value={form.caseStatus}
+            onChangeText={(v) => update({ caseStatus: v })}
+            placeholder="e.g. Listed, Heard, Adjourned"
+            hint="Status of the case"
+            multiline
+            numberOfLines={4}
+            inputStyle={styles.statusInput}
+          />
+          <DateField
+            label="Next Hearing Date"
+            required
+            value={form.nextHearingDate}
+            onChange={(v) => update({ nextHearingDate: v })}
+            placeholder="e.g. 08/09/2025"
+            hint="Enter next hearing date"
+            error={errors.nextHearingDate}
+          />
+          <FormFieldWithHint
+            label="Next status"
+            value={form.nextStatus}
+            onChangeText={(v) => update({ nextStatus: v })}
+            placeholder="e.g. Arguments, Judgment"
+            hint="What is coming up next"
+            multiline
+            numberOfLines={4}
+            inputStyle={styles.statusInput}
+          />
+          <FormFieldWithHint
+            label="Notes (Optional)"
+            value={form.notes}
+            onChangeText={(v) => update({ notes: v })}
+            placeholder="Brief description..."
+            hint="Additional notes"
+            multiline
+            numberOfLines={4}
+          />
+
+          {saveError ? (
+            <ThemedText style={styles.saveError}>{saveError}</ThemedText>
+          ) : null}
+          <View style={styles.buttons}>
+            <Bounceable
+              style={[styles.btn, styles.btnSecondary]}
+              onPress={() => router.back()}
+              disabled={saving}
+            >
+              <ThemedText style={styles.btnSecondaryText}>Cancel</ThemedText>
+            </Bounceable>
+            <Bounceable
+              style={[styles.btn, styles.btnPrimary]}
+              onPress={onSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+              ) : (
+                <ThemedText style={styles.btnPrimaryText}>
+                  Save changes
+                </ThemedText>
+              )}
+            </Bounceable>
+          </View>
+        </Animated.View>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -487,25 +474,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.themeGray3,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  backBtn: {
-    padding: 4,
-    marginRight: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
   },
   scroll: {
     flex: 1,
