@@ -1,4 +1,3 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -22,6 +21,7 @@ import { RadioOption } from "@/components/add-case/radio-option";
 import { StepIndicator } from "@/components/add-case/step-indicator";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   CASE_TYPES,
   COURT_TIERS,
@@ -181,16 +181,7 @@ export default function AddCaseFlowScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.header}>
-        <Bounceable onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.black}
-          />
-        </Bounceable>
-        <ThemedText style={styles.headerTitle}>Add New Case</ThemedText>
-      </View>
+      <ScreenHeader title="Add New Case" onBack={onBack} />
       <StepIndicator currentStep={step} />
       <KeyboardAwareScrollView
         style={styles.scroll}
@@ -604,24 +595,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.themeGray3,
-    backgroundColor: theme.colors.background,
-  },
-  backBtn: {
-    padding: 4,
-    marginRight: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
   },
 });

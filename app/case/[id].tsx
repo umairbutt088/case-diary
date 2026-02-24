@@ -1,4 +1,4 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -6,13 +6,14 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-  View
+  View,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -122,15 +123,7 @@ export default function CaseDetailScreen() {
   if (error || !caseData) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.header}>
-          <Bounceable onPress={() => router.back()} style={styles.backBtn}>
-            <MaterialIcons
-              name="arrow-back"
-              size={24}
-              color={theme.colors.black}
-            />
-          </Bounceable>
-        </View>
+        <ScreenHeader title="Error" />
         <View style={styles.centered}>
           <ThemedText style={styles.errorText}>
             {error || "Case not found"}
@@ -144,37 +137,19 @@ export default function CaseDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.header}>
-        <Bounceable onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.black}
-          />
-        </Bounceable>
-        <Bounceable
-          style={styles.headerTitleWrap}
-          onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
-          accessibilityLabel={title}
-          accessibilityHint="Long press to show full title"
-        >
-          <ThemedText
-            style={styles.headerTitle}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.65}
+      <ScreenHeader
+        title={title}
+        onTitleLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
+        rightComponent={
+          <Bounceable
+            style={styles.editBtn}
+            onPress={() => router.push(`/case/${id}/edit`)}
           >
-            {title}
-          </ThemedText>
-        </Bounceable>
-        <Bounceable
-          style={styles.editBtn}
-          onPress={() => router.push(`/case/${id}/edit`)}
-        >
-          <MaterialIcons name="edit" size={22} color={theme.colors.black} />
-          <ThemedText style={styles.editBtnText}>Edit</ThemedText>
-        </Bounceable>
-      </View>
+            <MaterialIcons name="edit" size={22} color={theme.colors.black} />
+            <ThemedText style={styles.editBtnText}>Edit</ThemedText>
+          </Bounceable>
+        }
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -303,29 +278,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.themeGray3,
-    backgroundColor: theme.colors.background,
-  },
-  backBtn: {
-    padding: 4,
-    marginRight: 8,
-  },
-  headerTitleWrap: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
   },
   editBtn: {
     flexDirection: "row",

@@ -2,16 +2,18 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    TextInput,
+    View,
 } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -109,119 +111,112 @@ export default function AddDateToCaseScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.btnBlue}
-          />
-        </Pressable>
-        <ThemedText style={styles.headerTitle} numberOfLines={1}>
-          Add date to {formattedDate}
-        </ThemedText>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title={`Add date to ${formattedDate}`} />
 
-      <View style={styles.processCard}>
-        <ThemedText style={styles.processTitle}>How it works</ThemedText>
-        <ThemedText
-          style={styles.processSteps}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
-        >
-          1. Search or scroll to find your case.{"\n"}
-          2. Tap the case to set its next hearing date to {formattedDate}.
-        </ThemedText>
-      </View>
-
-      <View style={styles.searchWrap}>
-        <MaterialIcons
-          name="search"
-          size={20}
-          color={theme.colors.gray50}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search cases by title, number, or type..."
-          placeholderTextColor={theme.colors.gray50}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
-
-      {error ? (
-        <ThemedText style={styles.errorText}>{error}</ThemedText>
-      ) : null}
-
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
+      <Animated.View 
+        style={{ flex: 1 }}
+        entering={FadeInUp.duration(400).springify().damping(20)}
+      >
+        <View style={styles.processCard}>
+          <ThemedText style={styles.processTitle}>How it works</ThemedText>
+          <ThemedText
+            style={styles.processSteps}
+            lightColor={theme.colors.gray50}
+            darkColor={theme.colors.gray50}
+          >
+            1. Search or scroll to find your case.{"\n"}
+            2. Tap the case to set its next hearing date to {formattedDate}.
+          </ThemedText>
         </View>
-      ) : filteredCases.length === 0 ? (
-        <ThemedText
-          style={styles.empty}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
-        >
-          {search.trim()
-            ? "No cases match your search."
-            : "You have no cases yet. Add a case first."}
-        </ThemedText>
-      ) : (
-        <FlatList
-          data={filteredCases}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => {
-            const isSaving = savingId === item.id;
-            const title = getCaseDisplayTitle(item);
-            const subtitle = item.case_number
-              ? `#${item.case_number}${item.case_type ? ` · ${item.case_type}` : ""}`
-              : item.case_type ?? "";
 
-            return (
-              <Pressable
-                style={styles.caseRow}
-                onPress={() => handleSelectCase(item)}
-                disabled={isSaving}
-              >
-                <View style={styles.caseRowText}>
-                  <ThemedText style={styles.caseRowTitle} numberOfLines={1}>
-                    {title}
-                  </ThemedText>
-                  {subtitle ? (
-                    <ThemedText
-                      style={styles.caseRowSubtitle}
-                      numberOfLines={1}
-                      lightColor={theme.colors.gray50}
-                      darkColor={theme.colors.gray50}
-                    >
-                      {subtitle}
+        <View style={styles.searchWrap}>
+          <MaterialIcons
+            name="search"
+            size={20}
+            color={theme.colors.gray50}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search cases by title, number, or type..."
+            placeholderTextColor={theme.colors.gray50}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+
+        {error ? (
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+        ) : null}
+
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={theme.colors.black} />
+          </View>
+        ) : filteredCases.length === 0 ? (
+          <ThemedText
+            style={styles.empty}
+            lightColor={theme.colors.gray50}
+            darkColor={theme.colors.gray50}
+          >
+            {search.trim()
+              ? "No cases match your search."
+              : "You have no cases yet. Add a case first."}
+          </ThemedText>
+        ) : (
+          <FlatList
+            data={filteredCases}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const isSaving = savingId === item.id;
+              const title = getCaseDisplayTitle(item);
+              const subtitle = item.case_number
+                ? `#${item.case_number}${item.case_type ? ` · ${item.case_type}` : ""}`
+                : item.case_type ?? "";
+
+              return (
+                <Pressable
+                  style={styles.caseRow}
+                  onPress={() => handleSelectCase(item)}
+                  disabled={isSaving}
+                >
+                  <View style={styles.caseRowText}>
+                    <ThemedText style={styles.caseRowTitle} numberOfLines={1}>
+                      {title}
                     </ThemedText>
-                  ) : null}
-                </View>
-                {isSaving ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.black}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name="chevron-right"
-                    size={24}
-                    color={theme.colors.gray50}
-                  />
-                )}
-              </Pressable>
-            );
-          }}
-        />
-      )}
+                    {subtitle ? (
+                      <ThemedText
+                        style={styles.caseRowSubtitle}
+                        numberOfLines={1}
+                        lightColor={theme.colors.gray50}
+                        darkColor={theme.colors.gray50}
+                      >
+                        {subtitle}
+                      </ThemedText>
+                    ) : null}
+                  </View>
+                  {isSaving ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.colors.black}
+                    />
+                  ) : (
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={24}
+                      color={theme.colors.gray50}
+                    />
+                  )}
+                </Pressable>
+              );
+            }}
+          />
+        )}
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -230,27 +225,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.borderGray,
-  },
-  backBtn: {
-    padding: 8,
-    marginRight: 4,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
-  },
-  headerSpacer: {
-    width: 40,
   },
   processCard: {
     marginHorizontal: 20,
