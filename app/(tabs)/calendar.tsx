@@ -1,21 +1,21 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import type { DateData } from "react-native-calendars";
 import { Calendar } from "react-native-calendars";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  CalendarCaseCard,
-  type CalendarCaseItem,
+    CalendarCaseCard,
+    type CalendarCaseItem,
 } from "@/components/calendar-case-card";
 import { ThemedText } from "@/components/themed-text";
 import { Spacer } from "@/components/ui";
@@ -277,7 +277,7 @@ export default function CalendarScreen() {
 
   const { session } = useAuth();
 
-  const fetchCases = useCallback(async () => {
+  const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
@@ -285,7 +285,10 @@ export default function CalendarScreen() {
       return;
     }
     setError(null);
-    setLoading(true);
+    // Only show loading if not silent
+    if (!isSilent) {
+      setLoading(true);
+    }
     const { data, error: e } = await supabase
       .from("cases")
       .select("*")
@@ -301,7 +304,7 @@ export default function CalendarScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCases();
+      fetchCases(true);
     }, [fetchCases]),
   );
 

@@ -64,19 +64,24 @@ export default function HomeScreen() {
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
 
-  const fetchCases = useCallback(async () => {
+  const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    
+    // Only show loading if not silent
+    if (!isSilent) {
+      setLoading(true);
+    }
     setError(null);
     const { data, error: e } = await supabase
       .from("cases")
       .select("*")
       .eq("user_id", session.user.id)
       .order("next_hearing_date", { ascending: true, nullsFirst: false });
+    
     setLoading(false);
     if (e) {
       setError(e.message);
@@ -88,7 +93,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCases();
+      fetchCases(true);
     }, [fetchCases]),
   );
 

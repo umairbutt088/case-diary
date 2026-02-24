@@ -26,13 +26,17 @@ export default function DiaryScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCases = useCallback(async () => {
+  const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    
+    // Only show loading if not silent
+    if (!isSilent) {
+      setLoading(true);
+    }
     setError(null);
     const { data, error: e } = await supabase
       .from("cases")
@@ -50,7 +54,7 @@ export default function DiaryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCases();
+      fetchCases(true);
     }, [fetchCases])
   );
 
