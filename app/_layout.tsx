@@ -10,6 +10,7 @@ import "react-native-reanimated";
 
 
 import { AuthNavigator } from "@/components/auth-navigator";
+import { OfflineSyncProvider } from "@/components/offline-sync-provider";
 import { AuthProvider } from "@/context/auth-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { CopilotProvider } from "react-native-copilot";
@@ -24,6 +25,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AuthProvider>
+        <OfflineSyncProvider>
         <CopilotProvider
           overlay="svg"
           backdropColor="rgba(0,0,0,0.75)"
@@ -64,6 +66,7 @@ export default function RootLayout() {
             </Stack>
           </AuthNavigator>
         </CopilotProvider>
+        </OfflineSyncProvider>
       </AuthProvider>
       <StatusBar style="auto" />
     </ThemeProvider>

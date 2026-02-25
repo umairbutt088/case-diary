@@ -2,9 +2,10 @@ import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
   StyleSheet,
-  View
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import Animated, { FadeInUp, FadeOut } from "react-native-reanimated";
@@ -35,6 +36,8 @@ import {
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import { addPendingCase, type PendingCaseRow } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const STEPS = 4;
@@ -42,6 +45,7 @@ const STEPS = 4;
 export default function AddCaseFlowScreen() {
   const router = useRouter();
   const { session } = useAuth();
+  const isOnline = useIsOnline();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<AddCaseFormState>(initialAddCaseFormState);
   const [errors, setErrors] = useState<
@@ -139,7 +143,7 @@ export default function AddCaseFlowScreen() {
       form.respondentName,
     );
 
-    const row = {
+    const row: PendingCaseRow = {
       user_id: userId,
       case_title: caseTitle || null,
       case_number: form.caseNumber.trim() || null,
@@ -162,19 +166,31 @@ export default function AddCaseFlowScreen() {
     };
 
     setSaving(true);
-    const { error } = await supabase
-      .from("cases")
-      .insert(row)
-      .select()
-      .single();
-    setSaving(false);
 
-    if (error) {
-      setSaveError(error.message || "Failed to save case.");
-      return;
+    if (isOnline) {
+      const { error } = await supabase
+        .from("cases")
+        .insert(row)
+        .select()
+        .single();
+      setSaving(false);
+
+      if (error) {
+        setSaveError(error.message || "Failed to save case.");
+        return;
+      }
+      router.back();
+    } else {
+      await addPendingCase(row);
+      setSaving(false);
+      setSaveError(null);
+      Alert.alert(
+        "Saved offline",
+        "Your case was saved locally. It will sync to the cloud when you're back online.",
+        [{ text: "OK", onPress: () => router.back() }]
+      );
     }
-    router.back();
-  }, [form, session?.user?.id, validateStep4, router]);
+  }, [form, session?.user?.id, validateStep4, router, isOnline]);
 
   const stepEntering = FadeInUp.duration(400).springify().damping(20);
   const stepExiting = FadeOut.duration(200);
