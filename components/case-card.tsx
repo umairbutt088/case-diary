@@ -1,6 +1,7 @@
 import { Bounceable } from "@/components/ui/bounceable";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
+import { CopilotStep, walkthroughable } from "react-native-copilot";
 import { Alert, StyleSheet, View } from "react-native";
 import Animated, {
   FadeInUp,
@@ -14,6 +15,7 @@ import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle } from "@/types/case";
 
 const CASE_DETAILS_SNIPPET_LENGTH = 80;
+const WalkthroughableView = walkthroughable(View);
 
 function getCaseDetailsSnippet(row: CaseRow): string {
   if (row.notes?.trim()) {
@@ -35,9 +37,20 @@ type CaseCardProps = {
   index?: number;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  walkthroughEnabled?: boolean;
+  walkthroughContext?: string;
+  walkthroughActive?: boolean;
 };
 
-export function CaseCard({ caseItem, index = 0, onEdit, onDelete }: CaseCardProps) {
+export function CaseCard({
+  caseItem,
+  index = 0,
+  onEdit,
+  onDelete,
+  walkthroughEnabled = false,
+  walkthroughContext = "case-card",
+  walkthroughActive = true,
+}: CaseCardProps) {
   const router = useRouter();
   const title = getCaseDisplayTitle(caseItem);
   const snippet = getCaseDetailsSnippet(caseItem);
@@ -74,16 +87,34 @@ export function CaseCard({ caseItem, index = 0, onEdit, onDelete }: CaseCardProp
               {title}
             </ThemedText>
           </Bounceable>
-          <View
-            style={styles.detailsButton}
-          >
-            <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
-            <MaterialIcons
-              name="chevron-right"
-              size={20}
-              color={theme.colors.gray50}
-            />
-          </View>
+          {walkthroughEnabled ? (
+            <CopilotStep
+              text="Details opens the full case page so you can review all information."
+              order={5}
+              name={`${walkthroughContext}-details`}
+              active={walkthroughActive}
+            >
+              <WalkthroughableView>
+                <View style={styles.detailsButton}>
+                  <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={20}
+                    color={theme.colors.gray50}
+                  />
+                </View>
+              </WalkthroughableView>
+            </CopilotStep>
+          ) : (
+            <View style={styles.detailsButton}>
+              <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
+              <MaterialIcons
+                name="chevron-right"
+                size={20}
+                color={theme.colors.gray50}
+              />
+            </View>
+          )}
         </View>
         <ThemedText
           style={styles.snippet}
@@ -111,18 +142,42 @@ export function CaseCard({ caseItem, index = 0, onEdit, onDelete }: CaseCardProp
           </View>
           <View style={styles.actions}>
             {onDelete ? (
-              <Bounceable
-                onPress={() => onDelete(caseItem.id)}
-                style={styles.iconButton}
-                hitSlop={8}
-                accessibilityLabel="Delete case"
-              >
-                <MaterialIcons
-                  name="delete-outline"
-                  size={22}
-                  color={theme.colors.themeRed}
-                />
-              </Bounceable>
+              walkthroughEnabled ? (
+                <CopilotStep
+                  text="Delete removes this case permanently."
+                  order={6}
+                  name={`${walkthroughContext}-delete`}
+                  active={walkthroughActive}
+                >
+                  <WalkthroughableView>
+                    <Bounceable
+                      onPress={() => onDelete(caseItem.id)}
+                      style={styles.iconButton}
+                      hitSlop={8}
+                      accessibilityLabel="Delete case"
+                    >
+                      <MaterialIcons
+                        name="delete-outline"
+                        size={22}
+                        color={theme.colors.themeRed}
+                      />
+                    </Bounceable>
+                  </WalkthroughableView>
+                </CopilotStep>
+              ) : (
+                <Bounceable
+                  onPress={() => onDelete(caseItem.id)}
+                  style={styles.iconButton}
+                  hitSlop={8}
+                  accessibilityLabel="Delete case"
+                >
+                  <MaterialIcons
+                    name="delete-outline"
+                    size={22}
+                    color={theme.colors.themeRed}
+                  />
+                </Bounceable>
+              )
             ) : null}
             <Bounceable
               onPress={() => router.push(`/calendar`)}
@@ -133,18 +188,42 @@ export function CaseCard({ caseItem, index = 0, onEdit, onDelete }: CaseCardProp
               <MaterialIcons name="event" size={22} color={theme.colors.gray50} />
             </Bounceable>
             {onEdit ? (
-              <Bounceable
-                onPress={() => onEdit(caseItem.id)}
-                style={styles.iconButton}
-                hitSlop={8}
-                accessibilityLabel="Edit case"
-              >
-                <MaterialIcons
-                  name="edit"
-                  size={22}
-                  color={theme.colors.gray50}
-                />
-              </Bounceable>
+              walkthroughEnabled ? (
+                <CopilotStep
+                  text="Edit lets you update this case information."
+                  order={7}
+                  name={`${walkthroughContext}-edit`}
+                  active={walkthroughActive}
+                >
+                  <WalkthroughableView>
+                    <Bounceable
+                      onPress={() => onEdit(caseItem.id)}
+                      style={styles.iconButton}
+                      hitSlop={8}
+                      accessibilityLabel="Edit case"
+                    >
+                      <MaterialIcons
+                        name="edit"
+                        size={22}
+                        color={theme.colors.gray50}
+                      />
+                    </Bounceable>
+                  </WalkthroughableView>
+                </CopilotStep>
+              ) : (
+                <Bounceable
+                  onPress={() => onEdit(caseItem.id)}
+                  style={styles.iconButton}
+                  hitSlop={8}
+                  accessibilityLabel="Edit case"
+                >
+                  <MaterialIcons
+                    name="edit"
+                    size={22}
+                    color={theme.colors.gray50}
+                  />
+                </Bounceable>
+              )
             ) : null}
           </View>
         </View>

@@ -1,4 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useIsFocused } from "@react-navigation/native";
 import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -13,6 +14,9 @@ import {
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
+
 import { CaseCard } from "@/components/case-card";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable, Spacer } from "@/components/ui";
@@ -22,6 +26,8 @@ import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { getTodayISO, getWeekBounds } from "@/types/case";
+
+const WalkthroughableView = walkthroughable(View);
 
 type HomeFilter = "today" | "weekly";
 
@@ -54,6 +60,8 @@ function getWeeklyCases(
 }
 
 export default function HomeScreen() {
+  const isFocused = useIsFocused();
+  const { start } = useCopilot();
   const router = useRouter();
   const { session } = useAuth();
   const [cases, setCases] = useState<CaseRow[]>([]);
@@ -64,37 +72,57 @@ export default function HomeScreen() {
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
 
-  const fetchCases = useCallback(async (isSilent = false) => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
-      setCases([]);
+  const fetchCases = useCallback(
+    async (isSilent = false) => {
+      if (!session?.user?.id || !isSupabaseConfigured) {
+        setCases([]);
+        setLoading(false);
+        return;
+      }
+
+      // Only show loading if not silent
+      if (!isSilent) {
+        setLoading(true);
+      }
+      setError(null);
+      const { data, error: e } = await supabase
+        .from("cases")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("next_hearing_date", { ascending: true, nullsFirst: false });
+
       setLoading(false);
-      return;
-    }
-    
-    // Only show loading if not silent
-    if (!isSilent) {
-      setLoading(true);
-    }
-    setError(null);
-    const { data, error: e } = await supabase
-      .from("cases")
-      .select("*")
-      .eq("user_id", session.user.id)
-      .order("next_hearing_date", { ascending: true, nullsFirst: false });
-    
-    setLoading(false);
-    if (e) {
-      setError(e.message);
-      setCases([]);
-      return;
-    }
-    setCases((data as CaseRow[]) ?? []);
-  }, [session?.user?.id]);
+      if (e) {
+        setError(e.message);
+        setCases([]);
+        return;
+      }
+      setCases((data as CaseRow[]) ?? []);
+    },
+    [session?.user?.id],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      fetchCases(true);
-    }, [fetchCases]),
+      let cancelled = false;
+      (async () => {
+        await fetchCases(true);
+        if (cancelled) return;
+        const hasSeenTour = await AsyncStorage.getItem(
+          "hasSeenHomeTourCopilot",
+        );
+        if (!hasSeenTour) {
+          setTimeout(() => {
+            if (cancelled) return;
+            start();
+            AsyncStorage.setItem("hasSeenHomeTourCopilot", "true");
+          }, 600);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchCases, start]),
   );
 
   const handleDeleteCase = useCallback(
@@ -157,41 +185,72 @@ export default function HomeScreen() {
   if (!hasAny) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <ScreenHeader title={isTodayFilter ? "Today" : "This week"} showBack={false} />
+        <CopilotStep
+          text="This is your dashboard where you can see all your upcoming hearings and filings."
+          order={1}
+          name="welcome"
+          active={isFocused}
+        >
+          <WalkthroughableView>
+            <ScreenHeader
+              title={isTodayFilter ? "Today" : "This week"}
+              showBack={false}
+            />
+          </WalkthroughableView>
+        </CopilotStep>
         <View style={styles.container}>
           <View style={styles.filterRow}>
-            <Pressable
-              style={[
-                styles.filterBtn,
-                isTodayFilter && styles.filterBtnActive,
-              ]}
-              onPress={() => setFilter("today")}
+            <CopilotStep
+              text="Tap here to see only today's cases."
+              order={2}
+              name="filter-today"
+              active={isFocused}
             >
-              <ThemedText
-                style={[
-                  styles.filterBtnText,
-                  isTodayFilter && styles.filterBtnTextActive,
-                ]}
-              >
-                Today
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.filterBtn,
-                !isTodayFilter && styles.filterBtnActive,
-              ]}
-              onPress={() => setFilter("weekly")}
+              <WalkthroughableView style={{ width: "45%" }}>
+                <Pressable
+                  style={[
+                    styles.filterBtn,
+                    isTodayFilter && styles.filterBtnActive,
+                  ]}
+                  onPress={() => setFilter("today")}
+                >
+                  <ThemedText
+                    style={[
+                      styles.filterBtnText,
+                      isTodayFilter && styles.filterBtnTextActive,
+                    ]}
+                  >
+                    Today
+                  </ThemedText>
+                </Pressable>
+              </WalkthroughableView>
+            </CopilotStep>
+
+            <CopilotStep
+              text="Tap here to see this week's hearings and filings."
+              order={3}
+              name="filter-weekly"
+              active={isFocused}
             >
-              <ThemedText
-                style={[
-                  styles.filterBtnText,
-                  !isTodayFilter && styles.filterBtnTextActive,
-                ]}
-              >
-                Weekly
-              </ThemedText>
-            </Pressable>
+              <WalkthroughableView style={{ width: "45%" }}>
+                <Pressable
+                  style={[
+                    styles.filterBtn,
+                    !isTodayFilter && styles.filterBtnActive,
+                  ]}
+                  onPress={() => setFilter("weekly")}
+                >
+                  <ThemedText
+                    style={[
+                      styles.filterBtnText,
+                      !isTodayFilter && styles.filterBtnTextActive,
+                    ]}
+                  >
+                    Weekly
+                  </ThemedText>
+                </Pressable>
+              </WalkthroughableView>
+            </CopilotStep>
           </View>
           <Spacer.Column numberOfSpaces={10} />
           <View style={styles.card}>
@@ -211,14 +270,25 @@ export default function HomeScreen() {
                 : "Cases with a hearing or filing this week will appear here."}
             </ThemedText>
             <Link href="/add-case-flow" asChild>
-              <Bounceable style={styles.addButton}>
-                <MaterialIcons
-                  name="add"
-                  size={22}
-                  color={theme.colors.pureWhite}
-                />
-                <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
-              </Bounceable>
+              <CopilotStep
+                text="Tap here to start adding your cases and stay organized."
+                order={4}
+                name="add-case"
+                active={isFocused}
+              >
+                <WalkthroughableView>
+                  <Bounceable style={styles.addButton}>
+                    <MaterialIcons
+                      name="add"
+                      size={22}
+                      color={theme.colors.pureWhite}
+                    />
+                    <ThemedText style={styles.addButtonText}>
+                      Add Case
+                    </ThemedText>
+                  </Bounceable>
+                </WalkthroughableView>
+              </CopilotStep>
             </Link>
             <Bounceable
               style={styles.diaryLink}
@@ -258,8 +328,20 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScreenHeader title={isTodayFilter ? "Today Cases" : "This week Cases"} showBack={false} />
-      <Animated.View 
+      <CopilotStep
+        text="This is your dashboard where you can see all your upcoming hearings and filings."
+        order={1}
+        name="welcome"
+        active={isFocused}
+      >
+        <WalkthroughableView>
+          <ScreenHeader
+            title={isTodayFilter ? "Today Cases" : "This week Cases"}
+            showBack={false}
+          />
+        </WalkthroughableView>
+      </CopilotStep>
+      <Animated.View
         style={{ flex: 1 }}
         entering={FadeInUp.duration(400).springify().damping(20)}
       >
@@ -267,32 +349,57 @@ export default function HomeScreen() {
           <Spacer.Column numberOfSpaces={4} />
 
           <View style={styles.filterRow}>
-            <Pressable
-              style={[styles.filterBtn, isTodayFilter && styles.filterBtnActive]}
-              onPress={() => setFilter("today")}
+            <CopilotStep
+              text="Tap here to see only today's cases."
+              order={2}
+              name="filter-today"
+              active={isFocused}
             >
-              <ThemedText
-                style={[
-                  styles.filterBtnText,
-                  isTodayFilter && styles.filterBtnTextActive,
-                ]}
-              >
-                Today
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              style={[styles.filterBtn, !isTodayFilter && styles.filterBtnActive]}
-              onPress={() => setFilter("weekly")}
+              <WalkthroughableView style={styles.filterBtnWrapper}>
+                <Pressable
+                  style={[
+                    styles.filterBtn,
+                    isTodayFilter && styles.filterBtnActive,
+                  ]}
+                  onPress={() => setFilter("today")}
+                >
+                  <ThemedText
+                    style={[
+                      styles.filterBtnText,
+                      isTodayFilter && styles.filterBtnTextActive,
+                    ]}
+                  >
+                    Today
+                  </ThemedText>
+                </Pressable>
+              </WalkthroughableView>
+            </CopilotStep>
+
+            <CopilotStep
+              text="Tap here to see this week's hearings and filings."
+              order={3}
+              name="filter-weekly"
+              active={isFocused}
             >
-              <ThemedText
-                style={[
-                  styles.filterBtnText,
-                  !isTodayFilter && styles.filterBtnTextActive,
-                ]}
-              >
-                Weekly
-              </ThemedText>
-            </Pressable>
+              <WalkthroughableView style={styles.filterBtnWrapper}>
+                <Pressable
+                  style={[
+                    styles.filterBtn,
+                    !isTodayFilter && styles.filterBtnActive,
+                  ]}
+                  onPress={() => setFilter("weekly")}
+                >
+                  <ThemedText
+                    style={[
+                      styles.filterBtnText,
+                      !isTodayFilter && styles.filterBtnTextActive,
+                    ]}
+                  >
+                    Weekly
+                  </ThemedText>
+                </Pressable>
+              </WalkthroughableView>
+            </CopilotStep>
           </View>
           <Spacer.Column numberOfSpaces={5} />
           <FlatList
@@ -325,6 +432,9 @@ export default function HomeScreen() {
                       caseItem={caseItem}
                       onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
                       onDelete={handleDeleteCase}
+                      walkthroughEnabled={previousItemsCount + itemIndex === 0}
+                      walkthroughContext="home-case-actions"
+                      walkthroughActive={isFocused}
                     />
                   ))}
                 </View>
@@ -371,9 +481,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderGray,
   },
+  filterBtnWrapper: {
+    width: "45%",
+  },
   filterBtn: {
     paddingVertical: 10,
-    width: "45%",
     alignItems: "center",
     borderRadius: 12,
     backgroundColor: theme.colors.grey100,
