@@ -1,5 +1,8 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
+import { useIsFocused } from "@react-navigation/native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,11 +20,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { getAvatarDisplayUrl } from "@/lib/cloudinary";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ProfileRow } from "@/types/profile";
 import { getDisplayName } from "@/types/profile";
+
+const WalkthroughableView = walkthroughable(View);
 
 function FieldRow({
   label,
@@ -44,7 +50,10 @@ function SectionTitle({ title }: { title: string }) {
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const isFocused = useIsFocused();
   const { session, signOut } = useAuth();
+  const { start } = useCopilot();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +105,29 @@ export default function ProfileScreen() {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        await fetchProfile();
+        if (cancelled) return;
+        const hasSeenTour = await AsyncStorage.getItem(
+          "hasSeenProfileTourCopilot",
+        );
+        if (!hasSeenTour) {
+          setTimeout(() => {
+            if (cancelled) return;
+            start();
+            AsyncStorage.setItem("hasSeenProfileTourCopilot", "true");
+          }, 600);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchProfile, start]),
+  );
 
   const { pickImage, uploading } = useProfilePhoto(
     session?.user?.id,
@@ -190,8 +222,14 @@ export default function ProfileScreen() {
       ) : (
         <View style={styles.card}>
           {/* Avatar & name */}
-          <View style={styles.avatarSection}>
-            <Pressable
+          <CopilotStep
+            text="This is your profile. Tap the avatar to add a photo when editing."
+            order={1}
+            name="profile-avatar"
+            active={isFocused}
+          >
+            <WalkthroughableView style={styles.avatarSection}>
+              <Pressable
               style={styles.avatarPressable}
               onPress={editing ? pickImage : undefined}
               disabled={uploading || !editing}
@@ -231,7 +269,8 @@ export default function ProfileScreen() {
                 {displayName || "User"}
               </ThemedText>
             )}
-          </View>
+            </WalkthroughableView>
+          </CopilotStep>
 
           {editing ? (
             <>
@@ -331,30 +370,65 @@ export default function ProfileScreen() {
               <FieldRow label="Mobile number" value={profile?.phone} />
               <SectionTitle title="Address" />
               <FieldRow label="Address" value={profile?.address} />
-              <Pressable
-                style={styles.editButton}
-                onPress={() => setEditing(true)}
+              <CopilotStep
+                text="Tap here to edit your profile details."
+                order={2}
+                name="profile-edit"
+                active={isFocused}
               >
-                <ThemedText style={styles.editButtonText}>
-                  Edit profile
-                </ThemedText>
-              </Pressable>
+                <WalkthroughableView>
+                  <Pressable
+                    style={styles.editButton}
+                    onPress={() => setEditing(true)}
+                  >
+                    <ThemedText style={styles.editButtonText}>
+                      Edit profile
+                    </ThemedText>
+                  </Pressable>
+                </WalkthroughableView>
+              </CopilotStep>
             </>
           )}
         </View>
       )}
 
       <Pressable
-        style={styles.signOutButton}
-        onPress={() =>
-          Alert.alert("Sign out?", "You can sign in again anytime.", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Sign out", style: "destructive", onPress: signOut },
-          ])
-        }
+        style={styles.resetTourButton}
+        onPress={async () => {
+          await AsyncStorage.multiRemove([
+            "hasSeenHomeTourCopilot",
+            "hasSeenCalendarTourCopilot",
+            "hasSeenProfileTourCopilot",
+            "hasSeenDiaryTourCopilot",
+          ]);
+          router.push("/(tabs)");
+        }}
       >
-        <ThemedText style={styles.signOutText}>Sign out</ThemedText>
+        <ThemedText style={styles.resetTourText}>
+          Start a walkthrough
+        </ThemedText>
       </Pressable>
+
+      <CopilotStep
+        text="Tap here to sign out of your account."
+        order={3}
+        name="profile-signout"
+        active={isFocused}
+      >
+        <WalkthroughableView>
+          <Pressable
+            style={styles.signOutButton}
+            onPress={() =>
+              Alert.alert("Sign out?", "You can sign in again anytime.", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Sign out", style: "destructive", onPress: signOut },
+              ])
+            }
+          >
+            <ThemedText style={styles.signOutText}>Sign out</ThemedText>
+          </Pressable>
+        </WalkthroughableView>
+      </CopilotStep>
     </>
   );
 
@@ -578,5 +652,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
     color: theme.colors.pureWhite,
+  },
+  resetTourButton: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 14,
+    backgroundColor: theme.colors.grey100,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  resetTourText: {
+    fontWeight: "600",
+    fontSize: 16,
+    color: theme.colors.black,
   },
 });

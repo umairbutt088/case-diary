@@ -1,21 +1,24 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import {
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import type { DateData } from "react-native-calendars";
 import { Calendar } from "react-native-calendars";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    CalendarCaseCard,
-    type CalendarCaseItem,
+  CalendarCaseCard,
+  type CalendarCaseItem,
 } from "@/components/calendar-case-card";
 import { ThemedText } from "@/components/themed-text";
 import { Spacer } from "@/components/ui";
@@ -24,6 +27,8 @@ import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { getCaseDisplayTitle, getTodayISO } from "@/types/case";
+
+const WalkthroughableView = walkthroughable(View);
 
 // Theme for calendar: white bg, black text, weekends red, selected outline, marked grey
 const CALENDAR_THEME = {
@@ -267,6 +272,9 @@ function caseToCalendarItem(c: CaseRow, date: string): CalendarCaseItem {
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
+  const { start } = useCopilot();
+  const scrollViewRef = useRef<ScrollView>(null);
   const today = getTodayISO();
   const [selectedDate, setSelectedDate] = useState(today);
   const [currentMonth, setCurrentMonth] = useState(today.slice(0, 7));
@@ -277,35 +285,55 @@ export default function CalendarScreen() {
 
   const { session } = useAuth();
 
-  const fetchCases = useCallback(async (isSilent = false) => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
-      setCases([]);
-      setLoading(false);
+  const fetchCases = useCallback(
+    async (isSilent = false) => {
+      if (!session?.user?.id || !isSupabaseConfigured) {
+        setCases([]);
+        setLoading(false);
+        setError(null);
+        return;
+      }
       setError(null);
-      return;
-    }
-    setError(null);
-    // Only show loading if not silent
-    if (!isSilent) {
-      setLoading(true);
-    }
-    const { data, error: e } = await supabase
-      .from("cases")
-      .select("*")
-      .eq("user_id", session.user.id);
-    setLoading(false);
-    if (e) {
-      setCases([]);
-      setError(e.message);
-      return;
-    }
-    setCases((data as CaseRow[]) ?? []);
-  }, [session?.user?.id]);
+      // Only show loading if not silent
+      if (!isSilent) {
+        setLoading(true);
+      }
+      const { data, error: e } = await supabase
+        .from("cases")
+        .select("*")
+        .eq("user_id", session.user.id);
+      setLoading(false);
+      if (e) {
+        setCases([]);
+        setError(e.message);
+        return;
+      }
+      setCases((data as CaseRow[]) ?? []);
+    },
+    [session?.user?.id],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      fetchCases(true);
-    }, [fetchCases]),
+      let cancelled = false;
+      (async () => {
+        await fetchCases(true);
+        if (cancelled) return;
+        const hasSeenTour = await AsyncStorage.getItem(
+          "hasSeenCalendarTourCopilot",
+        );
+        if (!hasSeenTour) {
+          setTimeout(() => {
+            if (cancelled) return;
+            start(undefined, scrollViewRef.current);
+            AsyncStorage.setItem("hasSeenCalendarTourCopilot", "true");
+          }, 800);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchCases, start]),
   );
 
   const dateToCount = useMemo(() => buildDateToCount(cases), [cases]);
@@ -338,6 +366,7 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -370,19 +399,28 @@ export default function CalendarScreen() {
             Add this date {`"${selectedDate}"`} as next hearing date to a case
           </Text>
           <Spacer.Column numberOfSpaces={5} />
-          <Pressable
-            style={styles.addDateButton}
-            onPress={() =>
-              router.push({
-                pathname: "/add-date-to-case",
-                params: { date: selectedDate },
-              })
-            }
+          <CopilotStep
+            text="Click here to add this selected date as the next hearing date to a case."
+            order={1}
+            name="calendar-add-next-hearing-date"
+            active={isFocused}
           >
-            <ThemedText style={styles.addDateButtonText}>
-              + Add as next hearing date
-            </ThemedText>
-          </Pressable>
+            <WalkthroughableView>
+              <Pressable
+                style={styles.addDateButton}
+                onPress={() =>
+                  router.push({
+                    pathname: "/add-date-to-case",
+                    params: { date: selectedDate },
+                  })
+                }
+              >
+                <ThemedText style={styles.addDateButtonText}>
+                  + Add next hearing date
+                </ThemedText>
+              </Pressable>
+            </WalkthroughableView>
+          </CopilotStep>
           <ThemedText
             style={styles.addDateHint}
             lightColor={theme.colors.gray50}
