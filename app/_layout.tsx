@@ -5,6 +5,7 @@ import {
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { Platform, StatusBar as RNStatusBar } from "react-native";
 import "react-native-reanimated";
 
 
@@ -30,6 +31,11 @@ export default function RootLayout() {
           overlay="svg"
           backdropColor="rgba(0,0,0,0.75)"
           animated={true}
+          verticalOffset={
+            Platform.OS === "android"
+              ? RNStatusBar.currentHeight ?? 24
+              : 0
+          }
         >
           <AuthNavigator>
             <Stack>

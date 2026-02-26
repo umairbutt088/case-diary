@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -53,7 +53,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const { session, signOut } = useAuth();
-  const { start } = useCopilot();
+  const { start, copilotEvents } = useCopilot();
+  const scrollRef = useRef<ScrollView | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +119,7 @@ export default function ProfileScreen() {
         if (!hasSeenTour) {
           setTimeout(() => {
             if (cancelled) return;
-            start();
+            start(undefined, scrollRef.current);
             AsyncStorage.setItem("hasSeenProfileTourCopilot", "true");
           }, 600);
         }
@@ -128,6 +129,21 @@ export default function ProfileScreen() {
       };
     }, [fetchProfile, start]),
   );
+
+  // Auto-scroll to logout button when walkthrough reaches that step (fixes large screens)
+  useEffect(() => {
+    const onStepChange = (step: { name?: string } | undefined) => {
+      if (step?.name === "profile-signout") {
+        setTimeout(() => {
+          scrollRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    };
+    copilotEvents.on("stepChange", onStepChange);
+    return () => {
+      copilotEvents.off("stepChange", onStepChange);
+    };
+  }, [copilotEvents]);
 
   const { pickImage, uploading } = useProfilePhoto(
     session?.user?.id,
@@ -456,6 +472,7 @@ export default function ProfileScreen() {
         </KeyboardAwareScrollView>
       ) : (
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
