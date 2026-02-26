@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useIsFocused } from "@react-navigation/native";
 import { Link, useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +23,8 @@ import { Bounceable, Spacer } from "@/components/ui";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import { getPendingCasesCount } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { getTodayISO, getWeekBounds } from "@/types/case";
@@ -59,15 +61,28 @@ function getWeeklyCases(
   return { hearingsThisWeek, filedThisWeek };
 }
 
+function isNetworkError(message: string): boolean {
+  const msg = (message || "").toLowerCase();
+  return (
+    msg.includes("network request failed") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("network error") ||
+    msg.includes("fetch failed")
+  );
+}
+
 export default function HomeScreen() {
   const isFocused = useIsFocused();
+  const isOnline = useIsOnline();
   const { start } = useCopilot();
   const router = useRouter();
   const { session } = useAuth();
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
   const [filter, setFilter] = useState<HomeFilter>("today");
+  const [pendingCount, setPendingCount] = useState(0);
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
@@ -77,6 +92,7 @@ export default function HomeScreen() {
       if (!session?.user?.id || !isSupabaseConfigured) {
         setCases([]);
         setLoading(false);
+        setIsOffline(false);
         return;
       }
 
@@ -85,6 +101,7 @@ export default function HomeScreen() {
         setLoading(true);
       }
       setError(null);
+      setIsOffline(false);
       const { data, error: e } = await supabase
         .from("cases")
         .select("*")
@@ -93,10 +110,18 @@ export default function HomeScreen() {
 
       setLoading(false);
       if (e) {
-        setError(e.message);
-        setCases([]);
+        if (isNetworkError(e.message)) {
+          setIsOffline(true);
+          setError(null);
+          setCases([]);
+        } else {
+          setError(e.message);
+          setIsOffline(false);
+          setCases([]);
+        }
         return;
       }
+      setIsOffline(false);
       setCases((data as CaseRow[]) ?? []);
     },
     [session?.user?.id],
@@ -106,8 +131,19 @@ export default function HomeScreen() {
     useCallback(() => {
       let cancelled = false;
       (async () => {
-        await fetchCases(true);
+        if (!isOnline && session?.user?.id && isSupabaseConfigured) {
+          setLoading(false);
+          setIsOffline(true);
+          setError(null);
+          setCases([]);
+        } else {
+          await fetchCases(true);
+        }
         if (cancelled) return;
+        if (session?.user?.id) {
+          const count = await getPendingCasesCount(session.user.id);
+          if (!cancelled) setPendingCount(count);
+        }
         const hasSeenTour = await AsyncStorage.getItem(
           "hasSeenHomeTourCopilot",
         );
@@ -122,8 +158,16 @@ export default function HomeScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchCases, start]),
+    }, [fetchCases, start, session?.user?.id, isOnline]),
   );
+
+  // Refetch when coming back online (smooth transition, no flicker)
+  useEffect(() => {
+    if (!isOnline || !session?.user?.id || !isSupabaseConfigured) return;
+    if (isOffline) {
+      fetchCases(true);
+    }
+  }, [isOnline, isOffline, session?.user?.id, fetchCases]);
 
   const handleDeleteCase = useCallback(
     (caseId: string) => {
@@ -160,7 +204,7 @@ export default function HomeScreen() {
   const hasAnyWeekly = hearingsThisWeek.length > 0 || filedThisWeek.length > 0;
   const hasAny = isTodayFilter ? hasAnyToday : hasAnyWeekly;
 
-  if (loading && cases.length === 0) {
+  if (loading && cases.length === 0 && !isOffline) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Home" showBack={false} />
@@ -171,7 +215,7 @@ export default function HomeScreen() {
     );
   }
 
-  if (error && cases.length === 0) {
+  if (error && cases.length === 0 && !isOffline) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Home" showBack={false} />
@@ -198,6 +242,18 @@ export default function HomeScreen() {
             />
           </WalkthroughableView>
         </CopilotStep>
+        {pendingCount > 0 && (
+          <View style={styles.pendingBanner}>
+            <MaterialIcons
+              name="cloud-upload"
+              size={18}
+              color={theme.colors.zodiacColour}
+            />
+            <ThemedText style={styles.pendingBannerText}>
+              {pendingCount} case{pendingCount !== 1 ? "s" : ""} waiting to sync
+            </ThemedText>
+          </View>
+        )}
         <View style={styles.container}>
           <View style={styles.filterRow}>
             <CopilotStep
@@ -256,18 +312,24 @@ export default function HomeScreen() {
           <View style={styles.card}>
             <View style={styles.iconCircle}>
               <MaterialIcons
-                name="today"
+                name={isOffline ? "cloud-off" : "today"}
                 size={40}
                 color={theme.colors.zodiacColour}
               />
             </View>
             <ThemedText style={styles.heading}>
-              {isTodayFilter ? "Nothing for today" : "Nothing this week"}
+              {isOffline
+                ? "You're offline"
+                : isTodayFilter
+                  ? "Nothing for today"
+                  : "Nothing this week"}
             </ThemedText>
             <ThemedText style={styles.subtext}>
-              {isTodayFilter
-                ? "Cases with a hearing today or filed today will appear here."
-                : "Cases with a hearing or filing this week will appear here."}
+              {isOffline
+                ? "Your cases will appear when you're connected. Cases you add while offline will sync automatically."
+                : isTodayFilter
+                  ? "Cases with a hearing today or filed today will appear here."
+                  : "Cases with a hearing or filing this week will appear here."}
             </ThemedText>
             <Link href="/add-case-flow" asChild>
               <CopilotStep
@@ -341,6 +403,18 @@ export default function HomeScreen() {
           />
         </WalkthroughableView>
       </CopilotStep>
+      {pendingCount > 0 && (
+        <View style={styles.pendingBanner}>
+          <MaterialIcons
+            name="cloud-upload"
+            size={18}
+            color={theme.colors.zodiacColour}
+          />
+          <ThemedText style={styles.pendingBannerText}>
+            {pendingCount} case{pendingCount !== 1 ? "s" : ""} waiting to sync
+          </ThemedText>
+        </View>
+      )}
       <Animated.View
         style={{ flex: 1 }}
         entering={FadeInUp.duration(400).springify().damping(20)}
@@ -453,6 +527,23 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  pendingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: theme.colors.zodiacColour + "20",
+    marginHorizontal: 24,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  pendingBannerText: {
+    fontSize: 14,
+    color: theme.colors.zodiacColour,
+    fontWeight: "500",
   },
   container: {
     flex: 1,
