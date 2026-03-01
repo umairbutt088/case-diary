@@ -18,6 +18,9 @@ Migrations are SQL files in `supabase/migrations/`. They run in **numeric order*
 | ------------------------- | -------------------------------------------------------------------------- |
 | `001_create_profiles.sql` | Profiles table + trigger to create a profile on signup; RLS for profiles.  |
 | `002_create_cases.sql`    | Cases table for add-case form data; RLS so users only see their own cases. |
+| `003_create_judges.sql`   | Saved judges table (per user) with RLS and unique judge name per user.     |
+| `008_add_court_room_address_to_judges.sql` | Adds optional `court_room_address` to saved judges.            |
+| `009_add_court_tier_to_judges.sql` | Adds `court_tier` to judges for tier-based selector filtering.             |
 
 ---
 
@@ -68,6 +71,50 @@ Migrations are SQL files in `supabase/migrations/`. They run in **numeric order*
 
 ---
 
+## 003 – Judges
+
+**File:** `supabase/migrations/003_create_judges.sql`
+
+**Creates:**
+
+- **Table `public.judges`**
+  - `id` (uuid, PK, default `gen_random_uuid()`)
+  - `user_id` (uuid, required, references `auth.users.id`) – owner
+  - `name` (text, required)
+  - `created_at` (timestamp)
+- **Indexes**
+  - `judges_user_id_idx` on `user_id`
+  - `judges_user_name_unique` unique on `(user_id, lower(trim(name)))` to prevent duplicates like "Judge A" vs " judge a "
+- **RLS on `judges`**
+  - Users can **select**, **insert**, and **delete** only their own rows.
+
+---
+
+## 008 – Judge court room address
+
+**File:** `supabase/migrations/008_add_court_room_address_to_judges.sql`
+
+**Adds:**
+
+- `court_room_address` (text, optional) to `public.judges`
+
+This lets the app auto-fill `Court room location` when a judge is selected, while keeping the case field editable.
+
+---
+
+## 009 – Judge court tier
+
+**File:** `supabase/migrations/009_add_court_tier_to_judges.sql`
+
+**Adds:**
+
+- `court_tier` (text, optional initially) to `public.judges`
+- index `judges_user_court_tier_idx` on `(user_id, court_tier)`
+
+This supports filtering judges by selected case court tier and keeps judge suggestions relevant.
+
+---
+
 ## How to run migrations
 
 ### Option A: Supabase Dashboard (SQL Editor)
@@ -76,6 +123,9 @@ Migrations are SQL files in `supabase/migrations/`. They run in **numeric order*
 2. Run migrations **in order**:
    - Open `supabase/migrations/001_create_profiles.sql`, copy its full contents, paste into the editor, click **Run**.
    - Then open `supabase/migrations/002_create_cases.sql`, copy, paste, **Run**.
+   - Then run `supabase/migrations/003_create_judges.sql`.
+   - Then run `supabase/migrations/008_add_court_room_address_to_judges.sql`.
+   - Then run `supabase/migrations/009_add_court_tier_to_judges.sql`.
 
 Re-running is safe because of `if not exists` and `drop trigger if exists` where used.
 
@@ -125,5 +175,6 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 | ---------- | ---------------------------------------------------------- |
 | `profiles` | One per user; `id` = `auth.users.id`; name, email, role.   |
 | `cases`    | One per case; `user_id` = owner; all add-case form fields. |
+| `judges`   | Saved judges per user; name + optional `court_room_address`, `court_tier`. |
 
 Both tables use RLS so each user only accesses their own data.

@@ -12,11 +12,12 @@ import Animated, { FadeInUp, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
+import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { DateField } from "@/components/add-case/date-field";
 import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
-import { JudgeNameField } from "@/components/add-case/judge-name-field";
+import { JudgeNameSelector } from "@/components/add-case/judge-name-selector";
 import { LinkExistingClientField } from "@/components/add-case/link-existing-client-field";
 import { RadioOption } from "@/components/add-case/radio-option";
 import { StepIndicator } from "@/components/add-case/step-indicator";
@@ -54,6 +55,7 @@ export default function AddCaseFlowScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
 
   const update = useCallback((updates: Partial<AddCaseFormState>) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -294,24 +296,47 @@ export default function AddCaseFlowScreen() {
                   label={label}
                   selected={form.courtTier === value}
                   onSelect={() =>
-                    update({ courtTier: value as CourtTier, courtName: "" })
+                    update({
+                      courtTier: value as CourtTier,
+                      courtName: "",
+                      judgeName: "",
+                      courtRoom: "",
+                    })
                   }
                 />
               ))}
             </FormField>
-            <JudgeNameField
+            <JudgeNameSelector
               label="Judge Name"
               value={form.judgeName}
+              courtTier={form.courtTier}
               onChange={(v) => update({ judgeName: v })}
-              placeholder="Select or add judge name"
-              hint="Pick from saved judges or add a new name for future use"
+              onSelectJudge={({ courtRoomAddress }) => {
+                update({ courtRoom: courtRoomAddress?.trim() || "" });
+              }}
+              onPressAddJudge={() => setShowAddJudgeSheet(true)}
+              placeholder="Select judge"
+              hint="Judges are filtered by selected court tier."
             />
             <FormFieldWithHint
               label="Court room location"
               value={form.courtRoom}
               onChangeText={(v) => update({ courtRoom: v })}
               placeholder="e.g. Building A, 2nd Floor"
-              hint="Enter court room location or address"
+              hint="Auto-filled from selected judge when available, and always editable."
+            />
+            <AddJudgeBottomSheet
+              visible={showAddJudgeSheet}
+              defaultCourtTier={form.courtTier}
+              onClose={() => setShowAddJudgeSheet(false)}
+              onSaved={(judge) => {
+                update({
+                  judgeName: judge.name,
+                  courtTier: judge.courtTier,
+                  courtRoom: judge.courtRoomAddress?.trim() || "",
+                });
+                setShowAddJudgeSheet(false);
+              }}
             />
             <View style={styles.buttons}>
               <Bounceable
