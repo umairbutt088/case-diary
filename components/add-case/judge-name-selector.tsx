@@ -2,12 +2,14 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 
 import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
@@ -52,6 +54,7 @@ export function JudgeNameSelector({
   const [query, setQuery] = useState("");
   const [judges, setJudges] = useState<JudgeRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingJudgeName, setDeletingJudgeName] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const normalize = useCallback((name: string) => name.trim().toLowerCase(), []);
@@ -126,6 +129,50 @@ export function JudgeNameSelector({
     [onChange, onSelectJudge],
   );
 
+  const handleDeleteJudge = useCallback(
+    async (judge: JudgeRecord) => {
+      if (!session?.user?.id || !isSupabaseConfigured || !courtTier) {
+        setFetchError("You must be signed in to delete a judge.");
+        return;
+      }
+
+      setDeletingJudgeName(judge.name);
+      setFetchError(null);
+      const { error: e } = await supabase
+        .from("judges")
+        .delete()
+        .eq("user_id", session.user.id)
+        .eq("court_tier", courtTier)
+        .eq("name", judge.name);
+      setDeletingJudgeName(null);
+
+      if (e) {
+        Alert.alert("Delete failed", e.message || "Could not delete judge.");
+        return;
+      }
+
+      setJudges((prev) =>
+        prev.filter(
+          (item) =>
+            !(
+              item.name === judge.name &&
+              item.courtTier === judge.courtTier
+            ),
+        ),
+      );
+
+      if (value === judge.name) {
+        onChange("");
+        onSelectJudge?.({
+          name: "",
+          courtRoomAddress: null,
+          courtTier: "",
+        });
+      }
+    },
+    [session?.user?.id, courtTier, value, onChange, onSelectJudge],
+  );
+
   return (
     <FormField label={label} required={required} hint={hint}>
       <View style={styles.dropdownWrap}>
@@ -195,38 +242,65 @@ export function JudgeNameSelector({
                 nestedScrollEnabled
               >
                 {filteredJudges.map((judge) => (
-                  <Pressable
+                  <Swipeable
                     key={`${judge.courtTier}:${judge.name}`}
-                    style={styles.option}
-                    onPress={() => onSelect(judge)}
-                  >
-                    <View style={styles.optionTextWrap}>
-                      <ThemedText
+                    overshootRight={false}
+                    renderRightActions={() => (
+                      <Pressable
                         style={[
-                          styles.optionText,
-                          value === judge.name && styles.optionTextSelected,
+                          styles.deleteAction,
+                          deletingJudgeName === judge.name && styles.deleteActionDisabled,
                         ]}
+                        onPress={() => void handleDeleteJudge(judge)}
+                        disabled={deletingJudgeName === judge.name}
                       >
-                        {judge.name}
-                      </ThemedText>
-                      {judge.courtRoomAddress ? (
-                        <ThemedText style={styles.optionSubText}>
-                          {judge.courtRoomAddress}
+                        {deletingJudgeName === judge.name ? (
+                          <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                        ) : (
+                          <>
+                            <MaterialIcons
+                              name="delete-outline"
+                              size={18}
+                              color={theme.colors.pureWhite}
+                            />
+                            <ThemedText style={styles.deleteActionText}>Delete</ThemedText>
+                          </>
+                        )}
+                      </Pressable>
+                    )}
+                  >
+                    <Pressable
+                      style={styles.option}
+                      onPress={() => onSelect(judge)}
+                    >
+                      <View style={styles.optionTextWrap}>
+                        <ThemedText
+                          style={[
+                            styles.optionText,
+                            value === judge.name && styles.optionTextSelected,
+                          ]}
+                        >
+                          {judge.name}
                         </ThemedText>
-                      ) : (
-                        <ThemedText style={styles.optionSubTextMuted}>
-                          No saved court room address
-                        </ThemedText>
-                      )}
-                    </View>
-                    {value === judge.name ? (
-                      <MaterialIcons
-                        name="check"
-                        size={22}
-                        color={theme.colors.themeBlack}
-                      />
-                    ) : null}
-                  </Pressable>
+                        {judge.courtRoomAddress ? (
+                          <ThemedText style={styles.optionSubText}>
+                            {judge.courtRoomAddress}
+                          </ThemedText>
+                        ) : (
+                          <ThemedText style={styles.optionSubTextMuted}>
+                            No saved court room address
+                          </ThemedText>
+                        )}
+                      </View>
+                      {value === judge.name ? (
+                        <MaterialIcons
+                          name="check"
+                          size={22}
+                          color={theme.colors.themeBlack}
+                        />
+                      ) : null}
+                    </Pressable>
+                  </Swipeable>
                 ))}
               </ScrollView>
             )}
@@ -328,6 +402,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.grey100,
+  },
+  deleteAction: {
+    width: 92,
+    backgroundColor: theme.colors.themeRed,
+    justifyContent: "center",
+    alignItems: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.grey100,
+    gap: 4,
+  },
+  deleteActionDisabled: {
+    opacity: 0.8,
+  },
+  deleteActionText: {
+    color: theme.colors.pureWhite,
+    fontSize: 12,
+    fontWeight: "600",
   },
   optionTextWrap: {
     flex: 1,

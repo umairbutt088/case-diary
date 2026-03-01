@@ -6,6 +6,7 @@ import {
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Platform, StatusBar as RNStatusBar } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 
@@ -24,57 +25,59 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <OfflineSyncProvider>
-        <CopilotProvider
-          overlay="svg"
-          backdropColor="rgba(0,0,0,0.75)"
-          animated={true}
-          verticalOffset={
-            Platform.OS === "android"
-              ? RNStatusBar.currentHeight ?? 24
-              : 0
-          }
-        >
-          <AuthNavigator>
-            <Stack>
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="add-case-flow"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="add-date-to-case"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="case"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="case/[id]"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="case/[id]/edit"
-                options={{
-                  headerShown: false,
-                }}
-              />
-            </Stack>
-          </AuthNavigator>
-        </CopilotProvider>
-        </OfflineSyncProvider>
-      </AuthProvider>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <OfflineSyncProvider>
+          <CopilotProvider
+            overlay="svg"
+            backdropColor="rgba(0,0,0,0.75)"
+            animated={true}
+            verticalOffset={
+              Platform.OS === "android"
+                ? RNStatusBar.currentHeight ?? 24
+                : 0
+            }
+          >
+            <AuthNavigator>
+              <Stack>
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="add-case-flow"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="add-date-to-case"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="case"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="case/[id]"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="case/[id]/edit"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+              </Stack>
+            </AuthNavigator>
+          </CopilotProvider>
+          </OfflineSyncProvider>
+        </AuthProvider>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

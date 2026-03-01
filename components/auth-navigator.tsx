@@ -8,30 +8,25 @@ import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 
 /**
- * Central auth navigator: routes based on session and onboarding.
+ * Central auth navigator: routes based on session.
  * Login/signup screens must NOT navigate after success; this component reacts to auth state.
  */
 export function AuthNavigator({ children }: { children: React.ReactNode }) {
-  const { session, isLoading, onboardingCompleted } = useAuth();
+  const { session, isLoading } = useAuth();
   const router = useRouter();
   const initialNavDone = useRef(false);
 
   const isAuthenticated = !!session?.user;
-  const onboardingDone = onboardingCompleted === true;
 
-  // Wait until we know both session and onboarding state before showing app content
-  const ready = !isLoading && onboardingCompleted !== null;
+  // Wait until session loading is complete before showing app content
+  const ready = !isLoading;
 
   // Single effect: whenever auth or onboarding state is known, navigate after a tick
   // (defer so React has committed session state and router is ready)
   useEffect(() => {
     if (!ready) return;
 
-    const target = isAuthenticated
-      ? "/(tabs)"
-      : !onboardingDone
-      ? "/(auth)/onboarding"
-      : "/(auth)/login";
+    const target = isAuthenticated ? "/(tabs)" : "/(auth)/login";
 
     const id = setTimeout(() => {
       router.replace(target as any);
@@ -39,7 +34,7 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
     }, 0);
 
     return () => clearTimeout(id);
-  }, [ready, isAuthenticated, onboardingDone, router]);
+  }, [ready, isAuthenticated, router]);
 
   if (!ready) {
     return (
