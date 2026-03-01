@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useIsFocused } from "@react-navigation/native";
 import { Link, useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -27,11 +27,90 @@ import { useIsOnline } from "@/hooks/use-is-online";
 import { getPendingCasesCount } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
-import { getTodayISO, getWeekBounds } from "@/types/case";
+import { formatCaseDate, getCaseDisplayTitle, getTodayISO, getWeekBounds } from "@/types/case";
 
 const WalkthroughableView = walkthroughable(View);
 
 type HomeFilter = "today" | "weekly";
+type CaseSection = { title: string; data: CaseRow[] };
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildCaseReportHtml(
+  reportTitle: string,
+  sections: CaseSection[],
+): string {
+  const generatedAt = new Date().toLocaleString();
+  const totalCases = sections.reduce((sum, section) => sum + section.data.length, 0);
+  const rowsHtml = sections
+    .flatMap((section) =>
+      section.data.map((caseItem) => {
+        const title = escapeHtml(getCaseDisplayTitle(caseItem));
+        const caseNumber = escapeHtml(caseItem.case_number || "—");
+        const courtName = escapeHtml(caseItem.court_name || "—");
+        const hearingDate = escapeHtml(formatCaseDate(caseItem.next_hearing_date));
+        const filingDate = escapeHtml(formatCaseDate(caseItem.date_of_filing));
+        const status = escapeHtml(caseItem.current_status || "—");
+        return `
+          <tr>
+            <td>${escapeHtml(section.title)}</td>
+            <td>${title}</td>
+            <td>${caseNumber}</td>
+            <td>${courtName}</td>
+            <td>${hearingDate}</td>
+            <td>${filingDate}</td>
+            <td>${status}</td>
+          </tr>
+        `;
+      }),
+    )
+    .join("");
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; margin: 24px; color: #1f1f1f; }
+          h1 { margin: 0 0 8px; font-size: 22px; }
+          .meta { margin-bottom: 16px; font-size: 13px; color: #5c5c5c; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th, td { border: 1px solid #d8d8d8; padding: 8px; text-align: left; vertical-align: top; }
+          th { background: #f2f2f2; font-weight: 600; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(reportTitle)}</h1>
+        <div class="meta">
+          Generated: ${escapeHtml(generatedAt)}<br />
+          Total cases: ${totalCases}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Section</th>
+              <th>Case</th>
+              <th>Case No.</th>
+              <th>Court</th>
+              <th>Next Hearing</th>
+              <th>Filed On</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+}
 
 function getTodayCases(
   cases: CaseRow[],
@@ -83,6 +162,8 @@ export default function HomeScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [filter, setFilter] = useState<HomeFilter>("today");
   const [pendingCount, setPendingCount] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const sectionsListRef = useRef<FlatList<CaseSection> | null>(null);
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
@@ -203,6 +284,110 @@ export default function HomeScreen() {
   const hasAnyToday = hearingsToday.length > 0 || filedToday.length > 0;
   const hasAnyWeekly = hearingsThisWeek.length > 0 || filedThisWeek.length > 0;
   const hasAny = isTodayFilter ? hasAnyToday : hasAnyWeekly;
+  const sections = useMemo<CaseSection[]>(() => {
+    const result: CaseSection[] = [];
+    if (isTodayFilter) {
+      if (hearingsToday.length > 0) {
+        result.push({ title: "Hearings today", data: hearingsToday });
+      }
+      if (filedToday.length > 0) {
+        result.push({ title: "Filed today", data: filedToday });
+      }
+    } else {
+      if (hearingsThisWeek.length > 0) {
+        result.push({ title: "Hearings this week", data: hearingsThisWeek });
+      }
+      if (filedThisWeek.length > 0) {
+        result.push({ title: "Filed this week", data: filedThisWeek });
+      }
+    }
+    return result;
+  }, [isTodayFilter, hearingsToday, filedToday, hearingsThisWeek, filedThisWeek]);
+
+  const shareCasesAsPdf = useCallback(async () => {
+    if (isExporting || sections.length === 0) return;
+    setIsExporting(true);
+    try {
+      const Sharing = await import("expo-sharing");
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+        return;
+      }
+      const reportTitle = isTodayFilter ? "Today Cases" : "Weekly Cases";
+      const html = buildCaseReportHtml(reportTitle, sections);
+      const Print = await import("expo-print");
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, {
+        mimeType: "application/pdf",
+        UTI: "com.adobe.pdf",
+        dialogTitle: `Share ${reportTitle} PDF`,
+      });
+    } catch (e: any) {
+      Alert.alert("Export failed", e?.message || "Could not export PDF.");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [isExporting, sections, isTodayFilter]);
+
+  const shareCasesAsImage = useCallback(async () => {
+    if (isExporting || sections.length === 0) return;
+    setIsExporting(true);
+    try {
+      const Sharing = await import("expo-sharing");
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+        return;
+      }
+      if (!sectionsListRef.current) {
+        Alert.alert("Export failed", "Could not capture the case list.");
+        return;
+      }
+
+      const { captureRef } = await import("react-native-view-shot");
+      const uri = await captureRef(sectionsListRef.current, {
+        format: "png",
+        quality: 1,
+        result: "tmpfile",
+        snapshotContentContainer: true,
+      });
+      const reportTitle = isTodayFilter ? "Today Cases" : "Weekly Cases";
+      await Sharing.shareAsync(uri, {
+        mimeType: "image/png",
+        UTI: "public.png",
+        dialogTitle: `Share ${reportTitle} image`,
+      });
+    } catch (e: any) {
+      Alert.alert("Export failed", e?.message || "Could not export image.");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [isExporting, sections.length, isTodayFilter]);
+
+  const handleShareCases = useCallback(() => {
+    if (isExporting || sections.length === 0) return;
+    Alert.alert("Share case list", "Choose a format", [
+      { text: "PDF", onPress: () => void shareCasesAsPdf() },
+      { text: "Image", onPress: () => void shareCasesAsImage() },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [isExporting, sections.length, shareCasesAsPdf, shareCasesAsImage]);
+
+  const shareButton = hasAny ? (
+    <Bounceable
+      onPress={handleShareCases}
+      style={styles.shareButton}
+      accessibilityLabel="Share case list"
+      disabled={isExporting}
+    >
+      {isExporting ? (
+        <ActivityIndicator size="small" color={theme.colors.black} />
+      ) : (
+        <MaterialIcons name="share" size={21} color={theme.colors.black} />
+      )}
+    </Bounceable>
+  ) : null;
 
   if (loading && cases.length === 0 && !isOffline) {
     return (
@@ -239,6 +424,7 @@ export default function HomeScreen() {
             <ScreenHeader
               title={isTodayFilter ? "Today" : "This week"}
               showBack={false}
+              rightComponent={shareButton}
             />
           </WalkthroughableView>
         </CopilotStep>
@@ -371,23 +557,6 @@ export default function HomeScreen() {
     );
   }
 
-  const sections: { title: string; data: CaseRow[] }[] = [];
-  if (isTodayFilter) {
-    if (hearingsToday.length > 0) {
-      sections.push({ title: "Hearings today", data: hearingsToday });
-    }
-    if (filedToday.length > 0) {
-      sections.push({ title: "Filed today", data: filedToday });
-    }
-  } else {
-    if (hearingsThisWeek.length > 0) {
-      sections.push({ title: "Hearings this week", data: hearingsThisWeek });
-    }
-    if (filedThisWeek.length > 0) {
-      sections.push({ title: "Filed this week", data: filedThisWeek });
-    }
-  }
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <CopilotStep
@@ -400,6 +569,7 @@ export default function HomeScreen() {
           <ScreenHeader
             title={isTodayFilter ? "Today Cases" : "This week Cases"}
             showBack={false}
+            rightComponent={shareButton}
           />
         </WalkthroughableView>
       </CopilotStep>
@@ -477,6 +647,7 @@ export default function HomeScreen() {
           </View>
           <Spacer.Column numberOfSpaces={5} />
           <FlatList
+            ref={sectionsListRef}
             data={sections}
             keyExtractor={(item) => item.title}
             refreshControl={
@@ -612,6 +783,13 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.themeRed,
     marginTop: 8,
+  },
+  shareButton: {
+    minWidth: 34,
+    minHeight: 34,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
   },
   card: {
     backgroundColor: theme.colors.pureWhite,
