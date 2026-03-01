@@ -94,9 +94,10 @@ export default function AddCaseFlowScreen() {
   const validateStep2 = useCallback((): boolean => {
     const e: typeof errors = {};
     if (!form.courtTier) e.courtTier = "Please select court tier";
+    if (!form.judgeName.trim()) e.judgeName = "Judge name is required";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
-  }, [form.courtTier]);
+  }, [form.courtTier, form.judgeName]);
 
   const validateStep3 = useCallback((): boolean => {
     const e: typeof errors = {};
@@ -308,6 +309,7 @@ export default function AddCaseFlowScreen() {
             </FormField>
             <JudgeNameSelector
               label="Judge Name"
+              required
               value={form.judgeName}
               courtTier={form.courtTier}
               onChange={(v) => update({ judgeName: v })}
@@ -317,6 +319,7 @@ export default function AddCaseFlowScreen() {
               onPressAddJudge={() => setShowAddJudgeSheet(true)}
               placeholder="Select judge"
               hint="Judges are filtered by selected court tier."
+              error={errors.judgeName}
             />
             <FormFieldWithHint
               label="Court room location"

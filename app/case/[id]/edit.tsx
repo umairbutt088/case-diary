@@ -136,6 +136,7 @@ export default function EditCaseScreen() {
     if (form.caseType && !form.caseSubType.trim())
       e.caseSubType = "Please select type of case";
     if (!form.courtTier) e.courtTier = "Please select court tier";
+    if (!form.judgeName.trim()) e.judgeName = "Judge name is required";
     if (!form.myClientIs) e.myClientIs = "Please select who your client is";
     if (!form.nextHearingDate.trim())
       e.nextHearingDate = "Next hearing date is required";
@@ -147,6 +148,7 @@ export default function EditCaseScreen() {
     form.caseType,
     form.caseSubType,
     form.courtTier,
+    form.judgeName,
     form.myClientIs,
     form.nextHearingDate,
   ]);
@@ -315,6 +317,7 @@ export default function EditCaseScreen() {
           </FormField>
           <JudgeNameSelector
             label="Judge Name"
+            required
             value={form.judgeName}
             courtTier={form.courtTier}
             onChange={(v) => update({ judgeName: v })}
@@ -324,6 +327,7 @@ export default function EditCaseScreen() {
             onPressAddJudge={() => setShowAddJudgeSheet(true)}
             placeholder="Select judge"
             hint="Judges are filtered by selected court tier."
+            error={errors.judgeName}
           />
           <FormFieldWithHint
             label="Court room location"

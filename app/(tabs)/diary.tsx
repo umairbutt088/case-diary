@@ -1,13 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -20,7 +21,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import type { CaseRow } from "@/types/case";
+import { getCaseDisplayTitle, type CaseRow } from "@/types/case";
 
 /** Wrapper that forwards copilot ref to a native View - required for measureLayout.
  * CopilotStep injects the copilot prop; we spread it onto a native View. */
@@ -44,8 +45,16 @@ export default function DiaryScreen() {
   const { session } = useAuth();
   const { start } = useCopilot();
   const [cases, setCases] = useState<CaseRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const filteredCases = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return cases;
+    return cases.filter((caseItem) =>
+      getCaseDisplayTitle(caseItem).toLowerCase().includes(query),
+    );
+  }, [cases, searchQuery]);
 
   const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
@@ -187,8 +196,18 @@ export default function DiaryScreen() {
         entering={FadeInUp.duration(400).springify().damping(20)}
       >
         <View style={styles.container}>
+          <View style={styles.searchRow}>
+            <ThemedText style={styles.searchIcon}>🔍</ThemedText>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search case by name"
+              placeholderTextColor={theme.colors.gray50}
+              style={styles.searchInput}
+            />
+          </View>
           <FlatList
-            data={cases}
+            data={filteredCases}
             keyExtractor={(item) => item.id}
             refreshControl={
               <RefreshControl
@@ -207,6 +226,14 @@ export default function DiaryScreen() {
           )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.noResultsWrap}>
+                <ThemedText style={styles.noResultsTitle}>No matching case</ThemedText>
+                <ThemedText style={styles.noResultsText}>
+                  Try another case name.
+                </ThemedText>
+              </View>
+            }
           />
         </View>
       </Animated.View>
@@ -231,6 +258,47 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  searchRow: {
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+    borderRadius: 10,
+    backgroundColor: theme.colors.pureWhite,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  searchIcon: {
+    fontSize: 14,
+    color: theme.colors.gray50,
+  },
+  searchInput: {
+    flex: 1,
+    color: theme.colors.black,
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+  noResultsWrap: {
+    marginTop: 18,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: theme.colors.pureWhite,
+    ...theme.shadow,
+  },
+  noResultsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.black,
+    textAlign: "center",
+  },
+  noResultsText: {
+    marginTop: 6,
+    fontSize: 13,
+    color: theme.colors.gray50,
+    textAlign: "center",
   },
   placeholder: {
     opacity: 0.8,

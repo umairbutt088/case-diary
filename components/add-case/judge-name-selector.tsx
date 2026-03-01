@@ -24,6 +24,7 @@ export type JudgeRecord = {
 
 type Props = {
   label: string;
+  required?: boolean;
   value: string;
   courtTier: CourtTier | "";
   onChange: (value: string) => void;
@@ -36,6 +37,7 @@ type Props = {
 
 export function JudgeNameSelector({
   label,
+  required = false,
   value,
   courtTier,
   onChange,
@@ -125,7 +127,7 @@ export function JudgeNameSelector({
   );
 
   return (
-    <FormField label={label} hint={hint}>
+    <FormField label={label} required={required} hint={hint}>
       <View style={styles.dropdownWrap}>
         <View style={[styles.triggerRow, error && styles.triggerRowError]}>
           <Pressable
