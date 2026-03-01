@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useIsFocused } from "@react-navigation/native";
-import { Link, useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -517,27 +517,28 @@ export default function HomeScreen() {
                   ? "Cases with a hearing today or filed today will appear here."
                   : "Cases with a hearing or filing this week will appear here."}
             </ThemedText>
-            <Link href="/add-case-flow" asChild>
-              <CopilotStep
-                text="Tap here to start adding your cases and stay organized."
-                order={4}
-                name="add-case"
-                active={isFocused}
-              >
-                <WalkthroughableView>
-                  <Bounceable style={styles.addButton}>
-                    <MaterialIcons
-                      name="add"
-                      size={22}
-                      color={theme.colors.pureWhite}
-                    />
-                    <ThemedText style={styles.addButtonText}>
-                      Add Case
-                    </ThemedText>
-                  </Bounceable>
-                </WalkthroughableView>
-              </CopilotStep>
-            </Link>
+            <CopilotStep
+              text="Tap here to start adding your cases and stay organized."
+              order={4}
+              name="add-case"
+              active={isFocused}
+            >
+              <WalkthroughableView>
+                <Bounceable
+                  style={styles.addButton}
+                  onPress={() => router.push("/add-case-flow")}
+                >
+                  <MaterialIcons
+                    name="add"
+                    size={22}
+                    color={theme.colors.pureWhite}
+                  />
+                  <ThemedText style={styles.addButtonText}>
+                    Add Case
+                  </ThemedText>
+                </Bounceable>
+              </WalkthroughableView>
+            </CopilotStep>
             <Bounceable
               style={styles.diaryLink}
               onPress={() => router.push("/(tabs)/diary")}

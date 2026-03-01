@@ -68,6 +68,8 @@ export function getCaseSubTypesForType(caseType: CaseType | ""): string[] {
 export const COURT_TIERS = [
   { value: "civil", label: "Civil Court" },
   { value: "criminal", label: "Criminal Court" },
+  { value: "family", label: "Family Court" },
+  { value: "banking", label: "Banking Court" },
   { value: "district", label: "District Court" },
   { value: "tribunal", label: "Tribunal" },
   { value: "high", label: "High Court" },
@@ -124,6 +126,24 @@ export const CRIMINAL_COURTS = [
   "Court of Session",
 ];
 
+/** Family courts. */
+export const FAMILY_COURTS = [
+  "Family Court, Lahore",
+  "Family Court, Karachi",
+  "Family Court, Islamabad",
+  "Family Court, Rawalpindi",
+  "Family Court, Faisalabad",
+];
+
+/** Banking courts. */
+export const BANKING_COURTS = [
+  "Banking Court, Lahore",
+  "Banking Court, Karachi",
+  "Banking Court, Islamabad",
+  "Banking Court, Rawalpindi",
+  "Banking Court, Peshawar",
+];
+
 /** Tribunals. */
 export const TRIBUNALS = [
   "Federal Service Tribunal",
@@ -154,6 +174,8 @@ export function getCourtNamesForTier(tier: CourtTier | ""): string[] {
   if (tier === "district") return COMMON_DISTRICT_COURTS;
   if (tier === "civil") return CIVIL_COURTS;
   if (tier === "criminal") return CRIMINAL_COURTS;
+  if (tier === "family") return FAMILY_COURTS;
+  if (tier === "banking") return BANKING_COURTS;
   if (tier === "tribunal") return TRIBUNALS;
   return [];
 }
