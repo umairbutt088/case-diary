@@ -55,6 +55,7 @@ export default function AddCaseFlowScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [clientListRefreshKey, setClientListRefreshKey] = useState(0);
   const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
 
   const update = useCallback((updates: Partial<AddCaseFormState>) => {
@@ -385,6 +386,7 @@ export default function AddCaseFlowScreen() {
             <LinkExistingClientField
               label="Link Existing Client"
               value={form.linkedClientName}
+              refreshKey={clientListRefreshKey}
               onChange={(name) =>
                 update({
                   linkedClientName: name ?? "",
@@ -431,6 +433,7 @@ export default function AddCaseFlowScreen() {
                   linkedClientName: "",
                   clientOption: "new",
                 });
+                setClientListRefreshKey((k) => k + 1);
                 setShowAddClientModal(false);
               }}
             />

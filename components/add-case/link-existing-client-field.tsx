@@ -18,6 +18,7 @@ type Props = {
   label: string;
   value: string;
   onChange: (clientName: string | null) => void;
+  refreshKey?: number;
   placeholder?: string;
   hint?: string;
 };
@@ -51,6 +52,7 @@ export function LinkExistingClientField({
   label,
   value,
   onChange,
+  refreshKey = 0,
   placeholder = "Select from your existing cases",
   hint,
 }: Props) {
@@ -91,7 +93,7 @@ export function LinkExistingClientField({
       fetchNames();
       setSearch("");
     }
-  }, [open, fetchNames]);
+  }, [open, fetchNames, refreshKey]);
 
   const filteredNames = useMemo(() => {
     if (!search.trim()) return names;

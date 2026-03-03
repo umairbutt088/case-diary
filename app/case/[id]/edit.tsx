@@ -84,6 +84,7 @@ export default function EditCaseScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [clientListRefreshKey, setClientListRefreshKey] = useState(0);
   const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
 
   useEffect(() => {
@@ -371,6 +372,7 @@ export default function EditCaseScreen() {
           <LinkExistingClientField
             label="Link Existing Client"
             value={form.linkedClientName}
+            refreshKey={clientListRefreshKey}
             onChange={(name) =>
               update({
                 linkedClientName: name ?? "",
@@ -417,6 +419,7 @@ export default function EditCaseScreen() {
                 linkedClientName: "",
                 clientOption: "new",
               });
+              setClientListRefreshKey((k) => k + 1);
               setShowAddClientModal(false);
             }}
           />
