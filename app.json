@@ -55,7 +55,8 @@
           "photosPermission": "Legal Diary uses your photos to set your profile picture.",
           "cameraPermission": "Legal Diary uses the camera to take your profile picture."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

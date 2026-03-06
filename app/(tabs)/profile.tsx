@@ -23,6 +23,7 @@ import { useAuth } from "@/context/auth-context";
 import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { getAvatarDisplayUrl } from "@/lib/cloudinary";
+import { APP_TIMEZONE } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ProfileRow } from "@/types/profile";
 import { getDisplayName } from "@/types/profile";
@@ -408,6 +409,22 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {!editing ? (
+        <View style={styles.card}>
+          <SectionTitle title="Cause List Reminder" />
+          <ThemedText style={styles.reminderHint}>
+            Nightly reminders are sent automatically at 8:00 PM with tomorrow&apos;s
+            hearing list.
+          </ThemedText>
+          <ThemedText style={styles.reminderSchedule}>
+            Reminder time: 8:00 PM (court opening at 8:00 AM)
+          </ThemedText>
+          <ThemedText style={styles.timezoneText}>
+            Timezone: {APP_TIMEZONE}
+          </ThemedText>
+        </View>
+      ) : null}
+
       <Pressable
         style={styles.resetTourButton}
         onPress={async () => {
@@ -656,6 +673,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.themeRed,
     marginBottom: 16,
+  },
+  reminderHint: {
+    fontSize: 14,
+    color: theme.colors.gray50,
+    marginBottom: 12,
+  },
+  reminderSchedule: {
+    fontSize: 14,
+    color: theme.colors.black,
+  },
+  timezoneText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: theme.colors.gray50,
   },
   signOutButton: {
     width: "100%",
