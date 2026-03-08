@@ -10,12 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.usamabutt.legal-diary",
+      "bundleIdentifier": "com.umairbutt.legaldiary",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Legal Diary uses your photo library to set your profile picture."
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/legal-diary-image1.png",
@@ -55,7 +56,8 @@
           "photosPermission": "Legal Diary uses your photos to set your profile picture.",
           "cameraPermission": "Legal Diary uses the camera to take your profile picture."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

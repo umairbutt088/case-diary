@@ -11,6 +11,10 @@ export type ProfileRow = {
   phone: string | null;
   address: string | null;
   avatar_url: string | null;
+  expo_push_token: string | null;
+  timezone: string | null;
+  cause_list_reminder_enabled: boolean;
+  cause_list_reminder_hour: number;
   created_at: string;
   updated_at: string;
 };

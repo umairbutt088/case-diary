@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import {
@@ -272,6 +272,7 @@ function caseToCalendarItem(c: CaseRow, date: string): CalendarCaseItem {
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ date?: string }>();
   const isFocused = useIsFocused();
   const { start } = useCopilot();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -284,6 +285,20 @@ export default function CalendarScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { session } = useAuth();
+
+  useFocusEffect(
+    useCallback(() => {
+      const selectedFromRoute = params.date;
+      const validDate =
+        typeof selectedFromRoute === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(selectedFromRoute)
+          ? selectedFromRoute
+          : null;
+      if (!validDate) return;
+      setSelectedDate(validDate);
+      setCurrentMonth(validDate.slice(0, 7));
+    }, [params.date]),
+  );
 
   const fetchCases = useCallback(
     async (isSilent = false) => {
