@@ -16,11 +16,13 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const EAS_PROJECT_ID = "4d913b2c-450d-48f9-a614-94ac21ba45b1";
+
 function getProjectId() {
   return (
     Constants.expoConfig?.extra?.eas?.projectId ??
     Constants.easConfig?.projectId ??
-    null
+    EAS_PROJECT_ID
   );
 }
 
@@ -28,7 +30,7 @@ export function getDeviceTimezone() {
   return APP_TIMEZONE;
 }
 
-export async function registerForPushNotificationsAsync() {
+export async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (Platform.OS === "web") return null;
 
   if (Platform.OS === "android") {
@@ -57,12 +59,21 @@ export async function registerForPushNotificationsAsync() {
   return pushToken.data;
 }
 
-export async function syncPushTokenForUser(userId: string) {
-  if (!isSupabaseConfigured) return false;
+export type SyncTokenResult = { ok: true } | { ok: false; error: string };
+
+export async function syncPushTokenForUser(userId: string): Promise<SyncTokenResult> {
+  if (!isSupabaseConfigured) {
+    return { ok: false, error: "Supabase is not configured." };
+  }
 
   try {
     const token = await registerForPushNotificationsAsync();
-    if (!token) return false;
+    if (!token) {
+      return {
+        ok: false,
+        error: "Could not get push token. Check that notifications are allowed and you have internet.",
+      };
+    }
 
     const timezone = getDeviceTimezone();
     const { error } = await supabase
@@ -73,8 +84,13 @@ export async function syncPushTokenForUser(userId: string) {
       })
       .eq("id", userId);
 
-    return !error;
-  } catch {
-    return false;
+    if (error) {
+      return { ok: false, error: `Failed to save token: ${error.message}` };
+    }
+
+    return { ok: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message || "Unknown error" };
   }
 }

@@ -23,7 +23,7 @@ import { useAuth } from "@/context/auth-context";
 import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { getAvatarDisplayUrl } from "@/lib/cloudinary";
-import { APP_TIMEZONE } from "@/lib/notifications";
+import { APP_TIMEZONE, syncPushTokenForUser } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ProfileRow } from "@/types/profile";
 import { getDisplayName } from "@/types/profile";
@@ -62,6 +62,8 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [syncingToken, setSyncingToken] = useState(false);
+  const [tokenSyncMessage, setTokenSyncMessage] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     first_name: "",
@@ -197,6 +199,20 @@ export default function ProfileScreen() {
     );
     setEditing(false);
   }, [session?.user?.id, form]);
+
+  const handleRegisterForReminders = useCallback(async () => {
+    if (!session?.user?.id || !isSupabaseConfigured) return;
+    setSyncingToken(true);
+    setTokenSyncMessage(null);
+    const result = await syncPushTokenForUser(session.user.id);
+    setSyncingToken(false);
+    if (result.ok) {
+      setTokenSyncMessage("Registered for reminders");
+      fetchProfile();
+    } else {
+      setTokenSyncMessage(result.error);
+    }
+  }, [session?.user?.id, fetchProfile]);
 
   const handleCancel = useCallback(() => {
     if (profile) {
@@ -422,6 +438,41 @@ export default function ProfileScreen() {
           <ThemedText style={styles.timezoneText}>
             Timezone: {APP_TIMEZONE}
           </ThemedText>
+          {profile?.expo_push_token ? (
+            <ThemedText style={styles.tokenStatus}>
+              You&apos;re registered for push notifications.
+            </ThemedText>
+          ) : (
+            <ThemedText style={styles.tokenStatusMuted}>
+              Not registered. Tap below to register.
+            </ThemedText>
+          )}
+          {tokenSyncMessage ? (
+            <ThemedText
+              style={
+                tokenSyncMessage.startsWith("Registered")
+                  ? styles.tokenSyncSuccess
+                  : styles.tokenSyncError
+              }
+            >
+              {tokenSyncMessage}
+            </ThemedText>
+          ) : null}
+          <Pressable
+            style={[styles.btn, styles.btnPrimary, styles.registerButton]}
+            onPress={handleRegisterForReminders}
+            disabled={syncingToken}
+          >
+            {syncingToken ? (
+              <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+            ) : (
+              <ThemedText style={styles.btnPrimaryText}>
+                {profile?.expo_push_token
+                  ? "Re-register for reminders"
+                  : "Register for reminders"}
+              </ThemedText>
+            )}
+          </Pressable>
         </View>
       ) : null}
 
@@ -687,6 +738,29 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 13,
     color: theme.colors.gray50,
+  },
+  tokenStatus: {
+    marginTop: 12,
+    fontSize: 14,
+    color: theme.colors.themeGreen,
+  },
+  tokenStatusMuted: {
+    marginTop: 12,
+    fontSize: 14,
+    color: theme.colors.gray50,
+  },
+  tokenSyncSuccess: {
+    marginTop: 8,
+    fontSize: 14,
+    color: theme.colors.themeGreen,
+  },
+  tokenSyncError: {
+    marginTop: 8,
+    fontSize: 14,
+    color: theme.colors.themeRed,
+  },
+  registerButton: {
+    marginTop: 16,
   },
   signOutButton: {
     width: "100%",

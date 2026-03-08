@@ -63,7 +63,35 @@ function buildNotificationBody(cases: CaseRow[]) {
   return `You have ${cases.length} cases tomorrow. Tap to view your cause list.`;
 }
 
-async function sendPush(token: string, title: string, body: string, date: string) {
+type ExpoPushResult = {
+  ok: boolean;
+  status: number;
+  json: unknown;
+  expoStatus?: "ok" | "error";
+  expoMessage?: string;
+};
+
+async function sendPush(
+  token: string,
+  title: string,
+  body: string,
+  date: string,
+  retryCount = 0,
+): Promise<ExpoPushResult> {
+  const maxRetries = 1;
+  const deepLinkUrl = `legaldiary://calendar?date=${date}`;
+  const payload = {
+    to: token,
+    title,
+    body,
+    sound: "default",
+    data: {
+      screen: "calendar",
+      date,
+      url: deepLinkUrl,
+    },
+  };
+
   const response = await fetch("https://exp.host/--/api/v2/push/send", {
     method: "POST",
     headers: {
@@ -71,20 +99,37 @@ async function sendPush(token: string, title: string, body: string, date: string
       "Accept-encoding": "gzip, deflate",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      to: token,
-      title,
-      body,
-      sound: "default",
-      data: {
-        screen: "calendar",
-        date,
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
-  const json = await response.json();
-  return { ok: response.ok, status: response.status, json };
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    const text = await response.text();
+    json = { _parseError: true, _rawBody: text?.slice(0, 500) };
+  }
+
+  const data = json as { data?: Array<{ status?: string; message?: string }> };
+  const first = data?.data?.[0];
+  const expoStatus = first?.status as "ok" | "error" | undefined;
+  const expoMessage = first?.message;
+
+  // Expo returns HTTP 200 even when push fails; check response body
+  const ok = response.ok && expoStatus === "ok";
+
+  // Retry on transient errors: 5xx, 503, 504, or unusual codes like 263
+  const isRetryable =
+    !ok &&
+    retryCount < maxRetries &&
+    (response.status >= 500 || response.status === 503 || response.status === 504 || response.status === 263);
+
+  if (isRetryable) {
+    await new Promise((r) => setTimeout(r, 2000));
+    return sendPush(token, title, body, date, retryCount + 1);
+  }
+
+  return { ok, status: response.status, json, expoStatus, expoMessage };
 }
 
 Deno.serve(async (req) => {
@@ -125,7 +170,26 @@ Deno.serve(async (req) => {
     }
 
     const rows = (profiles || []) as ProfileReminderRow[];
-    const summary = {
+    const tomorrowDate = getDateInTimezone(addDays(now, 1), APP_TIMEZONE);
+    console.log(
+      JSON.stringify({
+        profiles: rows.length,
+        forceSend,
+        tomorrowDate,
+        localHour: getHourInTimezone(now, APP_TIMEZONE),
+      }),
+    );
+
+    const summary: {
+      forced: boolean;
+      totalProfiles: number;
+      matchedWindow: number;
+      sent: number;
+      skippedNoCases: number;
+      skippedAlreadySent: number;
+      failed: number;
+      lastExpoError?: string;
+    } = {
       forced: forceSend,
       totalProfiles: rows.length,
       matchedWindow: 0,
@@ -140,18 +204,20 @@ Deno.serve(async (req) => {
       if (!forceSend && localHour !== COURT_REMINDER_HOUR) continue;
       summary.matchedWindow += 1;
 
-      const tomorrowDate = getDateInTimezone(addDays(now, 1), APP_TIMEZONE);
-      const { data: existingLog } = await supabase
-        .from("notification_log")
-        .select("id")
-        .eq("user_id", profile.id)
-        .eq("notification_type", REMINDER_TYPE)
-        .eq("target_date", tomorrowDate)
-        .maybeSingle();
+      if (!forceSend) {
+        const { data: existingLog } = await supabase
+          .from("notification_log")
+          .select("id")
+          .eq("user_id", profile.id)
+          .eq("notification_type", REMINDER_TYPE)
+          .eq("target_date", tomorrowDate)
+          .maybeSingle();
 
-      if (existingLog?.id) {
-        summary.skippedAlreadySent += 1;
-        continue;
+        if (existingLog?.id) {
+          summary.skippedAlreadySent += 1;
+          console.log(JSON.stringify({ profileId: profile.id, action: "skippedAlreadySent" }));
+          continue;
+        }
       }
 
       const { data: cases, error: casesError } = await supabase
@@ -177,6 +243,7 @@ Deno.serve(async (req) => {
       const tomorrowCases = (cases || []) as CaseRow[];
       if (!tomorrowCases.length) {
         summary.skippedNoCases += 1;
+        console.log(JSON.stringify({ profileId: profile.id, action: "skippedNoCases" }));
         continue;
       }
 
@@ -191,18 +258,33 @@ Deno.serve(async (req) => {
 
       if (!pushResult.ok) {
         summary.failed += 1;
+        console.log(
+          JSON.stringify({
+            profileId: profile.id,
+            action: "pushFailed",
+            httpStatus: pushResult.status,
+            expoMessage: pushResult.expoMessage,
+            expoStatus: pushResult.expoStatus,
+            expoResponse: pushResult.json,
+          }),
+        );
+        const errorMsg = pushResult.expoMessage
+          ? `Expo: ${pushResult.expoMessage}`
+          : `Expo push API failed (${pushResult.status})`;
+        summary.lastExpoError = errorMsg;
         await supabase.from("notification_log").insert({
           user_id: profile.id,
           notification_type: REMINDER_TYPE,
           target_date: tomorrowDate,
           status: "failed",
-          error_message: `Expo push API failed (${pushResult.status})`,
+          error_message: errorMsg,
           payload: pushResult.json,
         });
         continue;
       }
 
       summary.sent += 1;
+      console.log(JSON.stringify({ profileId: profile.id, action: "pushSent" }));
       await supabase.from("notification_log").insert({
         user_id: profile.id,
         notification_type: REMINDER_TYPE,
@@ -216,6 +298,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log(JSON.stringify({ action: "complete", summary }));
     return new Response(JSON.stringify(summary), {
       status: 200,
       headers: { "Content-Type": "application/json" },

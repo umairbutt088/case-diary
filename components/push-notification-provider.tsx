@@ -8,7 +8,13 @@ import { syncPushTokenForUser } from "@/lib/notifications";
 type NotificationRouteData = {
   screen?: string;
   date?: string;
+  url?: string;
 };
+
+function extractDateFromDeepLink(url: string) {
+  const match = url.match(/[?&]date=(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? null;
+}
 
 export function PushNotificationProvider({
   children,
@@ -25,20 +31,42 @@ export function PushNotificationProvider({
   }, [session?.user?.id]);
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const data = response.notification.request.content
-          .data as NotificationRouteData;
-        if (data?.screen === "calendar" && typeof data.date === "string") {
+    const navigateFromData = (data: NotificationRouteData | undefined) => {
+      if (!data) return;
+
+      if (typeof data.url === "string" && data.url.startsWith("legaldiary://")) {
+        const deeplinkDate = extractDateFromDeepLink(data.url);
+        if (deeplinkDate) {
           router.push({
             pathname: "/(tabs)/calendar",
-            params: { date: data.date },
+            params: { date: deeplinkDate },
           });
           return;
         }
-        router.push("/(tabs)/calendar");
+      }
+
+      if (data.screen === "calendar" && typeof data.date === "string") {
+        router.push({
+          pathname: "/(tabs)/calendar",
+          params: { date: data.date },
+        });
+        return;
+      }
+      router.push("/(tabs)/calendar");
+    };
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data as NotificationRouteData;
+        navigateFromData(data);
       }
     );
+
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!response) return;
+      const data = response.notification.request.content.data as NotificationRouteData;
+      navigateFromData(data);
+    });
 
     return () => {
       subscription.remove();
