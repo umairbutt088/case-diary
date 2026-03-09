@@ -1,8 +1,8 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useIsFocused } from "@react-navigation/native";
 import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import { useFocusEffect, useRouter } from "expo-router";
+import * as Sharing from "expo-sharing";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,9 +13,9 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { captureRef } from "react-native-view-shot";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { captureRef } from "react-native-view-shot";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
@@ -27,6 +27,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { getActivityNotesStorageKey, sanitizeActivityNotes } from "@/lib/activity-notes";
 import { getPendingCasesCount } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
@@ -178,6 +179,7 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState<HomeFilter>("today");
   const [pendingCount, setPendingCount] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [notesCount, setNotesCount] = useState(0);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -224,10 +226,31 @@ export default function HomeScreen() {
     [session?.user?.id],
   );
 
+  const notesStorageKey = useMemo(
+    () => getActivityNotesStorageKey(session?.user?.id),
+    [session?.user?.id],
+  );
+
+  const loadNotesCount = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(notesStorageKey);
+      if (!raw) {
+        setNotesCount(0);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      const sanitized = sanitizeActivityNotes(parsed, today);
+      setNotesCount(sanitized.length);
+    } catch {
+      setNotesCount(0);
+    }
+  }, [notesStorageKey, today]);
+
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
+        await loadNotesCount();
         if (!isOnline && session?.user?.id && isSupabaseConfigured) {
           setLoading(false);
           setIsOffline(true);
@@ -255,7 +278,7 @@ export default function HomeScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchCases, start, session?.user?.id, isOnline]),
+    }, [fetchCases, loadNotesCount, start, session?.user?.id, isOnline]),
   );
 
   // Refetch when coming back online (smooth transition, no flicker)
@@ -422,6 +445,25 @@ export default function HomeScreen() {
     </Bounceable>
   ) : null;
 
+  const hearingLabel = isTodayFilter ? "Hearings today" : "Hearings this week";
+  const notesFloatingButton = (
+    <Bounceable
+      style={styles.notesInlineButton}
+      onPress={() => router.push("/notes")}
+      accessibilityLabel="Open notes"
+    >
+      <MaterialIcons name="sticky-note-2" size={18} color={theme.colors.pureWhite} />
+      <ThemedText style={styles.notesInlineButtonText}>Notes</ThemedText>
+      {notesCount > 0 ? (
+        <View style={styles.notesCountBadge}>
+          <ThemedText style={styles.notesCountText}>
+            {notesCount > 99 ? "99+" : String(notesCount)}
+          </ThemedText>
+        </View>
+      ) : null}
+    </Bounceable>
+  );
+
   if (loading && cases.length === 0 && !isOffline) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -526,6 +568,11 @@ export default function HomeScreen() {
                 </Pressable>
               </WalkthroughableView>
             </CopilotStep>
+          </View>
+          <Spacer.Column numberOfSpaces={4} />
+          <View style={styles.hearingNotesRow}>
+            <ThemedText style={styles.hearingNotesTitle}>{hearingLabel}</ThemedText>
+            {notesFloatingButton}
           </View>
           <Spacer.Column numberOfSpaces={10} />
           <View style={styles.card}>
@@ -678,6 +725,11 @@ export default function HomeScreen() {
                 </Pressable>
               </WalkthroughableView>
             </CopilotStep>
+          </View>
+          <Spacer.Column numberOfSpaces={3} />
+          <View style={styles.hearingNotesRow}>
+            <ThemedText style={styles.hearingNotesTitle}>{hearingLabel}</ThemedText>
+            {notesFloatingButton}
           </View>
           <Spacer.Column numberOfSpaces={5} />
           <Animated.ScrollView
@@ -898,6 +950,53 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
+  },
+  hearingNotesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  hearingNotesTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.gray50,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  notesInlineButton: {
+    position: "relative",
+    minHeight: 36,
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: theme.colors.zodiacColour,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    justifyContent: "center",
+    ...theme.shadow,
+  },
+  notesInlineButtonText: {
+    fontSize: 13,
+    color: theme.colors.pureWhite,
+    fontWeight: "700",
+  },
+  notesCountBadge: {
+    position: "absolute",
+    top: -6,
+    right: -8,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.themeRed,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  notesCountText: {
+    fontSize: 10,
+    color: theme.colors.pureWhite,
+    fontWeight: "700",
   },
   card: {
     backgroundColor: theme.colors.pureWhite,
