@@ -2,6 +2,7 @@ import { Bounceable } from "@/components/ui/bounceable";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { CopilotStep, walkthroughable } from "react-native-copilot";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import Animated, {
@@ -59,18 +60,35 @@ export function CaseCard({
   const caseNumber = caseItem.case_number?.trim() || "—";
   const courtName = caseItem.court_name?.trim() || "—";
   const proceeding = caseItem.next_status?.trim() || caseItem.current_status?.trim() || "—";
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openDetails = () => {
     router.push(`/case/${caseItem.id}`);
   };
 
+  const showCopyNotice = (message: string) => {
+    setCopyNotice(message);
+    if (copyNoticeTimeoutRef.current) clearTimeout(copyNoticeTimeoutRef.current);
+    copyNoticeTimeoutRef.current = setTimeout(() => {
+      setCopyNotice(null);
+      copyNoticeTimeoutRef.current = null;
+    }, 1400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (copyNoticeTimeoutRef.current) clearTimeout(copyNoticeTimeoutRef.current);
+    };
+  }, []);
+
   const copyCaseNumber = async () => {
     if (!caseItem.case_number?.trim()) {
-      Alert.alert("No case number", "This case does not have a case number yet.");
+      showCopyNotice("No case number");
       return;
     }
     await Clipboard.setStringAsync(caseItem.case_number.trim());
-    Alert.alert("Copied", "Case number copied to clipboard.");
+    showCopyNotice("Case number copied");
   };
 
   return (
@@ -259,6 +277,11 @@ export function CaseCard({
             ) : null}
           </View>
         </View>
+        {copyNotice ? (
+          <View pointerEvents="none" style={styles.copyToastWrap}>
+            <ThemedText style={styles.copyToastText}>{copyNotice}</ThemedText>
+          </View>
+        ) : null}
       </Bounceable>
     </Animated.View>
   );
@@ -332,5 +355,23 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 4,
+  },
+  copyToastWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  copyToastText: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    fontSize: 14,
+    color: theme.colors.pureWhite,
+    backgroundColor: theme.colors.black + "CC",
+    overflow: "hidden",
   },
 });
