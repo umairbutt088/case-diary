@@ -1,0 +1,439 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { ThemedText } from "@/components/themed-text";
+import { Bounceable } from "@/components/ui";
+import { ScreenHeader } from "@/components/ui/screen-header";
+import { theme } from "@/constants/theme";
+import { useAuth } from "@/context/auth-context";
+import {
+  type ActivityNote,
+  getActivityNotesStorageKey,
+  sanitizeActivityNotes,
+} from "@/lib/activity-notes";
+import { getTodayISO } from "@/types/case";
+
+type NotesFilter = "today" | "all";
+
+export default function NotesScreen() {
+  const { session } = useAuth();
+  const [notes, setNotes] = useState<ActivityNote[]>([]);
+  const [filter, setFilter] = useState<NotesFilter>("today");
+  const [noteInput, setNoteInput] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const today = getTodayISO();
+
+  const storageKey = useMemo(
+    () => getActivityNotesStorageKey(session?.user?.id),
+    [session?.user?.id],
+  );
+
+  const visibleNotes = useMemo(
+    () => (filter === "today" ? notes.filter((note) => note.noteDate === today) : notes),
+    [filter, notes, today],
+  );
+
+  const loadNotes = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(storageKey);
+      if (!raw) {
+        setNotes([]);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      setNotes(sanitizeActivityNotes(parsed, today));
+    } catch {
+      setNotes([]);
+    }
+  }, [storageKey, today]);
+
+  const persistNotes = useCallback(
+    async (nextNotes: ActivityNote[]) => {
+      setNotes(nextNotes);
+      try {
+        await AsyncStorage.setItem(storageKey, JSON.stringify(nextNotes));
+      } catch {
+        Alert.alert("Error", "Could not save notes.");
+      }
+    },
+    [storageKey],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadNotes();
+    }, [loadNotes]),
+  );
+
+  const resetEditor = useCallback(() => {
+    setNoteInput("");
+    setEditingNoteId(null);
+  }, []);
+
+  const saveNote = useCallback(async () => {
+    const trimmed = noteInput.trim();
+    if (!trimmed) {
+      Alert.alert("Add note", "Please write something before saving.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    let nextNotes: ActivityNote[] = [];
+    if (editingNoteId) {
+      nextNotes = notes
+        .map((note) =>
+          note.id === editingNoteId ? { ...note, content: trimmed, updatedAt: now } : note,
+        )
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    } else {
+      nextNotes = [
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          content: trimmed,
+          createdAt: now,
+          updatedAt: now,
+          isDone: false,
+          noteDate: today,
+        },
+        ...notes,
+      ];
+    }
+
+    await persistNotes(nextNotes);
+    resetEditor();
+  }, [editingNoteId, noteInput, notes, persistNotes, resetEditor, today]);
+
+  const editNote = useCallback((note: ActivityNote) => {
+    setEditingNoteId(note.id);
+    setNoteInput(note.content);
+  }, []);
+
+  const deleteNote = useCallback(
+    (noteId: string) => {
+      Alert.alert("Delete note?", "This note will be removed.", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            const nextNotes = notes.filter((note) => note.id !== noteId);
+            void persistNotes(nextNotes);
+            if (editingNoteId === noteId) {
+              resetEditor();
+            }
+          },
+        },
+      ]);
+    },
+    [editingNoteId, notes, persistNotes, resetEditor],
+  );
+
+  const toggleDone = useCallback(
+    (noteId: string) => {
+      const now = new Date().toISOString();
+      const nextNotes = notes
+        .map((note) =>
+          note.id === noteId ? { ...note, isDone: !note.isDone, updatedAt: now } : note,
+        )
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      void persistNotes(nextNotes);
+    },
+    [notes, persistNotes],
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScreenHeader title="Notes" />
+      <Animated.View style={styles.container} entering={FadeInUp.duration(320).springify()}>
+        <View style={styles.filterRow}>
+          <Pressable
+            style={[styles.filterBtn, filter === "today" && styles.filterBtnActive]}
+            onPress={() => setFilter("today")}
+          >
+            <ThemedText
+              style={[styles.filterBtnText, filter === "today" && styles.filterBtnTextActive]}
+            >
+              Today Notes
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={[styles.filterBtn, filter === "all" && styles.filterBtnActive]}
+            onPress={() => setFilter("all")}
+          >
+            <ThemedText
+              style={[styles.filterBtnText, filter === "all" && styles.filterBtnTextActive]}
+            >
+              All Notes
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        <View style={styles.editorCard}>
+          <TextInput
+            style={styles.notesInput}
+            placeholder={
+              filter === "today"
+                ? "Write a note for today..."
+                : "Write a note (saved for today)..."
+            }
+            placeholderTextColor={theme.colors.gray50}
+            value={noteInput}
+            onChangeText={setNoteInput}
+            multiline
+          />
+          <View style={styles.actionsRow}>
+            {editingNoteId ? (
+              <Bounceable style={styles.secondaryButton} onPress={resetEditor}>
+                <ThemedText style={styles.secondaryButtonText}>Cancel edit</ThemedText>
+              </Bounceable>
+            ) : (
+              <View />
+            )}
+            <Bounceable style={styles.primaryButton} onPress={() => void saveNote()}>
+              <ThemedText style={styles.primaryButtonText}>
+                {editingNoteId ? "Update note" : "Save note"}
+              </ThemedText>
+            </Bounceable>
+          </View>
+        </View>
+
+        <Animated.ScrollView
+          style={styles.notesList}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.notesListContent}
+        >
+          {visibleNotes.length === 0 ? (
+            <ThemedText style={styles.emptyText}>
+              {filter === "today"
+                ? "No notes for today yet."
+                : "No notes yet. Add one to get started."}
+            </ThemedText>
+          ) : (
+            visibleNotes.map((note) => (
+              <View key={note.id} style={styles.noteCard}>
+                <View style={styles.noteTopRow}>
+                  <ThemedText style={[styles.noteContent, note.isDone && styles.noteContentDone]}>
+                    {note.content}
+                  </ThemedText>
+                  <View style={[styles.noteStatusBadge, note.isDone && styles.noteStatusBadgeDone]}>
+                    <ThemedText
+                      style={[styles.noteStatusText, note.isDone && styles.noteStatusTextDone]}
+                    >
+                      {note.isDone ? "Done" : "Active"}
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText style={styles.noteTime}>
+                  {filter === "all" ? `Date ${note.noteDate} - ` : ""}
+                  Updated {new Date(note.updatedAt).toLocaleString()}
+                </ThemedText>
+
+                <View style={styles.noteActions}>
+                  <Bounceable style={styles.noteAction} onPress={() => toggleDone(note.id)}>
+                    <MaterialIcons
+                      name={note.isDone ? "radio-button-unchecked" : "check-circle"}
+                      size={16}
+                      color={note.isDone ? theme.colors.gray50 : theme.colors.zodiacColour}
+                    />
+                    <ThemedText
+                      style={[styles.noteActionText, note.isDone && styles.noteActionInactive]}
+                    >
+                      {note.isDone ? "Mark active" : "Done"}
+                    </ThemedText>
+                  </Bounceable>
+                  <Bounceable style={styles.noteAction} onPress={() => editNote(note)}>
+                    <MaterialIcons name="edit" size={16} color={theme.colors.zodiacColour} />
+                    <ThemedText style={styles.noteActionText}>Edit</ThemedText>
+                  </Bounceable>
+                  <Bounceable style={styles.noteAction} onPress={() => deleteNote(note.id)}>
+                    <MaterialIcons name="delete" size={16} color={theme.colors.themeRed} />
+                    <ThemedText style={[styles.noteActionText, styles.noteActionDelete]}>
+                      Delete
+                    </ThemedText>
+                  </Bounceable>
+                </View>
+              </View>
+            ))
+          )}
+        </Animated.ScrollView>
+      </Animated.View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+  },
+  filterRow: {
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    width: "100%",
+    paddingVertical: 10,
+    justifyContent: "space-around",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+    marginBottom: 12,
+  },
+  filterBtn: {
+    width: "45%",
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 12,
+    backgroundColor: theme.colors.grey100,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  filterBtnActive: {
+    backgroundColor: theme.colors.themeBlack,
+    borderColor: theme.colors.themeBlack,
+  },
+  filterBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.gray50,
+  },
+  filterBtnTextActive: {
+    color: theme.colors.pureWhite,
+  },
+  editorCard: {
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: theme.colors.pureWhite,
+  },
+  notesInput: {
+    minHeight: 86,
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: theme.colors.black,
+    textAlignVertical: "top",
+  },
+  actionsRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.themeBlack,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  primaryButtonText: {
+    color: theme.colors.pureWhite,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    backgroundColor: theme.colors.background,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  secondaryButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.gray50,
+  },
+  notesList: {
+    marginTop: 12,
+  },
+  notesListContent: {
+    paddingBottom: 24,
+    gap: 10,
+  },
+  emptyText: {
+    color: theme.colors.gray50,
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 24,
+  },
+  noteCard: {
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.pureWhite,
+  },
+  noteTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  noteContent: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.black,
+    lineHeight: 20,
+  },
+  noteContentDone: {
+    color: theme.colors.gray50,
+    textDecorationLine: "line-through",
+  },
+  noteStatusBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: theme.colors.zodiacColour + "1a",
+    borderWidth: 1,
+    borderColor: theme.colors.zodiacColour + "55",
+  },
+  noteStatusBadgeDone: {
+    backgroundColor: theme.colors.gray100,
+    borderColor: theme.colors.borderGray,
+  },
+  noteStatusText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.zodiacColour,
+  },
+  noteStatusTextDone: {
+    color: theme.colors.gray50,
+  },
+  noteTime: {
+    marginTop: 6,
+    fontSize: 12,
+    color: theme.colors.gray50,
+  },
+  noteActions: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  noteAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  noteActionText: {
+    fontSize: 13,
+    color: theme.colors.zodiacColour,
+    fontWeight: "600",
+  },
+  noteActionInactive: {
+    color: theme.colors.gray50,
+  },
+  noteActionDelete: {
+    color: theme.colors.themeRed,
+  },
+});

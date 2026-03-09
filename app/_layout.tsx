@@ -73,6 +73,12 @@ export default function RootLayout() {
                         headerShown: false,
                       }}
                     />
+                    <Stack.Screen
+                      name="notes"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
                   </Stack>
                 </AuthNavigator>
               </CopilotProvider>
