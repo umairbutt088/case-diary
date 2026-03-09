@@ -7,6 +7,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
+  Pressable as RNPressable,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -180,6 +182,7 @@ export default function HomeScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   const [notesCount, setNotesCount] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -445,15 +448,14 @@ export default function HomeScreen() {
     </Bounceable>
   ) : null;
 
-  const hearingLabel = isTodayFilter ? "Hearings today" : "Hearings this week";
-  const notesFloatingButton = (
+  const notesHeaderButton = (
     <Bounceable
-      style={styles.notesInlineButton}
+      style={styles.notesHeaderButton}
       onPress={() => router.push("/notes")}
       accessibilityLabel="Open notes"
     >
-      <MaterialIcons name="sticky-note-2" size={18} color={theme.colors.pureWhite} />
-      <ThemedText style={styles.notesInlineButtonText}>Notes</ThemedText>
+      <MaterialIcons name="sticky-note-2" size={16} color={theme.colors.pureWhite} />
+      <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
       {notesCount > 0 ? (
         <View style={styles.notesCountBadge}>
           <ThemedText style={styles.notesCountText}>
@@ -463,14 +465,79 @@ export default function HomeScreen() {
       ) : null}
     </Bounceable>
   );
+  const menuHeaderButton = (
+    <Bounceable
+      onPress={() => setIsSidebarOpen(true)}
+      style={styles.menuHeaderButton}
+      accessibilityLabel="Open menu"
+    >
+      <MaterialIcons name="menu" size={21} color={theme.colors.black} />
+    </Bounceable>
+  );
+  const headerActions = (
+    <View style={styles.headerActions}>
+      {shareButton}
+      {notesHeaderButton}
+    </View>
+  );
+  const sidebarMenu = (
+    <Modal
+      visible={isSidebarOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setIsSidebarOpen(false)}
+    >
+      <RNPressable style={styles.sidebarOverlay} onPress={() => setIsSidebarOpen(false)}>
+        <RNPressable style={styles.sidebarPanel} onPress={() => undefined}>
+          <View style={styles.sidebarHeader}>
+            <ThemedText style={styles.sidebarTitle}>Quick Menu</ThemedText>
+            <Bounceable
+              style={styles.sidebarCloseButton}
+              onPress={() => setIsSidebarOpen(false)}
+            >
+              <MaterialIcons name="close" size={20} color={theme.colors.black} />
+            </Bounceable>
+          </View>
+
+          <Bounceable
+            style={styles.sidebarItem}
+            onPress={() => {
+              setIsSidebarOpen(false);
+              router.push("/notes");
+            }}
+          >
+            <MaterialIcons name="sticky-note-2" size={19} color={theme.colors.black} />
+            <ThemedText style={styles.sidebarItemText}>Notes</ThemedText>
+          </Bounceable>
+
+          <Bounceable
+            style={styles.sidebarItem}
+            onPress={() => {
+              setIsSidebarOpen(false);
+              handleShareCases();
+            }}
+          >
+            <MaterialIcons name="share" size={19} color={theme.colors.black} />
+            <ThemedText style={styles.sidebarItemText}>Share case list</ThemedText>
+          </Bounceable>
+        </RNPressable>
+      </RNPressable>
+    </Modal>
+  );
 
   if (loading && cases.length === 0 && !isOffline) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <ScreenHeader title="Home" showBack={false} />
+        <ScreenHeader
+          title="Home"
+          showBack={false}
+          leftComponent={menuHeaderButton}
+          rightComponent={headerActions}
+        />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
+        {sidebarMenu}
       </SafeAreaView>
     );
   }
@@ -478,10 +545,16 @@ export default function HomeScreen() {
   if (error && cases.length === 0 && !isOffline) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <ScreenHeader title="Home" showBack={false} />
+        <ScreenHeader
+          title="Home"
+          showBack={false}
+          leftComponent={menuHeaderButton}
+          rightComponent={headerActions}
+        />
         <View style={styles.container}>
           <ThemedText style={styles.errorText}>{error}</ThemedText>
         </View>
+        {sidebarMenu}
       </SafeAreaView>
     );
   }
@@ -499,7 +572,8 @@ export default function HomeScreen() {
             <ScreenHeader
               title={isTodayFilter ? "Today" : "This week"}
               showBack={false}
-              rightComponent={shareButton}
+              leftComponent={menuHeaderButton}
+              rightComponent={headerActions}
             />
           </WalkthroughableView>
         </CopilotStep>
@@ -569,11 +643,6 @@ export default function HomeScreen() {
               </WalkthroughableView>
             </CopilotStep>
           </View>
-          <Spacer.Column numberOfSpaces={4} />
-          <View style={styles.hearingNotesRow}>
-            <ThemedText style={styles.hearingNotesTitle}>{hearingLabel}</ThemedText>
-            {notesFloatingButton}
-          </View>
           <Spacer.Column numberOfSpaces={10} />
           <View style={styles.card}>
             <View style={styles.iconCircle}>
@@ -634,6 +703,7 @@ export default function HomeScreen() {
             </Bounceable>
           </View>
         </View>
+        {sidebarMenu}
       </SafeAreaView>
     );
   }
@@ -650,7 +720,8 @@ export default function HomeScreen() {
           <ScreenHeader
             title={isTodayFilter ? "Today Cases" : "This week Cases"}
             showBack={false}
-            rightComponent={shareButton}
+            leftComponent={menuHeaderButton}
+            rightComponent={headerActions}
           />
         </WalkthroughableView>
       </CopilotStep>
@@ -725,11 +796,6 @@ export default function HomeScreen() {
                 </Pressable>
               </WalkthroughableView>
             </CopilotStep>
-          </View>
-          <Spacer.Column numberOfSpaces={3} />
-          <View style={styles.hearingNotesRow}>
-            <ThemedText style={styles.hearingNotesTitle}>{hearingLabel}</ThemedText>
-            {notesFloatingButton}
           </View>
           <Spacer.Column numberOfSpaces={5} />
           <Animated.ScrollView
@@ -806,6 +872,7 @@ export default function HomeScreen() {
           ))}
         </View>
       </View>
+      {sidebarMenu}
     </SafeAreaView>
   );
 }
@@ -951,52 +1018,98 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 4,
   },
-  hearingNotesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  hearingNotesTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.gray50,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  notesInlineButton: {
-    position: "relative",
-    minHeight: 36,
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: theme.colors.zodiacColour,
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  notesHeaderButton: {
+    position: "relative",
+    minWidth: 76,
+    minHeight: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.zodiacColour,
+    alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 4,
+    paddingHorizontal: 10,
     ...theme.shadow,
   },
-  notesInlineButtonText: {
-    fontSize: 13,
+  notesHeaderButtonText: {
     color: theme.colors.pureWhite,
+    fontSize: 12,
     fontWeight: "700",
   },
   notesCountBadge: {
     position: "absolute",
-    top: -6,
-    right: -8,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: theme.colors.themeRed,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   notesCountText: {
-    fontSize: 10,
+    fontSize: 8,
     color: theme.colors.pureWhite,
     fontWeight: "700",
+  },
+  menuHeaderButton: {
+    minWidth: 34,
+    minHeight: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.background,
+  },
+  sidebarOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-start",
+  },
+  sidebarPanel: {
+    width: "78%",
+    maxWidth: 320,
+    backgroundColor: theme.colors.pureWhite,
+    height: "100%",
+    paddingTop: 52,
+    paddingHorizontal: 16,
+  },
+  sidebarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  sidebarTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: theme.colors.black,
+  },
+  sidebarCloseButton: {
+    minHeight: 34,
+    minWidth: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.background,
+  },
+  sidebarItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  sidebarItemText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.black,
   },
   card: {
     backgroundColor: theme.colors.pureWhite,

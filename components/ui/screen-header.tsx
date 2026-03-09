@@ -10,6 +10,7 @@ interface ScreenHeaderProps {
   title: string;
   showBack?: boolean;
   onBack?: () => void;
+  leftComponent?: React.ReactNode;
   rightComponent?: React.ReactNode;
   onTitleLongPress?: () => void;
   titleAccessibilityLabel?: string;
@@ -19,6 +20,7 @@ export function ScreenHeader({
   title,
   showBack = true,
   onBack,
+  leftComponent,
   rightComponent,
   onTitleLongPress,
   titleAccessibilityLabel,
@@ -51,6 +53,7 @@ export function ScreenHeader({
           <MaterialIcons name="arrow-back" size={24} color={theme.colors.black} />
         </Bounceable>
       )}
+      {leftComponent && <View style={styles.leftWrap}>{leftComponent}</View>}
 
       {onTitleLongPress ? (
         <Bounceable
@@ -88,6 +91,11 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
     marginRight: 8,
+  },
+  leftWrap: {
+    marginRight: 8,
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerTitleWrap: {
     flex: 1,
