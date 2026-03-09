@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { ChipGroup } from "@/components/add-case/chip-group";
+import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
 import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
@@ -24,13 +25,12 @@ import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   CASE_TYPES,
-  COURT_TIERS,
   getCaseSubTypesForType,
   getDerivedCaseTitle,
+  getPartyTerminology,
   initialAddCaseFormState,
   type AddCaseFormState,
   type CaseType,
-  type CourtTier,
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
@@ -42,7 +42,7 @@ function caseRowToFormState(row: CaseRow): AddCaseFormState {
     caseNumber: row.case_number ?? "",
     caseType: (row.case_type as CaseType) ?? "",
     caseSubType: row.case_sub_type ?? "",
-    courtTier: (row.court_tier as CourtTier) ?? "",
+    courtTier: row.court_tier ?? "",
     courtName: row.court_name ?? "",
     courtRoom: row.court_room ?? "",
     judgeName: row.judge_name ?? "",
@@ -86,6 +86,10 @@ export default function EditCaseScreen() {
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [clientListRefreshKey, setClientListRefreshKey] = useState(0);
   const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
+  const partyTerms = useMemo(
+    () => getPartyTerminology(form.courtTier, form.caseSubType),
+    [form.courtTier, form.caseSubType],
+  );
 
   useEffect(() => {
     if (!id) {
@@ -294,28 +298,21 @@ export default function EditCaseScreen() {
           ) : null}
 
           <ThemedText style={styles.sectionTitle}>Court</ThemedText>
-          <FormField label="Court Tier" required>
-            {errors.courtTier ? (
-              <ThemedText style={styles.fieldError}>
-                {errors.courtTier}
-              </ThemedText>
-            ) : null}
-            {COURT_TIERS.map(({ value, label }) => (
-              <RadioOption
-                key={value}
-                label={label}
-                selected={form.courtTier === value}
-                onSelect={() =>
-                  update({
-                    courtTier: value as CourtTier,
-                    courtName: "",
-                    judgeName: "",
-                    courtRoom: "",
-                  })
-                }
-              />
-            ))}
-          </FormField>
+          <CourtTierPicker
+            label="Court Tier"
+            required
+            value={form.courtTier}
+            onChange={(tier) =>
+              update({
+                courtTier: tier,
+                courtName: "",
+                judgeName: "",
+                courtRoom: "",
+              })
+            }
+            hint="Select from saved tiers, or add a new one."
+            error={errors.courtTier || null}
+          />
           <JudgeNameSelector
             label="Judge Name"
             required
@@ -359,12 +356,12 @@ export default function EditCaseScreen() {
               </ThemedText>
             ) : null}
             <RadioOption
-              label="Petitioner"
+              label={partyTerms.firstParty}
               selected={form.myClientIs === "petitioner"}
               onSelect={() => update({ myClientIs: "petitioner" })}
             />
             <RadioOption
-              label="Respondent"
+              label={partyTerms.secondParty}
               selected={form.myClientIs === "respondent"}
               onSelect={() => update({ myClientIs: "respondent" })}
             />

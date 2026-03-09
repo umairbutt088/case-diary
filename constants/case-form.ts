@@ -224,7 +224,7 @@ export type AddCaseFormState = {
   caseNumber: string;
   caseType: CaseType | "";
   caseSubType: string;
-  courtTier: CourtTier | "";
+  courtTier: string;
   courtName: string;
   courtRoom: string;
   judgeName: string;
@@ -278,4 +278,30 @@ export function getDerivedCaseTitle(
   if (!petitionerFirst) return respondentFirst;
   if (!respondentFirst) return petitionerFirst;
   return `${petitionerFirst} vs. ${respondentFirst}`;
+}
+
+export type PartyTerminology = {
+  firstParty: string;
+  secondParty: string;
+};
+
+/**
+ * Returns party-role labels based on case context.
+ * Stored values remain stable (first/second side) while labels adapt by forum/type.
+ */
+export function getPartyTerminology(
+  courtTier: string,
+  caseSubType: string,
+): PartyTerminology {
+  const subType = caseSubType.trim().toLowerCase();
+  if (subType.includes("appeal")) {
+    return { firstParty: "Appellant", secondParty: "Respondent" };
+  }
+  if (courtTier === "criminal") {
+    return { firstParty: "Complainant", secondParty: "Accused" };
+  }
+  if (courtTier === "civil" || courtTier === "district" || courtTier === "family") {
+    return { firstParty: "Plaintiff", secondParty: "Defendant" };
+  }
+  return { firstParty: "Petitioner", secondParty: "Respondent" };
 }

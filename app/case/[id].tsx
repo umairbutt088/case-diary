@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle } from "@/types/case";
 import type { ClientRow } from "@/types/client";
+import { getPartyTerminology } from "@/constants/case-form";
 
 function DetailRow({
   label,
@@ -195,6 +196,7 @@ export default function CaseDetailScreen() {
     await Clipboard.setStringAsync(caseData.case_number.trim());
     showCopyNotice("Case number copied");
   };
+  const partyTerms = getPartyTerminology(caseData.court_tier ?? "", caseData.case_sub_type ?? "");
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -218,8 +220,8 @@ export default function CaseDetailScreen() {
       >
         <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
           <SectionCard title="Parties & type">
-            <DetailRow label="Petitioner" value={caseData.petitioner_name} />
-            <DetailRow label="Respondent" value={caseData.respondent_name} />
+            <DetailRow label={partyTerms.firstParty} value={caseData.petitioner_name} />
+            <DetailRow label={partyTerms.secondParty} value={caseData.respondent_name} />
             <DetailRow
               label="Case number"
               value={caseData.case_number}
@@ -242,9 +244,9 @@ export default function CaseDetailScreen() {
               label="My client is"
               value={
                 caseData.my_client_is === "petitioner"
-                  ? "Petitioner"
+                  ? partyTerms.firstParty
                   : caseData.my_client_is === "respondent"
-                    ? "Respondent"
+                    ? partyTerms.secondParty
                     : null
               }
             />

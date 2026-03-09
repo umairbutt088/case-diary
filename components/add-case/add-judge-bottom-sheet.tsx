@@ -15,7 +15,6 @@ import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
 import { ThemedText } from "@/components/themed-text";
 import {
   COURT_TIERS,
-  type CourtTier,
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
@@ -24,12 +23,12 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 export type SavedJudge = {
   name: string;
   courtRoomAddress: string | null;
-  courtTier: CourtTier;
+  courtTier: string;
 };
 
 type Props = {
   visible: boolean;
-  defaultCourtTier: CourtTier | "";
+  defaultCourtTier: string;
   onClose: () => void;
   onSaved: (judge: SavedJudge) => void;
 };
@@ -56,7 +55,7 @@ export function AddJudgeBottomSheet({
   const [error, setError] = useState<string | null>(null);
   const selectedTierLabel =
     COURT_TIERS.find((tier) => tier.value === defaultCourtTier)?.label ??
-    null;
+    (defaultCourtTier || null);
 
   useEffect(() => {
     if (!visible) return;
