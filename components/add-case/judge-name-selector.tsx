@@ -13,7 +13,6 @@ import { Swipeable } from "react-native-gesture-handler";
 
 import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
-import type { CourtTier } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -21,14 +20,14 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 export type JudgeRecord = {
   name: string;
   courtRoomAddress: string | null;
-  courtTier: CourtTier | "";
+  courtTier: string;
 };
 
 type Props = {
   label: string;
   required?: boolean;
   value: string;
-  courtTier: CourtTier | "";
+  courtTier: string;
   onChange: (value: string) => void;
   onSelectJudge?: (judge: JudgeRecord) => void;
   onPressAddJudge?: () => void;
@@ -102,7 +101,7 @@ export function JudgeNameSelector({
       .map((row) => ({
         name: row.name?.trim(),
         courtRoomAddress: row.court_room_address?.trim() || null,
-        courtTier: (row.court_tier as CourtTier) ?? courtTier,
+        courtTier: row.court_tier ?? courtTier,
       }))
       .filter((row) => Boolean(row.name));
 

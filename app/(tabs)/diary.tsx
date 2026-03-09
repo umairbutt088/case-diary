@@ -8,7 +8,6 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -16,6 +15,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CopilotStep, useCopilot } from "react-native-copilot";
 
 import { CaseCard } from "@/components/case-card";
+import {
+  CaseSearchSelector,
+  type CaseSearchMode,
+} from "@/components/case-search-selector";
 import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
@@ -45,16 +48,22 @@ export default function DiaryScreen() {
   const { session } = useAuth();
   const { start } = useCopilot();
   const [cases, setCases] = useState<CaseRow[]>([]);
+  const [searchMode, setSearchMode] = useState<CaseSearchMode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const filteredCases = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return cases;
+    if (!query || !searchMode) return cases;
+    if (searchMode === "number") {
+      return cases.filter((caseItem) =>
+        (caseItem.case_number ?? "").toLowerCase().includes(query),
+      );
+    }
     return cases.filter((caseItem) =>
       getCaseDisplayTitle(caseItem).toLowerCase().includes(query),
     );
-  }, [cases, searchQuery]);
+  }, [cases, searchQuery, searchMode]);
 
   const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
@@ -196,16 +205,12 @@ export default function DiaryScreen() {
         entering={FadeInUp.duration(400).springify().damping(20)}
       >
         <View style={styles.container}>
-          <View style={styles.searchRow}>
-            <ThemedText style={styles.searchIcon}>🔍</ThemedText>
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search case by name"
-              placeholderTextColor={theme.colors.gray50}
-              style={styles.searchInput}
-            />
-          </View>
+          <CaseSearchSelector
+            mode={searchMode}
+            value={searchQuery}
+            onModeChange={setSearchMode}
+            onChangeText={setSearchQuery}
+          />
           <FlatList
             data={filteredCases}
             keyExtractor={(item) => item.id}
@@ -230,7 +235,9 @@ export default function DiaryScreen() {
               <View style={styles.noResultsWrap}>
                 <ThemedText style={styles.noResultsTitle}>No matching case</ThemedText>
                 <ThemedText style={styles.noResultsText}>
-                  Try another case name.
+                  {searchMode === "number"
+                    ? "Try another case number."
+                    : "Try another case name."}
                 </ThemedText>
               </View>
             }
@@ -258,28 +265,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
-  },
-  searchRow: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  searchIcon: {
-    fontSize: 14,
-    color: theme.colors.gray50,
-  },
-  searchInput: {
-    flex: 1,
-    color: theme.colors.black,
-    fontSize: 14,
-    paddingVertical: 10,
   },
   noResultsWrap: {
     marginTop: 18,
