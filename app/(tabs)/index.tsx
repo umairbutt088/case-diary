@@ -1,16 +1,19 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useIsFocused } from "@react-navigation/native";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { captureRef } from "react-native-view-shot";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -54,19 +57,28 @@ function buildCaseReportHtml(
       section.data.map((caseItem) => {
         const title = escapeHtml(getCaseDisplayTitle(caseItem));
         const caseNumber = escapeHtml(caseItem.case_number || "—");
-        const courtName = escapeHtml(caseItem.court_name || "—");
-        const hearingDate = escapeHtml(formatCaseDate(caseItem.next_hearing_date));
-        const filingDate = escapeHtml(formatCaseDate(caseItem.date_of_filing));
-        const status = escapeHtml(caseItem.current_status || "—");
+        const typeOfCase = escapeHtml(
+          caseItem.case_sub_type || caseItem.case_type || "—",
+        );
+        const courtTier = escapeHtml(caseItem.court_tier || "—");
+        const judgeName = escapeHtml(caseItem.judge_name || "—");
+        const courtAddress = escapeHtml(caseItem.court_room || "—");
+        const previousDate = escapeHtml(formatCaseDate(caseItem.date_of_filing));
+        const nextDate = escapeHtml(formatCaseDate(caseItem.next_hearing_date));
+        const previousProceeding = escapeHtml(caseItem.current_status || "—");
+        const nextProceeding = escapeHtml(caseItem.next_status || "—");
         return `
           <tr>
-            <td>${escapeHtml(section.title)}</td>
             <td>${title}</td>
             <td>${caseNumber}</td>
-            <td>${courtName}</td>
-            <td>${hearingDate}</td>
-            <td>${filingDate}</td>
-            <td>${status}</td>
+            <td>${typeOfCase}</td>
+            <td>${courtTier}</td>
+            <td>${judgeName}</td>
+            <td>${courtAddress}</td>
+            <td>${previousDate}</td>
+            <td>${nextDate}</td>
+            <td>${previousProceeding}</td>
+            <td>${nextProceeding}</td>
           </tr>
         `;
       }),
@@ -96,13 +108,16 @@ function buildCaseReportHtml(
         <table>
           <thead>
             <tr>
-              <th>Section</th>
-              <th>Case</th>
+              <th>Title</th>
               <th>Case No.</th>
-              <th>Court</th>
-              <th>Next Hearing</th>
-              <th>Filed On</th>
-              <th>Status</th>
+              <th>Type of case</th>
+              <th>Court tier</th>
+              <th>Judge name</th>
+              <th>Court address</th>
+              <th>Previous date</th>
+              <th>Next date</th>
+              <th>Previous proceeding</th>
+              <th>Next proceeding</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
@@ -163,7 +178,8 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState<HomeFilter>("today");
   const [pendingCount, setPendingCount] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
-  const sectionsListRef = useRef<FlatList<CaseSection> | null>(null);
+  const exportImageRef = useRef<View | null>(null);
+  const { width: screenWidth } = useWindowDimensions();
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
@@ -303,20 +319,29 @@ export default function HomeScreen() {
     }
     return result;
   }, [isTodayFilter, hearingsToday, filedToday, hearingsThisWeek, filedThisWeek]);
+  const shareSections = useMemo<CaseSection[]>(() => {
+    if (isTodayFilter) {
+      return hearingsToday.length > 0
+        ? [{ title: "Hearings today", data: hearingsToday }]
+        : [];
+    }
+    return hearingsThisWeek.length > 0
+      ? [{ title: "Hearings this week", data: hearingsThisWeek }]
+      : [];
+  }, [isTodayFilter, hearingsToday, hearingsThisWeek]);
+  const hasShareableHearings = shareSections.length > 0;
 
   const shareCasesAsPdf = useCallback(async () => {
-    if (isExporting || sections.length === 0) return;
+    if (isExporting || shareSections.length === 0) return;
     setIsExporting(true);
     try {
-      const Sharing = await import("expo-sharing");
       const available = await Sharing.isAvailableAsync();
       if (!available) {
         Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
         return;
       }
-      const reportTitle = isTodayFilter ? "Today Cases" : "Weekly Cases";
-      const html = buildCaseReportHtml(reportTitle, sections);
-      const Print = await import("expo-print");
+      const reportTitle = isTodayFilter ? "Today Hearings" : "This Week Hearings";
+      const html = buildCaseReportHtml(reportTitle, shareSections);
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, {
         mimeType: "application/pdf",
@@ -328,31 +353,30 @@ export default function HomeScreen() {
     } finally {
       setIsExporting(false);
     }
-  }, [isExporting, sections, isTodayFilter]);
+  }, [isExporting, shareSections, isTodayFilter]);
 
   const shareCasesAsImage = useCallback(async () => {
-    if (isExporting || sections.length === 0) return;
+    if (isExporting || shareSections.length === 0) return;
     setIsExporting(true);
     try {
-      const Sharing = await import("expo-sharing");
       const available = await Sharing.isAvailableAsync();
       if (!available) {
         Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
         return;
       }
-      if (!sectionsListRef.current) {
+      if (!exportImageRef.current) {
         Alert.alert("Export failed", "Could not capture the case list.");
         return;
       }
 
-      const { captureRef } = await import("react-native-view-shot");
-      const uri = await captureRef(sectionsListRef.current, {
+      // Allow one frame so hidden export view has the latest layout.
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      const uri = await captureRef(exportImageRef.current, {
         format: "png",
         quality: 1,
         result: "tmpfile",
-        snapshotContentContainer: true,
       });
-      const reportTitle = isTodayFilter ? "Today Cases" : "Weekly Cases";
+      const reportTitle = isTodayFilter ? "Today Hearings" : "This Week Hearings";
       await Sharing.shareAsync(uri, {
         mimeType: "image/png",
         UTI: "public.png",
@@ -363,18 +387,27 @@ export default function HomeScreen() {
     } finally {
       setIsExporting(false);
     }
-  }, [isExporting, sections.length, isTodayFilter]);
+  }, [isExporting, shareSections.length, isTodayFilter]);
 
   const handleShareCases = useCallback(() => {
-    if (isExporting || sections.length === 0) return;
+    if (isExporting) return;
+    if (shareSections.length === 0) {
+      Alert.alert(
+        "No hearings to share",
+        isTodayFilter
+          ? "There are no hearings today."
+          : "There are no hearings this week.",
+      );
+      return;
+    }
     Alert.alert("Share case list", "Choose a format", [
       { text: "PDF", onPress: () => void shareCasesAsPdf() },
       { text: "Image", onPress: () => void shareCasesAsImage() },
       { text: "Cancel", style: "cancel" },
     ]);
-  }, [isExporting, sections.length, shareCasesAsPdf, shareCasesAsImage]);
+  }, [isExporting, shareSections.length, isTodayFilter, shareCasesAsPdf, shareCasesAsImage]);
 
-  const shareButton = hasAny ? (
+  const shareButton = hasShareableHearings ? (
     <Bounceable
       onPress={handleShareCases}
       style={styles.shareButton}
@@ -647,10 +680,7 @@ export default function HomeScreen() {
             </CopilotStep>
           </View>
           <Spacer.Column numberOfSpaces={5} />
-          <FlatList
-            ref={sectionsListRef}
-            data={sections}
-            keyExtractor={(item) => item.title}
+          <Animated.ScrollView
             refreshControl={
               <RefreshControl
                 refreshing={loading}
@@ -659,17 +689,17 @@ export default function HomeScreen() {
                 tintColor={theme.colors.black}
               />
             }
-            renderItem={({ item: section, index: sectionIndex }) => {
-              // Calculate starting index for this section to keep staggered delay consistent
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {sections.map((section, sectionIndex) => {
               const previousItemsCount = sections
                 .slice(0, sectionIndex)
                 .reduce((acc, s) => acc + s.data.length, 0);
 
               return (
-                <View style={styles.section}>
-                  <ThemedText style={styles.sectionTitle}>
-                    {section.title}
-                  </ThemedText>
+                <View key={section.title} style={styles.section}>
+                  <ThemedText style={styles.sectionTitle}>{section.title}</ThemedText>
                   <Spacer.Column numberOfSpaces={5} />
                   {section.data.map((caseItem, itemIndex) => (
                     <CaseCard
@@ -685,12 +715,45 @@ export default function HomeScreen() {
                   ))}
                 </View>
               );
-            }}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          />
+            })}
+          </Animated.ScrollView>
         </View>
       </Animated.View>
+      <View pointerEvents="none" style={styles.exportCaptureRoot}>
+        <View
+          ref={exportImageRef}
+          collapsable={false}
+          style={[
+            styles.exportCaptureCanvas,
+            { width: Math.max(screenWidth - 48, 280) },
+          ]}
+        >
+          <ThemedText style={styles.exportCaptureHeading}>
+            {isTodayFilter ? "Today Hearings" : "This Week Hearings"}
+          </ThemedText>
+          {shareSections.map((section) => (
+            <View key={`export-${section.title}`} style={styles.exportSection}>
+              <ThemedText style={styles.exportSectionTitle}>{section.title}</ThemedText>
+              {section.data.map((caseItem) => (
+                <View key={`export-row-${caseItem.id}`} style={styles.exportRow}>
+                  <ThemedText style={styles.exportRowTitle}>
+                    {getCaseDisplayTitle(caseItem)}
+                  </ThemedText>
+                  <ThemedText style={styles.exportRowMeta}>
+                    Case no: {caseItem.case_number?.trim() || "—"}
+                  </ThemedText>
+                  <ThemedText style={styles.exportRowMeta}>
+                    Court: {caseItem.court_name?.trim() || "—"}
+                  </ThemedText>
+                  <ThemedText style={styles.exportRowMeta}>
+                    Next: {formatCaseDate(caseItem.next_hearing_date)}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -780,6 +843,50 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  exportCaptureRoot: {
+    position: "absolute",
+    left: -10000,
+    top: 0,
+    opacity: 0,
+  },
+  exportCaptureCanvas: {
+    backgroundColor: theme.colors.pureWhite,
+    padding: 16,
+    borderRadius: 12,
+  },
+  exportCaptureHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.black,
+    marginBottom: 12,
+  },
+  exportSection: {
+    marginBottom: 14,
+  },
+  exportSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.gray50,
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  exportRow: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  exportRowTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: theme.colors.black,
+    marginBottom: 2,
+  },
+  exportRowMeta: {
+    fontSize: 12,
+    color: theme.colors.gray50,
   },
   errorText: {
     color: theme.colors.themeRed,

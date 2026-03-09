@@ -1,8 +1,9 @@
 import { Bounceable } from "@/components/ui/bounceable";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { CopilotStep, walkthroughable } from "react-native-copilot";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   FadeInUp,
   FadeOut,
@@ -55,9 +56,21 @@ export function CaseCard({
   const title = getCaseDisplayTitle(caseItem);
   const snippet = getCaseDetailsSnippet(caseItem);
   const nextDate = formatCaseDate(caseItem.next_hearing_date);
+  const caseNumber = caseItem.case_number?.trim() || "—";
+  const courtName = caseItem.court_name?.trim() || "—";
+  const proceeding = caseItem.next_status?.trim() || caseItem.current_status?.trim() || "—";
 
   const openDetails = () => {
     router.push(`/case/${caseItem.id}`);
+  };
+
+  const copyCaseNumber = async () => {
+    if (!caseItem.case_number?.trim()) {
+      Alert.alert("No case number", "This case does not have a case number yet.");
+      return;
+    }
+    await Clipboard.setStringAsync(caseItem.case_number.trim());
+    Alert.alert("Copied", "Case number copied to clipboard.");
   };
 
   return (
@@ -124,6 +137,25 @@ export function CaseCard({
         >
           {snippet}
         </ThemedText>
+        <View style={styles.detailsBlock}>
+          <Pressable
+            onLongPress={() => void copyCaseNumber()}
+            onPress={(event) => event.stopPropagation()}
+            delayLongPress={250}
+            accessibilityLabel="Case number. Press and hold to copy"
+            accessibilityHint="Long press to copy the case number to clipboard"
+          >
+            <ThemedText style={styles.detailText} numberOfLines={1}>
+              Case no: {caseNumber}
+            </ThemedText>
+          </Pressable>
+          <ThemedText style={styles.detailText} numberOfLines={1}>
+            Court: {courtName}
+          </ThemedText>
+          <ThemedText style={styles.detailText} numberOfLines={1}>
+            Proceeding: {proceeding}
+          </ThemedText>
+        </View>
         <View style={styles.footer}>
           <View style={styles.nextDateRow}>
             <MaterialIcons
@@ -267,8 +299,16 @@ const styles = StyleSheet.create({
   },
   snippet: {
     fontSize: 14,
-    marginBottom: 12,
+    marginBottom: 10,
     lineHeight: 20,
+  },
+  detailsBlock: {
+    marginBottom: 12,
+    gap: 4,
+  },
+  detailText: {
+    fontSize: 13,
+    color: theme.colors.gray50,
   },
   footer: {
     flexDirection: "row",
