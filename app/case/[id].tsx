@@ -1,9 +1,11 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -24,15 +26,47 @@ import type { ClientRow } from "@/types/client";
 function DetailRow({
   label,
   value,
+  onValueLongPress,
+  valueAccessibilityHint,
+  onCopyPress,
 }: {
   label: string;
   value: string | null | undefined;
+  onValueLongPress?: () => void;
+  valueAccessibilityHint?: string;
+  onCopyPress?: () => void;
 }) {
   const text = value?.trim() || "—";
   return (
     <View style={styles.detailRow}>
       <ThemedText style={styles.detailLabel}>{label}</ThemedText>
-      <ThemedText style={styles.detailValue}>{text}</ThemedText>
+      <View style={styles.detailValueRow}>
+        {onValueLongPress ? (
+          <Pressable
+            onLongPress={onValueLongPress}
+            delayLongPress={250}
+            accessibilityLabel={`${label}: ${text}`}
+            accessibilityHint={valueAccessibilityHint}
+            style={styles.detailValuePressable}
+          >
+            <ThemedText style={styles.detailValue}>{text}</ThemedText>
+          </Pressable>
+        ) : (
+          <ThemedText style={[styles.detailValue, styles.detailValuePressable]}>
+            {text}
+          </ThemedText>
+        )}
+        {onCopyPress ? (
+          <Bounceable
+            onPress={onCopyPress}
+            style={styles.copyIconButton}
+            hitSlop={8}
+            accessibilityLabel={`Copy ${label}`}
+          >
+            <MaterialIcons name="content-copy" size={16} color={theme.colors.gray50} />
+          </Bounceable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -61,6 +95,17 @@ export default function CaseDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showCopyNotice = (message: string) => {
+    setCopyNotice(message);
+    if (copyNoticeTimeoutRef.current) clearTimeout(copyNoticeTimeoutRef.current);
+    copyNoticeTimeoutRef.current = setTimeout(() => {
+      setCopyNotice(null);
+      copyNoticeTimeoutRef.current = null;
+    }, 1400);
+  };
 
   useEffect(() => {
     if (!id) {
@@ -110,6 +155,14 @@ export default function CaseDetailScreen() {
     };
   }, [caseData?.linked_client_id]);
 
+  useEffect(() => {
+    return () => {
+      if (copyNoticeTimeoutRef.current) {
+        clearTimeout(copyNoticeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -134,6 +187,14 @@ export default function CaseDetailScreen() {
   }
 
   const title = getCaseDisplayTitle(caseData);
+  const copyCaseNumber = async () => {
+    if (!caseData.case_number?.trim()) {
+      showCopyNotice("No case number");
+      return;
+    }
+    await Clipboard.setStringAsync(caseData.case_number.trim());
+    showCopyNotice("Case number copied");
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -159,7 +220,13 @@ export default function CaseDetailScreen() {
           <SectionCard title="Parties & type">
             <DetailRow label="Petitioner" value={caseData.petitioner_name} />
             <DetailRow label="Respondent" value={caseData.respondent_name} />
-            <DetailRow label="Case number" value={caseData.case_number} />
+            <DetailRow
+              label="Case number"
+              value={caseData.case_number}
+              onValueLongPress={() => void copyCaseNumber()}
+              onCopyPress={() => void copyCaseNumber()}
+              valueAccessibilityHint="Long press to copy case number"
+            />
             <DetailRow label="Case type" value={caseData.case_type} />
             <DetailRow label="Type of case" value={caseData.case_sub_type} />
           </SectionCard>
@@ -270,6 +337,11 @@ export default function CaseDetailScreen() {
           </Bounceable>
         </Animated.View>
       </ScrollView>
+      {copyNotice ? (
+        <View pointerEvents="none" style={styles.copyToastWrap}>
+          <ThemedText style={styles.copyToastText}>{copyNotice}</ThemedText>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -324,6 +396,38 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 16,
     color: theme.colors.black,
+  },
+  detailValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  detailValuePressable: {
+    flex: 1,
+  },
+  copyIconButton: {
+    padding: 4,
+    alignSelf: "flex-end",
+  },
+  copyToastWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  copyToastText: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    fontSize: 14,
+    color: theme.colors.pureWhite,
+    backgroundColor: theme.colors.black + "CC",
+    overflow: "hidden",
   },
   centered: {
     flex: 1,
