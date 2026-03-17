@@ -56,12 +56,6 @@ export default function RootLayout() {
                       options={{ headerShown: false }}
                     />
                     <Stack.Screen
-                      name="case"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
                       name="case/[id]"
                       options={{
                         headerShown: false,

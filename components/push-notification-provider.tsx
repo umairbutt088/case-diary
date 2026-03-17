@@ -11,6 +11,8 @@ type NotificationRouteData = {
   url?: string;
 };
 
+const handledResponseIds = new Set<string>();
+
 function extractDateFromDeepLink(url: string) {
   const match = url.match(/[?&]date=(\d{4}-\d{2}-\d{2})/);
   return match?.[1] ?? null;
@@ -52,26 +54,34 @@ export function PushNotificationProvider({
         });
         return;
       }
-      router.push("/(tabs)/calendar");
+    };
+
+    const handleResponse = (response: Notifications.NotificationResponse | null) => {
+      if (!response) return;
+      if (!session?.user?.id) return;
+
+      const responseId = response.notification.request.identifier;
+      if (handledResponseIds.has(responseId)) return;
+      handledResponseIds.add(responseId);
+
+      const data = response.notification.request.content.data as NotificationRouteData;
+      navigateFromData(data);
     };
 
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const data = response.notification.request.content.data as NotificationRouteData;
-        navigateFromData(data);
+        handleResponse(response);
       }
     );
 
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (!response) return;
-      const data = response.notification.request.content.data as NotificationRouteData;
-      navigateFromData(data);
+      handleResponse(response);
     });
 
     return () => {
       subscription.remove();
     };
-  }, [router]);
+  }, [router, session?.user?.id]);
 
   return <>{children}</>;
 }

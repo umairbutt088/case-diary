@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -14,7 +14,6 @@ import { useAuth } from "@/context/auth-context";
 export function AuthNavigator({ children }: { children: React.ReactNode }) {
   const { session, isLoading } = useAuth();
   const router = useRouter();
-  const initialNavDone = useRef(false);
 
   const isAuthenticated = !!session?.user;
 
@@ -30,29 +29,31 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
 
     const id = setTimeout(() => {
       router.replace(target as any);
-      initialNavDone.current = true;
     }, 0);
 
     return () => clearTimeout(id);
   }, [ready, isAuthenticated, router]);
 
-  if (!ready) {
-    return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.colors.black} />
-        <ThemedText style={styles.loadingText}>Loading…</ThemedText>
-      </ThemedView>
-    );
-  }
-
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {!ready ? (
+        <ThemedView style={styles.overlay}>
+          <ActivityIndicator size="large" color={theme.colors.black} />
+          <ThemedText style={styles.loadingText}>Starting app...</ThemedText>
+        </ThemedView>
+      ) : null}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.96)",
   },
   loadingText: {
     marginTop: 12,
