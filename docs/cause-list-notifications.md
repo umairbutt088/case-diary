@@ -3,6 +3,7 @@
 This feature sends lawyers a push notification at night with tomorrow's hearing list.
 All reminder scheduling runs in Pakistan time (`Asia/Karachi`).
 Notification payload includes deep link data (`legaldiary://calendar?date=YYYY-MM-DD`) and opens the Calendar tab for that date.
+The send window is `8:00 PM` to `10:59 PM` Karachi time to avoid misses if the 8 PM run is delayed.
 
 ## What is included
 
@@ -36,9 +37,11 @@ For EAS to *send* push notifications, also upload a Google Service Account Key:
    - `supabase functions deploy send-cause-list-reminders`
 3. Set Edge Function secret:
    - `CAUSE_LIST_CRON_SECRET` (optional but recommended)
+   - `CAUSE_LIST_FORCE_SECRET` (required to allow manual force sends)
    - Note: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically by Supabase runtime.
 4. Create a scheduler (Supabase Cron or external cron) that invokes the function every hour.
    - Include header: `x-cron-secret: <CAUSE_LIST_CRON_SECRET>`
+   - Keep it hourly so a delayed 8 PM run can still send during the 8 PM-10:59 PM window.
 
 ## Example scheduler request
 
@@ -105,10 +108,11 @@ limit 5;
 ### 5. Manual test (force send now)
 Notifications are sent by the **Edge Function**, not by SQL. To trigger a test notification:
 
-1. Call the Edge Function with `{"force": true}` in the request body:
+1. Call the Edge Function with `{"force": true}` in the request body **and** include `x-force-secret`:
    ```bash
    curl -X POST "https://<PROJECT-REF>.functions.supabase.co/send-cause-list-reminders" \
      -H "Authorization: Bearer <SUPABASE_ANON_KEY>" \
+     -H "x-force-secret: <CAUSE_LIST_FORCE_SECRET>" \
      -H "Content-Type: application/json" \
      -d '{"force": true}'
    ```

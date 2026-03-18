@@ -16,6 +16,7 @@ type CaseRow = {
 
 const REMINDER_TYPE = "cause_list_tomorrow";
 const COURT_REMINDER_HOUR = 20; // 8 PM local time
+const COURT_REMINDER_END_HOUR = 22; // 10:59 PM local time catch-up window
 const APP_TIMEZONE = "Asia/Karachi";
 
 function getEnv(name: string) {
@@ -47,6 +48,10 @@ function addDays(date: Date, days: number) {
   const clone = new Date(date);
   clone.setUTCDate(clone.getUTCDate() + days);
   return clone;
+}
+
+function isWithinReminderWindow(hour: number) {
+  return hour >= COURT_REMINDER_HOUR && hour <= COURT_REMINDER_END_HOUR;
 }
 
 function getCaseDisplayTitle(row: CaseRow) {
@@ -149,17 +154,24 @@ Deno.serve(async (req) => {
     const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const requestText = await req.text();
-    let forceSend = req.headers.get("x-force-send") === "true";
+    const forceRequestedHeader = req.headers.get("x-force-send") === "true";
+    let forceRequestedBody = false;
     if (requestText) {
       try {
         const parsed = JSON.parse(requestText);
-        if (parsed?.force === true) forceSend = true;
+        if (parsed?.force === true) forceRequestedBody = true;
       } catch {
         // Ignore malformed body and keep default behavior.
       }
     }
+    const forceRequested = forceRequestedHeader || forceRequestedBody;
+    const forceSecret = Deno.env.get("CAUSE_LIST_FORCE_SECRET");
+    const incomingForceSecret = req.headers.get("x-force-secret");
+    const forceSend = forceRequested && !!forceSecret && incomingForceSecret === forceSecret;
+    const forceRejected = forceRequested && !forceSend;
 
     const now = new Date();
+    const localHour = getHourInTimezone(now, APP_TIMEZONE);
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select("id, expo_push_token")
@@ -174,25 +186,33 @@ Deno.serve(async (req) => {
     console.log(
       JSON.stringify({
         profiles: rows.length,
+        forceRequested,
         forceSend,
+        forceRejected,
         tomorrowDate,
-        localHour: getHourInTimezone(now, APP_TIMEZONE),
+        localHour,
       }),
     );
 
     const summary: {
+      forceRequested: boolean;
       forced: boolean;
+      forceRejected: boolean;
       totalProfiles: number;
       matchedWindow: number;
+      skippedOutsideWindow: number;
       sent: number;
       skippedNoCases: number;
       skippedAlreadySent: number;
       failed: number;
       lastExpoError?: string;
     } = {
+      forceRequested,
       forced: forceSend,
+      forceRejected,
       totalProfiles: rows.length,
       matchedWindow: 0,
+      skippedOutsideWindow: 0,
       sent: 0,
       skippedNoCases: 0,
       skippedAlreadySent: 0,
@@ -200,8 +220,10 @@ Deno.serve(async (req) => {
     };
 
     for (const profile of rows) {
-      const localHour = getHourInTimezone(now, APP_TIMEZONE);
-      if (!forceSend && localHour !== COURT_REMINDER_HOUR) continue;
+      if (!forceSend && !isWithinReminderWindow(localHour)) {
+        summary.skippedOutsideWindow += 1;
+        continue;
+      }
       summary.matchedWindow += 1;
 
       if (!forceSend) {
