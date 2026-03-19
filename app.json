@@ -17,13 +17,18 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
+      "statusBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#F9F9FB",
+        "translucent": false
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/legal-diary-image1.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "package": "com.umairbutt.legaldiary"
     },
