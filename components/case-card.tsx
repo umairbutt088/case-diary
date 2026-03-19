@@ -11,6 +11,7 @@ import Animated, {
   LinearTransition
 } from "react-native-reanimated";
 
+import { COURT_TIERS } from "@/constants/case-form";
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
 import type { CaseRow } from "@/types/case";
@@ -32,6 +33,17 @@ function getCaseDetailsSnippet(row: CaseRow): string {
   if (row.court_name) parts.push(row.court_name);
   if (parts.length) return parts.join(" · ");
   return "No details";
+}
+
+function getCourtDisplay(row: CaseRow): string {
+  const courtName = row.court_name?.trim();
+  if (courtName) return courtName;
+
+  const tierValue = row.court_tier?.trim();
+  if (!tierValue) return "—";
+
+  const tierLabel = COURT_TIERS.find((tier) => tier.value === tierValue)?.label;
+  return tierLabel ?? tierValue;
 }
 
 type CaseCardProps = {
@@ -58,7 +70,7 @@ export function CaseCard({
   const snippet = getCaseDetailsSnippet(caseItem);
   const nextDate = formatCaseDate(caseItem.next_hearing_date);
   const caseNumber = caseItem.case_number?.trim() || "—";
-  const courtName = caseItem.court_name?.trim() || "—";
+  const courtName = getCourtDisplay(caseItem);
   const proceeding = caseItem.next_status?.trim() || caseItem.current_status?.trim() || "—";
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
