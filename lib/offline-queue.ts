@@ -3,7 +3,12 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import {
+  removeCachedCase,
+  upsertCachedCase,
+} from "@/lib/cases-cache";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import type { CaseRow } from "@/types/case";
 
 const PENDING_CASES_KEY = "@legal_diary/pending_cases";
 
@@ -36,28 +41,156 @@ type StoredPendingCase = {
   row: PendingCaseRow;
 };
 
-async function getStored(): Promise<StoredPendingCase[]> {
+type PendingInsertCase = {
+  id: string;
+  createdAt: number;
+  kind: "insert";
+  user_id: string;
+  row: PendingCaseRow;
+  local_case_id?: string;
+};
+
+type PendingUpdateCase = {
+  id: string;
+  createdAt: number;
+  kind: "update";
+  user_id: string;
+  case_id: string;
+  patch: Partial<CaseRow>;
+};
+
+type PendingDeleteCase = {
+  id: string;
+  createdAt: number;
+  kind: "delete";
+  user_id: string;
+  case_id: string;
+};
+
+type PendingCaseOperation =
+  | PendingInsertCase
+  | PendingUpdateCase
+  | PendingDeleteCase;
+
+function toOperation(item: unknown): PendingCaseOperation | null {
+  if (!item || typeof item !== "object") return null;
+  const maybe = item as Partial<PendingCaseOperation & StoredPendingCase>;
+  const id = typeof maybe.id === "string" ? maybe.id : "";
+  const createdAt = typeof maybe.createdAt === "number" ? maybe.createdAt : Date.now();
+  if (!id) return null;
+
+  // Backward compatibility for old queue shape (insert-only entries)
+  if (!maybe.kind && maybe.row && typeof maybe.row === "object") {
+    const row = maybe.row as PendingCaseRow;
+    return {
+      id,
+      createdAt,
+      kind: "insert",
+      user_id: row.user_id,
+      row,
+    };
+  }
+
+  if (maybe.kind === "insert" && maybe.row && typeof maybe.user_id === "string") {
+    return {
+      id,
+      createdAt,
+      kind: "insert",
+      user_id: maybe.user_id,
+      row: maybe.row as PendingCaseRow,
+      local_case_id:
+        typeof maybe.local_case_id === "string" ? maybe.local_case_id : undefined,
+    };
+  }
+
+  if (
+    maybe.kind === "update" &&
+    typeof maybe.user_id === "string" &&
+    typeof maybe.case_id === "string" &&
+    maybe.patch &&
+    typeof maybe.patch === "object"
+  ) {
+    return {
+      id,
+      createdAt,
+      kind: "update",
+      user_id: maybe.user_id,
+      case_id: maybe.case_id,
+      patch: maybe.patch as Partial<CaseRow>,
+    };
+  }
+
+  if (
+    maybe.kind === "delete" &&
+    typeof maybe.user_id === "string" &&
+    typeof maybe.case_id === "string"
+  ) {
+    return {
+      id,
+      createdAt,
+      kind: "delete",
+      user_id: maybe.user_id,
+      case_id: maybe.case_id,
+    };
+  }
+
+  return null;
+}
+
+async function getStored(): Promise<PendingCaseOperation[]> {
   try {
     const raw = await AsyncStorage.getItem(PENDING_CASES_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as StoredPendingCase[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(raw) as unknown[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(toOperation).filter((i): i is PendingCaseOperation => Boolean(i));
   } catch {
     return [];
   }
 }
 
-async function setStored(items: StoredPendingCase[]): Promise<void> {
+async function setStored(items: PendingCaseOperation[]): Promise<void> {
   await AsyncStorage.setItem(PENDING_CASES_KEY, JSON.stringify(items));
+}
+
+function buildLocalCaseRow(
+  localId: string,
+  row: PendingCaseRow,
+  nowIso: string,
+): CaseRow {
+  return {
+    id: localId,
+    user_id: row.user_id,
+    case_title: row.case_title ?? null,
+    case_number: row.case_number ?? null,
+    case_type: row.case_type ?? null,
+    case_sub_type: row.case_sub_type ?? null,
+    petitioner_name: row.petitioner_name,
+    respondent_name: row.respondent_name,
+    court_tier: row.court_tier ?? null,
+    court_name: row.court_name ?? null,
+    court_room: row.court_room ?? null,
+    judge_name: row.judge_name ?? null,
+    my_client_is: row.my_client_is ?? null,
+    linked_client_id: row.linked_client_id ?? null,
+    linked_client_name: row.linked_client_name ?? null,
+    date_of_filing: row.date_of_filing ?? null,
+    next_hearing_date: row.next_hearing_date ?? null,
+    current_status: row.current_status ?? null,
+    next_status: row.next_status ?? null,
+    notes: row.notes ?? null,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
 }
 
 /** Get all pending cases (for current user or all if userId not provided) */
 export async function getPendingCases(
   userId?: string
-): Promise<StoredPendingCase[]> {
+): Promise<PendingCaseOperation[]> {
   const items = await getStored();
   if (userId) {
-    return items.filter((i) => i.row.user_id === userId);
+    return items.filter((i) => i.user_id === userId);
   }
   return items;
 }
@@ -72,12 +205,76 @@ export async function getPendingCasesCount(userId: string): Promise<number> {
 export async function addPendingCase(row: PendingCaseRow): Promise<void> {
   const items = await getStored();
   const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const localCaseId = `local_${id}`;
+  const nowIso = new Date().toISOString();
   items.push({
     id,
     createdAt: Date.now(),
+    kind: "insert",
+    user_id: row.user_id,
     row,
+    local_case_id: localCaseId,
   });
   await setStored(items);
+  await upsertCachedCase(row.user_id, buildLocalCaseRow(localCaseId, row, nowIso));
+}
+
+export async function addPendingCaseUpdate(
+  userId: string,
+  caseId: string,
+  patch: Partial<CaseRow>,
+): Promise<void> {
+  const items = await getStored();
+  const localInsertIndex = items.findIndex(
+    (i) => i.kind === "insert" && i.user_id === userId && i.local_case_id === caseId,
+  );
+  if (localInsertIndex >= 0) {
+    const existing = items[localInsertIndex] as PendingInsertCase;
+    existing.row = {
+      ...existing.row,
+      ...patch,
+    } as PendingCaseRow;
+    items[localInsertIndex] = existing;
+    await setStored(items);
+    return;
+  }
+  const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  items.push({
+    id,
+    createdAt: Date.now(),
+    kind: "update",
+    user_id: userId,
+    case_id: caseId,
+    patch,
+  });
+  await setStored(items);
+}
+
+export async function addPendingCaseDelete(
+  userId: string,
+  caseId: string,
+): Promise<void> {
+  const items = await getStored();
+  const remaining = items.filter((i) => {
+    if (i.user_id !== userId) return true;
+    // Deleting an unsynced local case should just remove its pending insert.
+    if (i.kind === "insert" && i.local_case_id === caseId) return false;
+    return true;
+  });
+  if (remaining.length !== items.length) {
+    await setStored(remaining);
+    return;
+  }
+
+  const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  remaining.push({
+    id,
+    createdAt: Date.now(),
+    kind: "delete",
+    user_id: userId,
+    case_id: caseId,
+  });
+  await setStored(remaining);
 }
 
 /** Remove a pending case by id */
@@ -96,25 +293,67 @@ export type SyncResult = {
 export async function syncPendingCases(userId: string): Promise<SyncResult> {
   if (!isSupabaseConfigured) return { synced: 0, failed: 0 };
 
-  const items = await getPendingCases(userId);
+  const items = (await getPendingCases(userId)).sort(
+    (a, b) => a.createdAt - b.createdAt,
+  );
   if (items.length === 0) return { synced: 0, failed: 0 };
 
   let synced = 0;
   let failed = 0;
 
   for (const item of items) {
-    const { error } = await supabase
-      .from("cases")
-      .insert(item.row)
-      .select()
-      .single();
+    if (item.kind === "insert") {
+      const { data, error } = await supabase
+        .from("cases")
+        .insert(item.row)
+        .select()
+        .single();
 
-    if (error) {
-      failed += 1;
-      // Keep in queue for retry; don't remove
+      if (error) {
+        failed += 1;
+        continue;
+      }
+
+      if (data) {
+        if (item.local_case_id) {
+          await removeCachedCase(userId, item.local_case_id);
+        }
+        await upsertCachedCase(userId, data as CaseRow);
+      }
+      await removePendingCase(item.id);
+      synced += 1;
       continue;
     }
 
+    if (item.kind === "update") {
+      const { error } = await supabase
+        .from("cases")
+        .update(item.patch)
+        .eq("id", item.case_id)
+        .eq("user_id", userId);
+
+      if (error) {
+        failed += 1;
+        continue;
+      }
+
+      await removePendingCase(item.id);
+      synced += 1;
+      continue;
+    }
+
+    const { error } = await supabase
+      .from("cases")
+      .delete()
+      .eq("id", item.case_id)
+      .eq("user_id", userId);
+
+    if (error) {
+      failed += 1;
+      continue;
+    }
+
+    await removeCachedCase(userId, item.case_id);
     await removePendingCase(item.id);
     synced += 1;
   }

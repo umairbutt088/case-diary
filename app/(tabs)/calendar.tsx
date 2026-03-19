@@ -24,6 +24,8 @@ import { ThemedText } from "@/components/themed-text";
 import { Spacer } from "@/components/ui";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import { getCachedCases, setCachedCases } from "@/lib/cases-cache";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { getCaseDisplayTitle, getTodayISO } from "@/types/case";
@@ -285,6 +287,7 @@ export default function CalendarScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { session } = useAuth();
+  const isOnline = useIsOnline();
 
   useFocusEffect(
     useCallback(() => {
@@ -308,6 +311,13 @@ export default function CalendarScreen() {
         setError(null);
         return;
       }
+      if (!isOnline) {
+        const cached = await getCachedCases(session.user.id);
+        setCases(cached);
+        setLoading(false);
+        setError(null);
+        return;
+      }
       setError(null);
       // Only show loading if not silent
       if (!isSilent) {
@@ -319,13 +329,27 @@ export default function CalendarScreen() {
         .eq("user_id", session.user.id);
       setLoading(false);
       if (e) {
-        setCases([]);
-        setError(e.message);
+        const msg = (e.message || "").toLowerCase();
+        const isNetworkError =
+          msg.includes("network request failed") ||
+          msg.includes("failed to fetch") ||
+          msg.includes("network error") ||
+          msg.includes("fetch failed");
+        if (isNetworkError) {
+          const cached = await getCachedCases(session.user.id);
+          setCases(cached);
+          setError(null);
+        } else {
+          setCases([]);
+          setError(e.message);
+        }
         return;
       }
-      setCases((data as CaseRow[]) ?? []);
+      const nextCases = (data as CaseRow[]) ?? [];
+      setCases(nextCases);
+      await setCachedCases(session.user.id, nextCases);
     },
-    [session?.user?.id],
+    [session?.user?.id, isOnline],
   );
 
   useFocusEffect(

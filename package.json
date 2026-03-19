@@ -11,7 +11,9 @@
     "lint": "expo lint",
     "ios:install": "cd ios/ && pod install && cd ..",
     "prebuild:clean": "expo prebuild --clean",
-    "build:android": "eas build --profile preview --platform android"
+    "build:android": "eas build --profile preview --platform android",
+    "apk:debug": "cd android && ./gradlew assembleDebug",
+    "apk:release": "cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -23,6 +23,9 @@ import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
+import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { getCaseDisplayTitle, type CaseRow } from "@/types/case";
 
@@ -45,6 +48,7 @@ function DiaryHeaderWithRef({
 export default function DiaryScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
+  const isOnline = useIsOnline();
   const { session } = useAuth();
   const { start } = useCopilot();
   const [cases, setCases] = useState<CaseRow[]>([]);
@@ -65,13 +69,31 @@ export default function DiaryScreen() {
     );
   }, [cases, searchQuery, searchMode]);
 
+  const isNetworkError = useCallback((message: string) => {
+    const msg = (message || "").toLowerCase();
+    return (
+      msg.includes("network request failed") ||
+      msg.includes("failed to fetch") ||
+      msg.includes("network error") ||
+      msg.includes("fetch failed")
+    );
+  }, []);
+
   const fetchCases = useCallback(async (isSilent = false) => {
     if (!session?.user?.id || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
       return;
     }
-    
+
+    if (!isOnline) {
+      const cached = await getCachedCases(session.user.id);
+      setCases(cached);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     // Only show loading if not silent
     if (!isSilent) {
       setLoading(true);
@@ -84,12 +106,20 @@ export default function DiaryScreen() {
       .order("created_at", { ascending: false });
     setLoading(false);
     if (e) {
-      setError(e.message);
-      setCases([]);
+      if (isNetworkError(e.message)) {
+        const cached = await getCachedCases(session.user.id);
+        setCases(cached);
+        setError(null);
+      } else {
+        setError(e.message);
+        setCases([]);
+      }
       return;
     }
-    setCases((data as CaseRow[]) ?? []);
-  }, [session?.user?.id]);
+    const nextCases = (data as CaseRow[]) ?? [];
+    setCases(nextCases);
+    await setCachedCases(session.user.id, nextCases);
+  }, [session?.user?.id, isOnline, isNetworkError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -126,19 +156,33 @@ export default function DiaryScreen() {
             style: "destructive",
             onPress: async () => {
               if (!session?.user?.id) return;
+              if (!isOnline) {
+                await addPendingCaseDelete(session.user.id, caseId);
+                await removeCachedCase(session.user.id, caseId);
+                setCases((prev) => prev.filter((c) => c.id !== caseId));
+                Alert.alert(
+                  "Delete queued",
+                  "Case will be deleted in cloud when internet is available.",
+                );
+                return;
+              }
               const { error: e } = await supabase
                 .from("cases")
                 .delete()
                 .eq("id", caseId)
                 .eq("user_id", session.user.id);
-              if (e) Alert.alert("Error", e.message);
-              else fetchCases();
+              if (e) {
+                Alert.alert("Error", e.message);
+              } else {
+                await removeCachedCase(session.user.id, caseId);
+                fetchCases();
+              }
             },
           },
         ]
       );
     },
-    [session?.user?.id, fetchCases]
+    [session?.user?.id, fetchCases, isOnline]
   );
 
   if (loading && cases.length === 0) {

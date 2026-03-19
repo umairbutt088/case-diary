@@ -13,6 +13,19 @@ import { AppState, type AppStateStatus } from "react-native";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const ONBOARDING_STORAGE_KEY = "@legal_diary/onboarding_completed";
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 3500;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      const id = setTimeout(() => {
+        clearTimeout(id);
+        reject(new Error("Auth bootstrap timed out"));
+      }, timeoutMs);
+    }),
+  ]);
+}
 
 type AuthContextValue = {
   session: Session | null;
@@ -69,30 +82,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { session: initialSession },
           error,
-        } = await supabase.auth.getSession();
+        } = await withTimeout(supabase.auth.getSession(), AUTH_BOOTSTRAP_TIMEOUT_MS);
         if (!mounted) return;
         if (error) {
           setSession(null);
           setIsLoading(false);
           return;
         }
+
+        setSession(initialSession ?? null);
+
+        // Do not block app startup on refresh when offline.
         if (
           initialSession?.expires_at &&
           initialSession.expires_at * 1000 < Date.now() + 60_000
         ) {
-          const {
-            data: { session: refreshed },
-            error: refreshError,
-          } = await supabase.auth.refreshSession();
-          if (!mounted) return;
-          if (refreshError) {
-            await supabase.auth.signOut();
-            setSession(null);
-          } else {
-            setSession(refreshed ?? null);
-          }
-        } else {
-          setSession(initialSession ?? null);
+          supabase.auth
+            .refreshSession()
+            .then(async ({ data: { session: refreshed }, error: refreshError }) => {
+              if (!mounted) return;
+              if (refreshError) {
+                await supabase.auth.signOut();
+                if (mounted) setSession(null);
+              } else if (refreshed) {
+                setSession(refreshed);
+              }
+            })
+            .catch(() => {
+              // Keep current session and retry on foreground.
+            });
         }
       } catch {
         if (mounted) setSession(null);

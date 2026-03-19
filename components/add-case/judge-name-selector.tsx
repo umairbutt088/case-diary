@@ -15,6 +15,14 @@ import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import {
+  getCachedJudges,
+  getCachedJudgesForTier,
+  queueDeleteJudge,
+  removeCachedJudge,
+  setCachedJudges,
+} from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export type JudgeRecord = {
@@ -49,6 +57,7 @@ export function JudgeNameSelector({
   error,
 }: Props) {
   const { session } = useAuth();
+  const isOnline = useIsOnline();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [judges, setJudges] = useState<JudgeRecord[]>([]);
@@ -70,6 +79,13 @@ export function JudgeNameSelector({
       setFetchError(null);
       return;
     }
+    if (!isOnline) {
+      const cached = await getCachedJudgesForTier(session.user.id, courtTier);
+      setJudges(cached);
+      setFetchError(null);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setFetchError(null);
@@ -82,14 +98,25 @@ export function JudgeNameSelector({
     setLoading(false);
 
     if (e) {
-      if (e.message?.toLowerCase().includes("court_tier")) {
+      const msg = (e.message || "").toLowerCase();
+      const isNetworkError =
+        msg.includes("network request failed") ||
+        msg.includes("failed to fetch") ||
+        msg.includes("network error") ||
+        msg.includes("fetch failed");
+      if (isNetworkError) {
+        const cached = await getCachedJudgesForTier(session.user.id, courtTier);
+        setJudges(cached);
+        setFetchError(null);
+      } else if (msg.includes("court_tier")) {
         setFetchError(
           "Judge tier setup is missing in database. Please run latest migrations.",
         );
+        setJudges([]);
       } else {
         setFetchError(e.message || "Failed to load saved judges.");
+        setJudges([]);
       }
-      setJudges([]);
       return;
     }
 
@@ -106,7 +133,12 @@ export function JudgeNameSelector({
       .filter((row) => Boolean(row.name));
 
     setJudges(list);
-  }, [session?.user?.id, courtTier]);
+    const allCached = await getCachedJudges(session.user.id);
+    const otherTierJudges = allCached.filter(
+      (item) => item.courtTier.toLowerCase() !== courtTier.toLowerCase(),
+    );
+    await setCachedJudges(session.user.id, [...otherTierJudges, ...list]);
+  }, [session?.user?.id, courtTier, isOnline]);
 
   useEffect(() => {
     setOpen(false);
@@ -134,6 +166,31 @@ export function JudgeNameSelector({
         setFetchError("You must be signed in to delete a judge.");
         return;
       }
+      if (!isOnline) {
+        await queueDeleteJudge(session.user.id, {
+          name: judge.name,
+          courtTier,
+        });
+        await removeCachedJudge(session.user.id, judge.name, courtTier);
+        setJudges((prev) =>
+          prev.filter(
+            (item) =>
+              !(
+                item.name === judge.name &&
+                item.courtTier === judge.courtTier
+              ),
+          ),
+        );
+        if (value === judge.name) {
+          onChange("");
+          onSelectJudge?.({
+            name: "",
+            courtRoomAddress: null,
+            courtTier: "",
+          });
+        }
+        return;
+      }
 
       setDeletingJudgeName(judge.name);
       setFetchError(null);
@@ -159,6 +216,7 @@ export function JudgeNameSelector({
             ),
         ),
       );
+      await removeCachedJudge(session.user.id, judge.name, courtTier);
 
       if (value === judge.name) {
         onChange("");
@@ -169,7 +227,7 @@ export function JudgeNameSelector({
         });
       }
     },
-    [session?.user?.id, courtTier, value, onChange, onSelectJudge],
+    [session?.user?.id, courtTier, value, onChange, onSelectJudge, isOnline],
   );
 
   return (

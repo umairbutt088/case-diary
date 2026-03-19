@@ -34,6 +34,13 @@ import {
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import {
+  getCachedCaseById,
+  patchCachedCase,
+  upsertCachedCase,
+} from "@/lib/cases-cache";
+import { addPendingCaseUpdate } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 
@@ -74,6 +81,7 @@ export default function EditCaseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session } = useAuth();
+  const isOnline = useIsOnline();
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +107,18 @@ export default function EditCaseScreen() {
     }
     let cancelled = false;
     (async () => {
+      if (session?.user?.id && !isOnline) {
+        const cached = await getCachedCaseById(session.user.id, id);
+        if (cancelled) return;
+        setLoading(false);
+        if (!cached) {
+          setError("Case not available offline");
+          return;
+        }
+        setCaseData(cached);
+        setForm(caseRowToFormState(cached));
+        return;
+      }
       const { data, error: e } = await supabase
         .from("cases")
         .select("*")
@@ -113,11 +133,14 @@ export default function EditCaseScreen() {
       const row = data as CaseRow;
       setCaseData(row);
       setForm(caseRowToFormState(row));
+      if (session?.user?.id) {
+        await upsertCachedCase(session.user.id, row);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, session?.user?.id, isOnline]);
 
   const update = useCallback((updates: Partial<AddCaseFormState>) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -194,6 +217,17 @@ export default function EditCaseScreen() {
 
     setSaving(true);
     setSaveError(null);
+    if (!isOnline) {
+      const patch = {
+        ...row,
+        updated_at: new Date().toISOString(),
+      };
+      await addPendingCaseUpdate(session.user.id, id, patch);
+      await patchCachedCase(session.user.id, id, patch);
+      setSaving(false);
+      router.replace(`/case/${id}`);
+      return;
+    }
     const { error } = await supabase
       .from("cases")
       .update(row)
@@ -205,8 +239,12 @@ export default function EditCaseScreen() {
       setSaveError(error.message || "Failed to update case.");
       return;
     }
+    await patchCachedCase(session.user.id, id, {
+      ...row,
+      updated_at: new Date().toISOString(),
+    });
     router.replace(`/case/${id}`);
-  }, [id, session?.user?.id, form, validate, router]);
+  }, [id, session?.user?.id, form, validate, router, isOnline]);
 
   if (loading || (!caseData && !error)) {
     return (

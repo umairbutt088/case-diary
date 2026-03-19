@@ -15,6 +15,15 @@ import { ThemedText } from "@/components/themed-text";
 import { COURT_TIERS } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import {
+  addCachedCustomCourtTier,
+  getCachedCustomCourtTiers,
+  queueAddCourtTier,
+  queueDeleteCourtTier,
+  removeCachedCustomCourtTier,
+  setCachedCustomCourtTiers,
+} from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type Props = {
@@ -41,6 +50,7 @@ export function CourtTierPicker({
   hint,
 }: Props) {
   const { session } = useAuth();
+  const isOnline = useIsOnline();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -85,6 +95,13 @@ export function CourtTierPicker({
       setFetchError(null);
       return;
     }
+    if (!isOnline) {
+      const cached = await getCachedCustomCourtTiers(session.user.id);
+      setCustomTiers(cached);
+      setFetchError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setFetchError(null);
     const { data, error: e } = await supabase
@@ -94,15 +111,28 @@ export function CourtTierPicker({
       .order("name", { ascending: true });
     setLoading(false);
     if (e) {
-      setFetchError(e.message || "Failed to load court tiers.");
-      setCustomTiers([]);
+      const msg = (e.message || "").toLowerCase();
+      const isNetworkError =
+        msg.includes("network request failed") ||
+        msg.includes("failed to fetch") ||
+        msg.includes("network error") ||
+        msg.includes("fetch failed");
+      if (isNetworkError) {
+        const cached = await getCachedCustomCourtTiers(session.user.id);
+        setCustomTiers(cached);
+        setFetchError(null);
+      } else {
+        setFetchError(e.message || "Failed to load court tiers.");
+        setCustomTiers([]);
+      }
       return;
     }
     const names = ((data ?? []) as { name: string }[])
       .map((row) => row.name?.trim())
       .filter(Boolean) as string[];
     setCustomTiers(names);
-  }, [session?.user?.id]);
+    await setCachedCustomCourtTiers(session.user.id, names);
+  }, [session?.user?.id, isOnline]);
 
   useEffect(() => {
     if (!open) return;
@@ -123,6 +153,14 @@ export function CourtTierPicker({
       setAddError("You must be signed in to add a court tier.");
       return;
     }
+    if (!isOnline) {
+      await addCachedCustomCourtTier(session.user.id, name);
+      await queueAddCourtTier(session.user.id, name);
+      setCustomTiers((prev) => [...prev, name].sort((a, b) => a.localeCompare(b)));
+      setNewTier("");
+      onChange(name);
+      return;
+    }
     setAddingTier(true);
     setAddError(null);
     const { error: e } = await supabase.from("court_tiers").insert({
@@ -139,14 +177,24 @@ export function CourtTierPicker({
       return;
     }
     setCustomTiers((prev) => [...prev, name].sort((a, b) => a.localeCompare(b)));
+    await addCachedCustomCourtTier(session.user.id, name);
     setNewTier("");
     onChange(name);
-  }, [newTier, options, session?.user?.id, onChange]);
+  }, [newTier, options, session?.user?.id, onChange, isOnline]);
 
   const handleDeleteTier = useCallback(
     async (tierName: string) => {
       if (!session?.user?.id || !isSupabaseConfigured) {
         setAddError("You must be signed in to remove a court tier.");
+        return;
+      }
+      if (!isOnline) {
+        await queueDeleteCourtTier(session.user.id, tierName);
+        await removeCachedCustomCourtTier(session.user.id, tierName);
+        setCustomTiers((prev) => prev.filter((tier) => tier !== tierName));
+        if (value === tierName) {
+          onChange("");
+        }
         return;
       }
       setDeletingTier(tierName);
@@ -162,11 +210,12 @@ export function CourtTierPicker({
         return;
       }
       setCustomTiers((prev) => prev.filter((tier) => tier !== tierName));
+      await removeCachedCustomCourtTier(session.user.id, tierName);
       if (value === tierName) {
         onChange("");
       }
     },
-    [session?.user?.id, value, onChange],
+    [session?.user?.id, value, onChange, isOnline],
   );
 
   return (

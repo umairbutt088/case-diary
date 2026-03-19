@@ -18,6 +18,13 @@ import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import {
+  getCachedCaseById,
+  removeCachedCase,
+  upsertCachedCase,
+} from "@/lib/cases-cache";
+import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle } from "@/types/case";
@@ -91,6 +98,7 @@ export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session } = useAuth();
+  const isOnline = useIsOnline();
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
   const [linkedClient, setLinkedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,6 +124,17 @@ export default function CaseDetailScreen() {
     }
     let cancelled = false;
     (async () => {
+      if (session?.user?.id && !isOnline) {
+        const cached = await getCachedCaseById(session.user.id, id);
+        if (cancelled) return;
+        setLoading(false);
+        if (!cached) {
+          setError("Case not available offline");
+          return;
+        }
+        setCaseData(cached);
+        return;
+      }
       const { data, error: e } = await supabase
         .from("cases")
         .select("*")
@@ -127,12 +146,16 @@ export default function CaseDetailScreen() {
         setError(e.message || "Failed to load case");
         return;
       }
-      setCaseData(data as CaseRow);
+      const row = data as CaseRow;
+      setCaseData(row);
+      if (session?.user?.id) {
+        await upsertCachedCase(session.user.id, row);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, session?.user?.id, isOnline]);
 
   useEffect(() => {
     const clientId = caseData?.linked_client_id;
@@ -312,6 +335,12 @@ export default function CaseDetailScreen() {
                     style: "destructive",
                     onPress: async () => {
                       if (!id || !session?.user?.id) return;
+                      if (!isOnline) {
+                        await addPendingCaseDelete(session.user.id, id);
+                        await removeCachedCase(session.user.id, id);
+                        router.replace("/(tabs)");
+                        return;
+                      }
                       setDeleting(true);
                       const { error: e } = await supabase
                         .from("cases")
@@ -323,6 +352,7 @@ export default function CaseDetailScreen() {
                         Alert.alert("Error", e.message);
                         return;
                       }
+                      await removeCachedCase(session.user.id, id);
                       router.replace("/(tabs)");
                     },
                   },
