@@ -257,6 +257,9 @@ export default function HomeScreen() {
       const parsed = JSON.parse(raw);
       const sanitized = sanitizeActivityNotes(parsed, today);
       setNotesCount(sanitized.length);
+      if (Array.isArray(parsed) && sanitized.length !== parsed.length) {
+        await AsyncStorage.setItem(notesStorageKey, JSON.stringify(sanitized));
+      }
     } catch {
       setNotesCount(0);
     }

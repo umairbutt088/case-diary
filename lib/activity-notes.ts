@@ -8,6 +8,7 @@ export type ActivityNote = {
 };
 
 const HOME_NOTES_STORAGE_KEY = "homeActivityNotes";
+const NOTE_RETENTION_DAYS = 7;
 
 export function getActivityNotesStorageKey(userId?: string): string {
   return `${HOME_NOTES_STORAGE_KEY}:${userId ?? "guest"}`;
@@ -17,6 +18,16 @@ export function sanitizeActivityNotes(
   rawItems: unknown,
   fallbackDate: string,
 ): ActivityNote[] {
+  const fallback = fallbackDate.length >= 10 ? fallbackDate.slice(0, 10) : "1970-01-01";
+  const [fy, fm, fd] = fallback.split("-").map((v) => Number.parseInt(v, 10));
+  const fallbackAsDate = new Date(fy, Math.max(0, fm - 1), fd || 1);
+  fallbackAsDate.setDate(fallbackAsDate.getDate() - (NOTE_RETENTION_DAYS - 1));
+  const cutoffDate = [
+    fallbackAsDate.getFullYear(),
+    String(fallbackAsDate.getMonth() + 1).padStart(2, "0"),
+    String(fallbackAsDate.getDate()).padStart(2, "0"),
+  ].join("-");
+
   if (!Array.isArray(rawItems)) return [];
   return rawItems
     .filter(
@@ -50,5 +61,6 @@ export function sanitizeActivityNotes(
       };
     })
     .filter((item) => item.content.length > 0)
+    .filter((item) => item.noteDate >= cutoffDate)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
