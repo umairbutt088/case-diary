@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CopilotStep, useCopilot } from "react-native-copilot";
+import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 
 import { CaseCard } from "@/components/case-card";
 import {
@@ -29,6 +29,8 @@ import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { getCaseDisplayTitle, type CaseRow } from "@/types/case";
 
+const WalkthroughableView = walkthroughable(View);
+
 /** Wrapper that forwards copilot ref to a native View - required for measureLayout.
  * CopilotStep injects the copilot prop; we spread it onto a native View. */
 function DiaryHeaderWithRef({
@@ -39,9 +41,13 @@ function DiaryHeaderWithRef({
   title: string;
 }) {
   return (
-    <View ref={copilot?.ref as React.Ref<View>} onLayout={copilot?.onLayout} collapsable={false}>
+    <WalkthroughableView
+      ref={copilot?.ref as React.Ref<View>}
+      onLayout={copilot?.onLayout}
+      collapsable={false}
+    >
       <ScreenHeader title={title} showBack={false} />
-    </View>
+    </WalkthroughableView>
   );
 }
 
@@ -133,7 +139,10 @@ export default function DiaryScreen() {
         if (!hasSeenTour) {
           setTimeout(() => {
             if (cancelled) return;
-            start();
+            requestAnimationFrame(() => {
+              if (cancelled) return;
+              start();
+            });
             AsyncStorage.setItem("hasSeenDiaryTourCopilot", "true");
           }, 600);
         }

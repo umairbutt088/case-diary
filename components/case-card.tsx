@@ -3,8 +3,8 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { CopilotStep, walkthroughable } from "react-native-copilot";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { CopilotStep, walkthroughable } from "react-native-copilot";
 import Animated, {
   FadeInUp,
   FadeOut,
@@ -93,6 +93,7 @@ export function CaseCard({
 
   return (
     <Animated.View
+      style={styles.cardOuter}
       entering={FadeInUp.delay(index * 50).springify()}
       exiting={FadeOut.duration(200)}
       layout={LinearTransition.springify()}
@@ -288,12 +289,21 @@ export function CaseCard({
 }
 
 const styles = StyleSheet.create({
+  cardOuter: {
+    paddingHorizontal: 6,
+    paddingTop: 2,
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
   card: {
     backgroundColor: theme.colors.cream50,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    ...theme.shadow,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 5,
   },
   cardTop: {
     flexDirection: "row",
