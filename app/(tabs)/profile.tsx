@@ -122,7 +122,10 @@ export default function ProfileScreen() {
         if (!hasSeenTour) {
           setTimeout(() => {
             if (cancelled) return;
-            start(undefined, scrollRef.current);
+            requestAnimationFrame(() => {
+              if (cancelled) return;
+              start();
+            });
             AsyncStorage.setItem("hasSeenProfileTourCopilot", "true");
           }, 600);
         }

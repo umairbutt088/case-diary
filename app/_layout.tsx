@@ -4,7 +4,6 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { Platform, StatusBar as RNStatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -24,6 +23,17 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const isAndroid = Platform.OS === "android";
+  const statusBarStyle = isAndroid
+    ? "dark-content"
+    : colorScheme === "dark"
+      ? "light-content"
+      : "dark-content";
+  const statusBarBackground = isAndroid
+    ? "#F9F9FB"
+    : colorScheme === "dark"
+      ? "#1A1A1A"
+      : "#F9F9FB";
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -79,7 +89,12 @@ export default function RootLayout() {
             </PushNotificationProvider>
           </OfflineSyncProvider>
         </AuthProvider>
-        <StatusBar style="auto" />
+        <RNStatusBar
+          barStyle={statusBarStyle}
+          backgroundColor={statusBarBackground}
+          translucent={false}
+          hidden={false}
+        />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

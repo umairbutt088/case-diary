@@ -3,14 +3,15 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { CopilotStep, walkthroughable } from "react-native-copilot";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { CopilotStep, walkthroughable } from "react-native-copilot";
 import Animated, {
   FadeInUp,
   FadeOut,
   LinearTransition
 } from "react-native-reanimated";
 
+import { COURT_TIERS } from "@/constants/case-form";
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
 import type { CaseRow } from "@/types/case";
@@ -32,6 +33,17 @@ function getCaseDetailsSnippet(row: CaseRow): string {
   if (row.court_name) parts.push(row.court_name);
   if (parts.length) return parts.join(" · ");
   return "No details";
+}
+
+function getCourtDisplay(row: CaseRow): string {
+  const courtName = row.court_name?.trim();
+  if (courtName) return courtName;
+
+  const tierValue = row.court_tier?.trim();
+  if (!tierValue) return "—";
+
+  const tierLabel = COURT_TIERS.find((tier) => tier.value === tierValue)?.label;
+  return tierLabel ?? tierValue;
 }
 
 type CaseCardProps = {
@@ -58,7 +70,7 @@ export function CaseCard({
   const snippet = getCaseDetailsSnippet(caseItem);
   const nextDate = formatCaseDate(caseItem.next_hearing_date);
   const caseNumber = caseItem.case_number?.trim() || "—";
-  const courtName = caseItem.court_name?.trim() || "—";
+  const courtName = getCourtDisplay(caseItem);
   const proceeding = caseItem.next_status?.trim() || caseItem.current_status?.trim() || "—";
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,6 +105,7 @@ export function CaseCard({
 
   return (
     <Animated.View
+      style={styles.cardOuter}
       entering={FadeInUp.delay(index * 50).springify()}
       exiting={FadeOut.duration(200)}
       layout={LinearTransition.springify()}
@@ -288,12 +301,21 @@ export function CaseCard({
 }
 
 const styles = StyleSheet.create({
+  cardOuter: {
+    paddingHorizontal: 6,
+    paddingTop: 2,
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
   card: {
     backgroundColor: theme.colors.cream50,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    ...theme.shadow,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 5,
   },
   cardTop: {
     flexDirection: "row",

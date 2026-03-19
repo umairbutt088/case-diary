@@ -230,6 +230,17 @@ export function JudgeNameSelector({
     [session?.user?.id, courtTier, value, onChange, onSelectJudge, isOnline],
   );
 
+  const handlePressAddJudge = useCallback(() => {
+    if (!courtTier) {
+      Alert.alert(
+        "Select court tier first",
+        "Please select a court tier before adding a judge. The judge will be saved under that tier.",
+      );
+      return;
+    }
+    onPressAddJudge?.();
+  }, [courtTier, onPressAddJudge]);
+
   return (
     <FormField label={label} required={required} hint={hint}>
       <View style={styles.dropdownWrap}>
@@ -366,7 +377,7 @@ export function JudgeNameSelector({
       </View>
 
       {onPressAddJudge ? (
-        <Pressable style={styles.addJudgeBtn} onPress={onPressAddJudge}>
+        <Pressable style={styles.addJudgeBtn} onPress={handlePressAddJudge}>
           <MaterialIcons
             name="person-add-alt-1"
             size={18}
