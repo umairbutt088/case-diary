@@ -26,6 +26,7 @@ export default function NotesScreen() {
   const [filter, setFilter] = useState<NotesFilter>("today");
   const [noteInput, setNoteInput] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const today = getTodayISO();
 
   const storageKey = useMemo(
@@ -46,7 +47,11 @@ export default function NotesScreen() {
         return;
       }
       const parsed = JSON.parse(raw);
-      setNotes(sanitizeActivityNotes(parsed, today));
+      const sanitized = sanitizeActivityNotes(parsed, today);
+      setNotes(sanitized);
+      if (Array.isArray(parsed) && sanitized.length !== parsed.length) {
+        await AsyncStorage.setItem(storageKey, JSON.stringify(sanitized));
+      }
     } catch {
       setNotes([]);
     }
@@ -73,6 +78,7 @@ export default function NotesScreen() {
   const resetEditor = useCallback(() => {
     setNoteInput("");
     setEditingNoteId(null);
+    setIsComposerOpen(false);
   }, []);
 
   const saveNote = useCallback(async () => {
@@ -111,6 +117,7 @@ export default function NotesScreen() {
   const editNote = useCallback((note: ActivityNote) => {
     setEditingNoteId(note.id);
     setNoteInput(note.content);
+    setIsComposerOpen(true);
   }, []);
 
   const deleteNote = useCallback(
@@ -173,35 +180,6 @@ export default function NotesScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.editorCard}>
-          <TextInput
-            style={styles.notesInput}
-            placeholder={
-              filter === "today"
-                ? "Write a note for today..."
-                : "Write a note (saved for today)..."
-            }
-            placeholderTextColor={theme.colors.gray50}
-            value={noteInput}
-            onChangeText={setNoteInput}
-            multiline
-          />
-          <View style={styles.actionsRow}>
-            {editingNoteId ? (
-              <Bounceable style={styles.secondaryButton} onPress={resetEditor}>
-                <ThemedText style={styles.secondaryButtonText}>Cancel edit</ThemedText>
-              </Bounceable>
-            ) : (
-              <View />
-            )}
-            <Bounceable style={styles.primaryButton} onPress={() => void saveNote()}>
-              <ThemedText style={styles.primaryButtonText}>
-                {editingNoteId ? "Update note" : "Save note"}
-              </ThemedText>
-            </Bounceable>
-          </View>
-        </View>
-
         <Animated.ScrollView
           style={styles.notesList}
           showsVerticalScrollIndicator={false}
@@ -261,6 +239,49 @@ export default function NotesScreen() {
             ))
           )}
         </Animated.ScrollView>
+
+        {isComposerOpen ? (
+          <View style={styles.composerWrap}>
+            <View style={styles.editorCard}>
+              <TextInput
+                style={styles.notesInput}
+                placeholder={
+                  filter === "today"
+                    ? "Write a note for today..."
+                    : "Write a note (saved for today)..."
+                }
+                placeholderTextColor={theme.colors.gray50}
+                value={noteInput}
+                onChangeText={setNoteInput}
+                multiline
+                autoFocus
+              />
+              <View style={styles.actionsRow}>
+                <Bounceable style={styles.secondaryButton} onPress={resetEditor}>
+                  <ThemedText style={styles.secondaryButtonText}>
+                    {editingNoteId ? "Cancel edit" : "Close"}
+                  </ThemedText>
+                </Bounceable>
+                <Bounceable style={styles.primaryButton} onPress={() => void saveNote()}>
+                  <ThemedText style={styles.primaryButtonText}>
+                    {editingNoteId ? "Update note" : "Save note"}
+                  </ThemedText>
+                </Bounceable>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        <Bounceable
+          style={styles.fab}
+          onPress={() => {
+            setEditingNoteId(null);
+            setNoteInput("");
+            setIsComposerOpen(true);
+          }}
+        >
+          <MaterialIcons name="add" size={28} color={theme.colors.pureWhite} />
+        </Bounceable>
       </Animated.View>
     </SafeAreaView>
   );
@@ -357,8 +378,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   notesListContent: {
-    paddingBottom: 24,
+    paddingBottom: 104,
     gap: 10,
+  },
+  composerWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 86,
+    paddingHorizontal: 24,
+    zIndex: 20,
   },
   emptyText: {
     color: theme.colors.gray50,
@@ -435,5 +464,18 @@ const styles = StyleSheet.create({
   },
   noteActionDelete: {
     color: theme.colors.themeRed,
+  },
+  fab: {
+    position: "absolute",
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.themeBlack,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 30,
+    ...theme.shadow,
   },
 });

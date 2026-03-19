@@ -30,7 +30,8 @@ import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { getActivityNotesStorageKey, sanitizeActivityNotes } from "@/lib/activity-notes";
-import { getPendingCasesCount } from "@/lib/offline-queue";
+import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
+import { addPendingCaseDelete, getPendingCasesCount } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle, getTodayISO, getWeekBounds } from "@/types/case";
@@ -198,6 +199,15 @@ export default function HomeScreen() {
         return;
       }
 
+      if (!isOnline) {
+        const cached = await getCachedCases(session.user.id);
+        setCases(cached);
+        setLoading(false);
+        setIsOffline(true);
+        setError(null);
+        return;
+      }
+
       // Only show loading if not silent
       if (!isSilent) {
         setLoading(true);
@@ -213,9 +223,10 @@ export default function HomeScreen() {
       setLoading(false);
       if (e) {
         if (isNetworkError(e.message)) {
+          const cached = await getCachedCases(session.user.id);
           setIsOffline(true);
           setError(null);
-          setCases([]);
+          setCases(cached);
         } else {
           setError(e.message);
           setIsOffline(false);
@@ -224,9 +235,11 @@ export default function HomeScreen() {
         return;
       }
       setIsOffline(false);
-      setCases((data as CaseRow[]) ?? []);
+      const nextCases = (data as CaseRow[]) ?? [];
+      setCases(nextCases);
+      await setCachedCases(session.user.id, nextCases);
     },
-    [session?.user?.id],
+    [session?.user?.id, isOnline],
   );
 
   const notesStorageKey = useMemo(
@@ -244,6 +257,9 @@ export default function HomeScreen() {
       const parsed = JSON.parse(raw);
       const sanitized = sanitizeActivityNotes(parsed, today);
       setNotesCount(sanitized.length);
+      if (Array.isArray(parsed) && sanitized.length !== parsed.length) {
+        await AsyncStorage.setItem(notesStorageKey, JSON.stringify(sanitized));
+      }
     } catch {
       setNotesCount(0);
     }
@@ -255,10 +271,11 @@ export default function HomeScreen() {
       (async () => {
         await loadNotesCount();
         if (!isOnline && session?.user?.id && isSupabaseConfigured) {
+          const cached = await getCachedCases(session.user.id);
           setLoading(false);
           setIsOffline(true);
           setError(null);
-          setCases([]);
+          setCases(cached);
         } else {
           await fetchCases(true);
         }
@@ -301,18 +318,31 @@ export default function HomeScreen() {
           style: "destructive",
           onPress: async () => {
             if (!session?.user?.id) return;
+            if (!isOnline) {
+              await addPendingCaseDelete(session.user.id, caseId);
+              await removeCachedCase(session.user.id, caseId);
+              setCases((prev) => prev.filter((c) => c.id !== caseId));
+              Alert.alert(
+                "Delete queued",
+                "Case will be deleted in cloud when internet is available.",
+              );
+              return;
+            }
             const { error: e } = await supabase
               .from("cases")
               .delete()
               .eq("id", caseId)
               .eq("user_id", session.user.id);
             if (e) Alert.alert("Error", e.message);
-            else fetchCases();
+            else {
+              await removeCachedCase(session.user.id, caseId);
+              fetchCases();
+            }
           },
         },
       ]);
     },
-    [session?.user?.id, fetchCases],
+    [session?.user?.id, fetchCases, isOnline],
   );
 
   const { hearingsToday, filedToday } = getTodayCases(cases, today);

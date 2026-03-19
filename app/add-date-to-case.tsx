@@ -16,6 +16,9 @@ import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import { getCachedCases, patchCachedCase, setCachedCases } from "@/lib/cases-cache";
+import { addPendingCaseUpdate } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle } from "@/types/case";
@@ -39,6 +42,7 @@ export default function AddDateToCaseScreen() {
   const formattedDate = formatCaseDate(selectedDate);
 
   const { session } = useAuth();
+  const isOnline = useIsOnline();
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -51,6 +55,13 @@ export default function AddDateToCaseScreen() {
       setLoading(false);
       return;
     }
+    if (!isOnline) {
+      const cached = await getCachedCases(session.user.id);
+      setCases(cached);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     const { data, error: e } = await supabase
       .from("cases")
@@ -59,12 +70,26 @@ export default function AddDateToCaseScreen() {
       .order("updated_at", { ascending: false });
     setLoading(false);
     if (e) {
-      setCases([]);
-      setError(e.message);
+      const msg = (e.message || "").toLowerCase();
+      const isNetworkError =
+        msg.includes("network request failed") ||
+        msg.includes("failed to fetch") ||
+        msg.includes("network error") ||
+        msg.includes("fetch failed");
+      if (isNetworkError) {
+        const cached = await getCachedCases(session.user.id);
+        setCases(cached);
+        setError(null);
+      } else {
+        setCases([]);
+        setError(e.message);
+      }
       return;
     }
-    setCases((data as CaseRow[]) ?? []);
-  }, [session?.user?.id]);
+    const nextCases = (data as CaseRow[]) ?? [];
+    setCases(nextCases);
+    await setCachedCases(session.user.id, nextCases);
+  }, [session?.user?.id, isOnline]);
 
   useEffect(() => {
     fetchCases();
@@ -87,8 +112,20 @@ export default function AddDateToCaseScreen() {
         setError("Database not configured");
         return;
       }
+      if (!session?.user?.id) return;
       setSavingId(caseItem.id);
       setError(null);
+      if (!isOnline) {
+        const patch = {
+          next_hearing_date: selectedDate,
+          updated_at: new Date().toISOString(),
+        };
+        await addPendingCaseUpdate(session.user.id, caseItem.id, patch);
+        await patchCachedCase(session.user.id, caseItem.id, patch);
+        setSavingId(null);
+        router.back();
+        return;
+      }
       const { error: e } = await supabase
         .from("cases")
         .update({
@@ -103,10 +140,14 @@ export default function AddDateToCaseScreen() {
         setError(e.message);
         return;
       }
+      await patchCachedCase(session.user.id, caseItem.id, {
+        next_hearing_date: selectedDate,
+        updated_at: new Date().toISOString(),
+      });
       setError(null);
       router.back();
     },
-    [selectedDate, session?.user?.id, router]
+    [selectedDate, session?.user?.id, router, isOnline]
   );
 
   return (

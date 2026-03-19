@@ -18,6 +18,11 @@ import {
 } from "@/constants/case-form";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useIsOnline } from "@/hooks/use-is-online";
+import {
+  addCachedJudge,
+  queueAddJudge,
+} from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export type SavedJudge = {
@@ -50,6 +55,7 @@ export function AddJudgeBottomSheet({
   onSaved,
 }: Props) {
   const { session } = useAuth();
+  const isOnline = useIsOnline();
   const [form, setForm] = useState<AddJudgeForm>(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +93,18 @@ export function AddJudgeBottomSheet({
       setError("You must be signed in to add a judge.");
       return;
     }
+    if (!isOnline) {
+      const offlineJudge = {
+        name,
+        courtRoomAddress: form.courtRoomAddress.trim() || null,
+        courtTier: defaultCourtTier,
+      };
+      await addCachedJudge(session.user.id, offlineJudge);
+      await queueAddJudge(session.user.id, offlineJudge);
+      onSaved(offlineJudge);
+      onClose();
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -116,8 +134,13 @@ export function AddJudgeBottomSheet({
       courtRoomAddress: form.courtRoomAddress.trim() || null,
       courtTier: defaultCourtTier,
     });
+    await addCachedJudge(session.user.id, {
+      name,
+      courtRoomAddress: form.courtRoomAddress.trim() || null,
+      courtTier: defaultCourtTier,
+    });
     onClose();
-  }, [form, defaultCourtTier, session?.user?.id, onSaved, onClose]);
+  }, [form, defaultCourtTier, session?.user?.id, onSaved, onClose, isOnline]);
 
   if (!visible) return null;
 
