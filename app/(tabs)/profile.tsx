@@ -479,6 +479,31 @@ export default function ProfileScreen() {
         </View>
       ) : null}
 
+      {!editing ? (
+        <View style={styles.card}>
+          <SectionTitle title="Reference Data" />
+          <ThemedText style={styles.referenceHint}>
+            Manage your saved clients and judges in one place.
+          </ThemedText>
+          <View style={styles.referenceActions}>
+            <Pressable
+              style={styles.referenceBtn}
+              onPress={() => router.push("/clients")}
+            >
+              <MaterialIcons name="groups-2" size={18} color={theme.colors.black} />
+              <ThemedText style={styles.referenceBtnText}>Clients</ThemedText>
+            </Pressable>
+            <Pressable
+              style={styles.referenceBtn}
+              onPress={() => router.push("/judges")}
+            >
+              <MaterialIcons name="gavel" size={18} color={theme.colors.black} />
+              <ThemedText style={styles.referenceBtnText}>Judges</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
       <Pressable
         style={styles.resetTourButton}
         onPress={async () => {
@@ -764,6 +789,33 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginTop: 16,
+  },
+  referenceHint: {
+    fontSize: 14,
+    color: theme.colors.gray50,
+    marginBottom: 12,
+  },
+  referenceActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  referenceBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    backgroundColor: theme.colors.pureWhite,
+  },
+  referenceBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.black,
   },
   signOutButton: {
     width: "100%",

@@ -327,6 +327,12 @@ export default function AddCaseFlowScreen() {
               hint="Judges are filtered by selected court tier."
               error={errors.judgeName}
             />
+            <Bounceable
+              style={styles.manageRefBtn}
+              onPress={() => router.push("/judges")}
+            >
+              <ThemedText style={styles.manageRefBtnText}>Manage judges list</ThemedText>
+            </Bounceable>
             <FormFieldWithHint
               label="Court room location"
               value={form.courtRoom}
@@ -401,6 +407,12 @@ export default function AddCaseFlowScreen() {
               placeholder="Select from your existing cases"
               hint="Parties from your cases — select to link this case to that client"
             />
+            <Bounceable
+              style={styles.manageRefBtn}
+              onPress={() => router.push("/clients")}
+            >
+              <ThemedText style={styles.manageRefBtnText}>Manage clients list</ThemedText>
+            </Bounceable>
             <FormField label="OR Add New Client">
               <Bounceable
                 style={[
@@ -585,6 +597,23 @@ const styles = StyleSheet.create({
   addClientTextSelected: {
     color: theme.colors.pureWhite,
     fontWeight: "600",
+  },
+  manageRefBtn: {
+    marginTop: 8,
+    marginBottom: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.borderGray,
+    backgroundColor: theme.colors.pureWhite,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  manageRefBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.black,
   },
   clientOptionRow: {
     borderRadius: 10,
