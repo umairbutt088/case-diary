@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +18,7 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
+import { DateField } from "@/components/add-case/date-field";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
@@ -34,6 +38,8 @@ import { formatCaseDate, getCaseDisplayTitle, getTodayISO } from "@/types/case";
 import type { CaseHearingRow } from "@/types/case-hearing";
 import type { ClientRow } from "@/types/client";
 import { getPartyTerminology } from "@/constants/case-form";
+
+const DETAIL_HEARING_PAGE_SIZE = 20;
 
 function DetailRow({
   label,
@@ -110,8 +116,6 @@ export default function CaseDetailScreen() {
   const [deleting, setDeleting] = useState(false);
   const [hearingHistory, setHearingHistory] = useState<CaseHearingRow[]>([]);
   const [showProceedingForm, setShowProceedingForm] = useState(false);
-  const [proceedingText, setProceedingText] = useState("");
-  const [proceedingDate, setProceedingDate] = useState(getTodayISO());
   const [nextStatusDraft, setNextStatusDraft] = useState("");
   const [nextDateDraft, setNextDateDraft] = useState("");
   const [savingProceeding, setSavingProceeding] = useState(false);
@@ -201,7 +205,10 @@ export default function CaseDetailScreen() {
 
     let cancelled = false;
     (async () => {
-      const history = await getCaseHearingHistory(caseId, userId);
+      const history = await getCaseHearingHistory(caseId, userId, {
+        limit: DETAIL_HEARING_PAGE_SIZE,
+        offset: 0,
+      });
       if (cancelled) return;
       setHearingHistory(history);
     })();
@@ -212,7 +219,6 @@ export default function CaseDetailScreen() {
   }, [caseData?.id, session?.user?.id, isOnline]);
 
   useEffect(() => {
-    setProceedingDate(caseData?.next_hearing_date || getTodayISO());
     setNextDateDraft(caseData?.next_hearing_date || "");
   }, [caseData?.next_hearing_date]);
 
@@ -250,6 +256,11 @@ export default function CaseDetailScreen() {
   const title = getCaseDisplayTitle(caseData);
   const recentHearings = hearingHistory.slice(0, 1);
   const hasMoreHearings = hearingHistory.length > 1;
+  const previousHearingDate = caseData.next_hearing_date || getTodayISO();
+  const previousProceeding =
+    caseData.next_status?.trim() ||
+    caseData.current_status?.trim() ||
+    "Proceeding updated";
   const copyCaseNumber = async () => {
     if (!caseData.case_number?.trim()) {
       showCopyNotice("No case number");
@@ -265,24 +276,27 @@ export default function CaseDetailScreen() {
       setProceedingError("Proceeding history requires internet for now.");
       return;
     }
-    if (!proceedingDate.trim()) {
-      setProceedingError("Hearing date is required.");
+    if (!nextDateDraft.trim()) {
+      setProceedingError("Next hearing date is required.");
+      return;
+    }
+    if (!nextStatusDraft.trim()) {
+      setProceedingError("Next proceeding detail is required.");
       return;
     }
 
     setSavingProceeding(true);
     setProceedingError(null);
 
-    const proceeding = proceedingText.trim();
-    const resolvedCurrentStatus = proceeding || caseData.current_status || null;
-    const resolvedNextStatus = nextStatusDraft.trim() || caseData.next_status || null;
-    const resolvedNextDate = nextDateDraft.trim() || caseData.next_hearing_date || null;
+    const resolvedCurrentStatus = previousProceeding;
+    const resolvedNextStatus = nextStatusDraft.trim();
+    const resolvedNextDate = nextDateDraft.trim();
 
     const historySaved = await addCaseHearingEntry({
       caseId: caseData.id,
       userId: session.user.id,
-      hearingDate: proceedingDate.trim(),
-      proceeding: proceeding || null,
+      hearingDate: previousHearingDate,
+      proceeding: previousProceeding,
       currentStatus: resolvedCurrentStatus,
       nextStatus: resolvedNextStatus,
       nextHearingDate: resolvedNextDate,
@@ -316,11 +330,14 @@ export default function CaseDetailScreen() {
     await patchCachedCase(session.user.id, caseData.id, patch);
     setCaseData((prev) => (prev ? { ...prev, ...patch } : prev));
 
-    const history = await getCaseHearingHistory(caseData.id, session.user.id);
+    const history = await getCaseHearingHistory(caseData.id, session.user.id, {
+      limit: DETAIL_HEARING_PAGE_SIZE,
+      offset: 0,
+    });
     setHearingHistory(history);
 
-    setProceedingText("");
     setNextStatusDraft("");
+    setNextDateDraft(resolvedNextDate);
     setShowProceedingForm(false);
     setSavingProceeding(false);
   };
@@ -436,64 +453,9 @@ export default function CaseDetailScreen() {
                 color={theme.colors.black}
               />
               <ThemedText style={styles.addProceedingText}>
-                {showProceedingForm ? "Cancel" : "Add proceeding"}
+                Add proceeding
               </ThemedText>
             </Bounceable>
-
-            {showProceedingForm ? (
-              <View style={styles.proceedingForm}>
-                <ThemedText style={styles.inputLabel}>Proceeding</ThemedText>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  value={proceedingText}
-                  onChangeText={setProceedingText}
-                  placeholder="e.g. Arguments heard, adjourned for reply"
-                  placeholderTextColor={theme.colors.gray50}
-                  multiline
-                />
-
-                <ThemedText style={styles.inputLabel}>Hearing date (YYYY-MM-DD)</ThemedText>
-                <TextInput
-                  style={styles.textInput}
-                  value={proceedingDate}
-                  onChangeText={setProceedingDate}
-                  placeholder="2026-03-14"
-                  placeholderTextColor={theme.colors.gray50}
-                />
-
-                <ThemedText style={styles.inputLabel}>Next status (optional)</ThemedText>
-                <TextInput
-                  style={styles.textInput}
-                  value={nextStatusDraft}
-                  onChangeText={setNextStatusDraft}
-                  placeholder="e.g. Evidence, Final arguments"
-                  placeholderTextColor={theme.colors.gray50}
-                />
-
-                <ThemedText style={styles.inputLabel}>Next hearing date (optional)</ThemedText>
-                <TextInput
-                  style={styles.textInput}
-                  value={nextDateDraft}
-                  onChangeText={setNextDateDraft}
-                  placeholder="2026-03-29"
-                  placeholderTextColor={theme.colors.gray50}
-                />
-
-                {proceedingError ? (
-                  <ThemedText style={styles.formErrorText}>{proceedingError}</ThemedText>
-                ) : null}
-
-                <Bounceable
-                  style={styles.saveProceedingBtn}
-                  onPress={() => void saveProceeding()}
-                  disabled={savingProceeding}
-                >
-                  <ThemedText style={styles.saveProceedingBtnText}>
-                    {savingProceeding ? "Saving..." : "Save proceeding"}
-                  </ThemedText>
-                </Bounceable>
-              </View>
-            ) : null}
 
             <View style={styles.currentHearingCard}>
               <ThemedText style={styles.currentHearingTitle}>Next hearing</ThemedText>
@@ -596,6 +558,88 @@ export default function CaseDetailScreen() {
           </Bounceable>
         </Animated.View>
       </ScrollView>
+
+      <Modal
+        visible={showProceedingForm}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowProceedingForm(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalRoot}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => {
+              if (!savingProceeding) setShowProceedingForm(false);
+            }}
+          />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Add proceeding</ThemedText>
+              <Bounceable
+                style={styles.modalClose}
+                onPress={() => {
+                  if (!savingProceeding) setShowProceedingForm(false);
+                }}
+              >
+                <MaterialIcons name="close" size={20} color={theme.colors.black} />
+              </Bounceable>
+            </View>
+
+            <ScrollView
+              style={styles.proceedingForm}
+              contentContainerStyle={styles.proceedingFormContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.previousInfoBox}>
+                <ThemedText style={styles.previousInfoLabel}>Previous hearing</ThemedText>
+                <ThemedText style={styles.previousInfoDate}>
+                  {formatCaseDate(previousHearingDate)}
+                </ThemedText>
+                <ThemedText style={styles.previousInfoText}>
+                  {previousProceeding}
+                </ThemedText>
+              </View>
+
+              <ThemedText style={styles.inputLabel}>Next proceeding detail</ThemedText>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={nextStatusDraft}
+                onChangeText={setNextStatusDraft}
+                placeholder="e.g. Evidence, Final arguments"
+                placeholderTextColor={theme.colors.gray50}
+                multiline
+              />
+
+              <DateField
+                label="Next hearing date"
+                required
+                value={nextDateDraft}
+                onChange={setNextDateDraft}
+                placeholder="e.g. 30/03/2026"
+              />
+
+              {proceedingError ? (
+                <ThemedText style={styles.formErrorText}>{proceedingError}</ThemedText>
+              ) : null}
+
+              <Bounceable
+                style={styles.saveProceedingBtn}
+                onPress={() => void saveProceeding()}
+                disabled={savingProceeding}
+              >
+                <ThemedText style={styles.saveProceedingBtnText}>
+                  {savingProceeding ? "Saving..." : "Save proceeding"}
+                </ThemedText>
+              </Bounceable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {copyNotice ? (
         <View pointerEvents="none" style={styles.copyToastWrap}>
           <ThemedText style={styles.copyToastText}>{copyNotice}</ThemedText>
@@ -740,13 +784,72 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.black,
   },
-  proceedingForm: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalCard: {
     backgroundColor: theme.colors.pureWhite,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.black,
+  },
+  modalClose: {
+    minWidth: 32,
+    minHeight: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: theme.colors.background,
+  },
+  proceedingForm: {
+    flexGrow: 0,
+    maxHeight: "100%",
+  },
+  proceedingFormContent: {
+    marginBottom: 8,
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: theme.colors.pureWhite,
+  },
+  previousInfoBox: {
+    marginBottom: 10,
+    borderRadius: 8,
+    backgroundColor: theme.colors.cream50,
+    padding: 10,
+  },
+  previousInfoLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.gray50,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  previousInfoDate: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.black,
+    marginBottom: 2,
+  },
+  previousInfoText: {
+    fontSize: 14,
+    color: theme.colors.black,
   },
   inputLabel: {
     fontSize: 12,

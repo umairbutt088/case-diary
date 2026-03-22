@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
@@ -12,13 +12,60 @@ import { supabase } from "@/lib/supabase";
 import { formatCaseDate, getCaseDisplayTitle, type CaseRow } from "@/types/case";
 import type { CaseHearingRow } from "@/types/case-hearing";
 
+const HEARINGS_PAGE_SIZE = 10;
+
 export default function CaseHearingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("Hearing history");
   const [hearingHistory, setHearingHistory] = useState<CaseHearingRow[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+
+  const loadHearings = useCallback(
+    async ({ reset, offset = 0 }: { reset: boolean; offset?: number }) => {
+      if (!id || !session?.user?.id) {
+        setLoading(false);
+        setError("Invalid case.");
+        return;
+      }
+
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      setError(null);
+
+      try {
+        const pageOffset = reset ? 0 : Math.max(0, offset);
+        const chunk = await getCaseHearingHistory(id, session.user.id, {
+          limit: HEARINGS_PAGE_SIZE,
+          offset: pageOffset,
+        });
+
+        if (reset) {
+          setHearingHistory(chunk);
+        } else {
+          setHearingHistory((prev) => {
+            const existingIds = new Set(prev.map((entry) => entry.id));
+            const nextEntries = chunk.filter((entry) => !existingIds.has(entry.id));
+            return [...prev, ...nextEntries];
+          });
+        }
+
+        setHasMore(chunk.length === HEARINGS_PAGE_SIZE);
+      } catch {
+        setError("Failed to load hearing history.");
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [id, session?.user?.id],
+  );
 
   useEffect(() => {
     if (!id || !session?.user?.id) {
@@ -29,30 +76,24 @@ export default function CaseHearingsScreen() {
 
     let cancelled = false;
     (async () => {
-      setLoading(true);
-
-      const [{ data: caseData }, history] = await Promise.all([
-        supabase.from("cases").select("*").eq("id", id).single(),
-        getCaseHearingHistory(id, session.user.id),
-      ]);
-
-      if (cancelled) return;
-
-      if (caseData) {
-        setTitle(getCaseDisplayTitle(caseData as CaseRow));
+      try {
+        const { data: caseData } = await supabase.from("cases").select("*").eq("id", id).single();
+        if (cancelled) return;
+        if (caseData) {
+          setTitle(getCaseDisplayTitle(caseData as CaseRow));
+        }
+        await loadHearings({ reset: true, offset: 0 });
+      } catch {
+        if (cancelled) return;
+        setError("Failed to load hearing history.");
+        setLoading(false);
       }
-      setHearingHistory(history);
-      setLoading(false);
-    })().catch(() => {
-      if (cancelled) return;
-      setError("Failed to load hearing history.");
-      setLoading(false);
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [id, session?.user?.id]);
+  }, [id, session?.user?.id, loadHearings]);
 
   if (loading) {
     return (
@@ -68,31 +109,53 @@ export default function CaseHearingsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader title="All hearings" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ThemedText style={styles.caseTitle}>{title}</ThemedText>
-        {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
-
-        {hearingHistory.length === 0 ? (
+      <FlatList
+        data={hearingHistory}
+        keyExtractor={(entry) => entry.id}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        onEndReachedThreshold={0.35}
+        onEndReached={() => {
+          if (!hasMore || loadingMore || loading) return;
+          void loadHearings({ reset: false, offset: hearingHistory.length });
+        }}
+        ListHeaderComponent={
+          <>
+            <ThemedText style={styles.caseTitle}>{title}</ThemedText>
+            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+          </>
+        }
+        ListEmptyComponent={
           <ThemedText style={styles.emptyText}>No hearings recorded yet.</ThemedText>
-        ) : (
-          hearingHistory.map((entry) => (
-            <View key={entry.id} style={styles.card}>
-              <ThemedText style={styles.dateText}>
-                {formatCaseDate(entry.hearing_date)}
-              </ThemedText>
-              <ThemedText style={styles.proceedingText}>
-                {(entry.proceeding || entry.current_status || "Proceeding updated").trim()}
-              </ThemedText>
-              <ThemedText style={styles.nextText}>
-                Next: {entry.next_status?.trim() || "—"} •{" "}
-                {entry.next_hearing_date
-                  ? formatCaseDate(entry.next_hearing_date)
-                  : "No date"}
-              </ThemedText>
-            </View>
-          ))
+        }
+        renderItem={({ item: entry }) => (
+          <View style={styles.card}>
+            <ThemedText style={styles.dateText}>
+              {formatCaseDate(entry.hearing_date)}
+            </ThemedText>
+            <ThemedText style={styles.proceedingText}>
+              {(entry.proceeding || entry.current_status || "Proceeding updated").trim()}
+            </ThemedText>
+            <ThemedText style={styles.nextText}>
+              Next: {entry.next_status?.trim() || "—"} •{" "}
+              {entry.next_hearing_date
+                ? formatCaseDate(entry.next_hearing_date)
+                : "No date"}
+            </ThemedText>
+          </View>
         )}
-      </ScrollView>
+        ListFooterComponent={
+          hasMore ? (
+            <View style={styles.loadingMoreWrap}>
+              {loadingMore ? (
+                <ActivityIndicator size="small" color={theme.colors.black} />
+              ) : (
+                <ThemedText style={styles.loadingMoreText}>Scroll for more hearings</ThemedText>
+              )}
+            </View>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -147,5 +210,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: theme.colors.themeRed,
     fontSize: 14,
+  },
+  loadingMoreWrap: {
+    marginTop: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingMoreText: {
+    fontSize: 13,
+    color: theme.colors.gray50,
   },
 });
