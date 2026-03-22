@@ -1,6 +1,8 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import * as Print from "expo-print";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Sharing from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,6 +11,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -40,6 +43,97 @@ import type { ClientRow } from "@/types/client";
 import { getPartyTerminology } from "@/constants/case-form";
 
 const DETAIL_HEARING_PAGE_SIZE = 20;
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function getCaseSummaryText(params: {
+  caseData: CaseRow;
+  title: string;
+  linkedClientName?: string | null;
+}) {
+  const { caseData, title, linkedClientName } = params;
+  const lines = [
+    `Case Summary: ${title}`,
+    "",
+    `Case Number: ${caseData.case_number?.trim() || "—"}`,
+    `Case Type: ${caseData.case_sub_type?.trim() || caseData.case_type?.trim() || "—"}`,
+    `Court Tier: ${caseData.court_tier?.trim() || "—"}`,
+    `Court Room: ${caseData.court_room?.trim() || "—"}`,
+    `Judge: ${caseData.judge_name?.trim() || "—"}`,
+    `Client: ${linkedClientName?.trim() || caseData.linked_client_name?.trim() || "—"}`,
+    "",
+    `Date of Filing: ${formatCaseDate(caseData.date_of_filing)}`,
+    `Next Hearing: ${formatCaseDate(caseData.next_hearing_date)}`,
+    `Current Status: ${caseData.current_status?.trim() || "—"}`,
+    `Next Status: ${caseData.next_status?.trim() || "—"}`,
+    "",
+    `Notes: ${caseData.notes?.trim() || "—"}`,
+    "",
+    `Generated: ${new Date().toLocaleString()}`,
+  ];
+  return lines.join("\n");
+}
+
+function buildCaseSummaryHtml(params: {
+  caseData: CaseRow;
+  title: string;
+  linkedClientName?: string | null;
+}) {
+  const { caseData, title, linkedClientName } = params;
+  const rows = [
+    ["Case Number", caseData.case_number?.trim() || "—"],
+    ["Case Type", caseData.case_sub_type?.trim() || caseData.case_type?.trim() || "—"],
+    ["Court Tier", caseData.court_tier?.trim() || "—"],
+    ["Court Room", caseData.court_room?.trim() || "—"],
+    ["Judge", caseData.judge_name?.trim() || "—"],
+    ["Client", linkedClientName?.trim() || caseData.linked_client_name?.trim() || "—"],
+    ["Date of Filing", formatCaseDate(caseData.date_of_filing)],
+    ["Next Hearing", formatCaseDate(caseData.next_hearing_date)],
+    ["Current Status", caseData.current_status?.trim() || "—"],
+    ["Next Status", caseData.next_status?.trim() || "—"],
+    ["Notes", caseData.notes?.trim() || "—"],
+  ]
+    .map(
+      ([label, value]) => `
+        <tr>
+          <th>${escapeHtml(label)}</th>
+          <td>${escapeHtml(value)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; margin: 24px; color: #1f1f1f; }
+          h1 { margin: 0 0 8px; font-size: 22px; }
+          .meta { margin-bottom: 16px; font-size: 13px; color: #5c5c5c; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; }
+          th, td { border: 1px solid #d8d8d8; padding: 10px; text-align: left; vertical-align: top; }
+          th { width: 34%; background: #f2f2f2; font-weight: 600; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)}</h1>
+        <div class="meta">Generated: ${escapeHtml(new Date().toLocaleString())}</div>
+        <table>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+}
 
 function DetailRow({
   label,
@@ -121,6 +215,7 @@ export default function CaseDetailScreen() {
   const [savingProceeding, setSavingProceeding] = useState(false);
   const [proceedingError, setProceedingError] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [isSharingCase, setIsSharingCase] = useState(false);
   const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showCopyNotice = (message: string) => {
@@ -269,6 +364,66 @@ export default function CaseDetailScreen() {
     await Clipboard.setStringAsync(caseData.case_number.trim());
     showCopyNotice("Case number copied");
   };
+  const shareCaseAsText = async () => {
+    if (isSharingCase) return;
+    setIsSharingCase(true);
+    try {
+      const message = getCaseSummaryText({
+        caseData,
+        title,
+        linkedClientName: linkedClient?.name,
+      });
+      await Share.share({
+        title: `Case Summary - ${title}`,
+        message,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not share case summary.";
+      Alert.alert("Share failed", message);
+    } finally {
+      setIsSharingCase(false);
+    }
+  };
+
+  const shareCaseAsPdf = async () => {
+    if (isSharingCase) return;
+    setIsSharingCase(true);
+    try {
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+        return;
+      }
+      const html = buildCaseSummaryHtml({
+        caseData,
+        title,
+        linkedClientName: linkedClient?.name,
+      });
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, {
+        mimeType: "application/pdf",
+        UTI: "com.adobe.pdf",
+        dialogTitle: "Share case summary PDF",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not export case summary.";
+      Alert.alert("Export failed", message);
+    } finally {
+      setIsSharingCase(false);
+    }
+  };
+
+  const openShareSheet = () => {
+    if (isSharingCase) return;
+    Alert.alert("Share case summary", "Choose a format", [
+      { text: "Text", onPress: () => void shareCaseAsText() },
+      { text: "PDF", onPress: () => void shareCaseAsPdf() },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   const partyTerms = getPartyTerminology(caseData.court_tier ?? "", caseData.case_sub_type ?? "");
   const saveProceeding = async () => {
     if (!session?.user?.id) return;
@@ -348,13 +503,27 @@ export default function CaseDetailScreen() {
         title={title}
         onTitleLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
         rightComponent={
-          <Bounceable
-            style={styles.editBtn}
-            onPress={() => router.push(`/case/${id}/edit`)}
-          >
-            <MaterialIcons name="edit" size={22} color={theme.colors.black} />
-            <ThemedText style={styles.editBtnText}>Edit</ThemedText>
-          </Bounceable>
+          <View style={styles.headerActions}>
+            <Bounceable
+              style={styles.shareBtn}
+              onPress={openShareSheet}
+              disabled={isSharingCase}
+              accessibilityLabel="Share case summary"
+            >
+              {isSharingCase ? (
+                <ActivityIndicator size="small" color={theme.colors.black} />
+              ) : (
+                <MaterialIcons name="share" size={20} color={theme.colors.black} />
+              )}
+            </Bounceable>
+            <Bounceable
+              style={styles.editBtn}
+              onPress={() => router.push(`/case/${id}/edit`)}
+              accessibilityLabel="Edit case"
+            >
+              <MaterialIcons name="edit" size={20} color={theme.colors.black} />
+            </Bounceable>
+          </View>
         }
       />
       <ScrollView
@@ -655,16 +824,25 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   editBtn: {
+    minWidth: 34,
+    minHeight: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    gap: 2,
   },
-  editBtnText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.black,
+  shareBtn: {
+    minWidth: 34,
+    minHeight: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
   },
   scroll: {
     flex: 1,
