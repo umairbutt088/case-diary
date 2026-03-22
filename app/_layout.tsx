@@ -89,6 +89,18 @@ export default function RootLayout() {
                         headerShown: false,
                       }}
                     />
+                    <Stack.Screen
+                      name="clients"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="judges"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
                   </Stack>
                 </AuthNavigator>
               </CopilotProvider>

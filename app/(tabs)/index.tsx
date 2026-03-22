@@ -544,6 +544,28 @@ export default function HomeScreen() {
             style={styles.sidebarItem}
             onPress={() => {
               setIsSidebarOpen(false);
+              router.push("/clients");
+            }}
+          >
+            <MaterialIcons name="groups-2" size={19} color={theme.colors.black} />
+            <ThemedText style={styles.sidebarItemText}>Manage clients</ThemedText>
+          </Bounceable>
+
+          <Bounceable
+            style={styles.sidebarItem}
+            onPress={() => {
+              setIsSidebarOpen(false);
+              router.push("/judges");
+            }}
+          >
+            <MaterialIcons name="gavel" size={19} color={theme.colors.black} />
+            <ThemedText style={styles.sidebarItemText}>Manage judges</ThemedText>
+          </Bounceable>
+
+          <Bounceable
+            style={styles.sidebarItem}
+            onPress={() => {
+              setIsSidebarOpen(false);
               handleShareCases();
             }}
           >
