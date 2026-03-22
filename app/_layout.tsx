@@ -78,6 +78,12 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="case/[id]/hearings"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
+                    <Stack.Screen
                       name="notes"
                       options={{
                         headerShown: false,

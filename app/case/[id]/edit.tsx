@@ -35,6 +35,7 @@ import {
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { addCaseHearingEntry } from "@/lib/case-hearings";
 import {
   getCachedCaseById,
   patchCachedCase,
@@ -193,6 +194,7 @@ export default function EditCaseScreen() {
       form.petitionerName,
       form.respondentName,
     );
+    const previousHearingDate = caseData?.next_hearing_date ?? null;
 
     const row = {
       case_title: caseTitle || null,
@@ -239,12 +241,21 @@ export default function EditCaseScreen() {
       setSaveError(error.message || "Failed to update case.");
       return;
     }
+    await addCaseHearingEntry({
+      caseId: id,
+      userId: session.user.id,
+      hearingDate: previousHearingDate ?? row.next_hearing_date,
+      currentStatus: row.current_status,
+      nextStatus: row.next_status,
+      nextHearingDate: row.next_hearing_date,
+      proceeding: row.current_status,
+    });
     await patchCachedCase(session.user.id, id, {
       ...row,
       updated_at: new Date().toISOString(),
     });
     router.replace(`/case/${id}`);
-  }, [id, session?.user?.id, form, validate, router, isOnline]);
+  }, [id, session?.user?.id, form, validate, router, isOnline, caseData?.next_hearing_date]);
 
   if (loading || (!caseData && !error)) {
     return (

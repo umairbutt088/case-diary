@@ -18,6 +18,7 @@ import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { getCachedCases, patchCachedCase, setCachedCases } from "@/lib/cases-cache";
+import { addCaseHearingEntry } from "@/lib/case-hearings";
 import { addPendingCaseUpdate } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
@@ -143,6 +144,13 @@ export default function AddDateToCaseScreen() {
       await patchCachedCase(session.user.id, caseItem.id, {
         next_hearing_date: selectedDate,
         updated_at: new Date().toISOString(),
+      });
+      await addCaseHearingEntry({
+        caseId: caseItem.id,
+        userId: session.user.id,
+        hearingDate: caseItem.next_hearing_date ?? selectedDate,
+        nextHearingDate: selectedDate,
+        proceeding: "Next hearing date updated",
       });
       setError(null);
       router.back();
