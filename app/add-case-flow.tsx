@@ -37,6 +37,7 @@ import {
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { addCaseHearingEntry } from "@/lib/case-hearings";
 import { addPendingCase, type PendingCaseRow } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
@@ -170,7 +171,7 @@ export default function AddCaseFlowScreen() {
     setSaving(true);
 
     if (isOnline) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("cases")
         .insert(row)
         .select()
@@ -180,6 +181,19 @@ export default function AddCaseFlowScreen() {
       if (error) {
         setSaveError(error.message || "Failed to save case.");
         return;
+      }
+
+      const savedCase = data as { id: string } | null;
+      if (savedCase?.id) {
+        await addCaseHearingEntry({
+          caseId: savedCase.id,
+          userId,
+          hearingDate: row.next_hearing_date,
+          currentStatus: row.current_status,
+          nextStatus: row.next_status,
+          nextHearingDate: row.next_hearing_date,
+          proceeding: row.current_status,
+        });
       }
       router.back();
     } else {
