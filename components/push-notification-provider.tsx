@@ -18,6 +18,15 @@ function extractDateFromDeepLink(url: string) {
   return match?.[1] ?? null;
 }
 
+function hasNotificationDateTarget(data: NotificationRouteData | undefined): boolean {
+  if (!data) return false;
+  if (data.screen === "calendar" && typeof data.date === "string") return true;
+  if (typeof data.url === "string" && data.url.startsWith("legaldiary://")) {
+    return extractDateFromDeepLink(data.url) !== null;
+  }
+  return false;
+}
+
 export function PushNotificationProvider({
   children,
 }: {
@@ -33,25 +42,16 @@ export function PushNotificationProvider({
   }, [session?.user?.id]);
 
   useEffect(() => {
+    const navigateToHomeToday = () => {
+      router.push("/(tabs)");
+    };
+
     const navigateFromData = (data: NotificationRouteData | undefined) => {
       if (!data) return;
 
-      if (typeof data.url === "string" && data.url.startsWith("legaldiary://")) {
-        const deeplinkDate = extractDateFromDeepLink(data.url);
-        if (deeplinkDate) {
-          router.push({
-            pathname: "/(tabs)/calendar",
-            params: { date: deeplinkDate },
-          });
-          return;
-        }
-      }
-
-      if (data.screen === "calendar" && typeof data.date === "string") {
-        router.push({
-          pathname: "/(tabs)/calendar",
-          params: { date: data.date },
-        });
+      // For hearing reminders, open Home (today-cases flow) instead of Calendar.
+      if (hasNotificationDateTarget(data)) {
+        navigateToHomeToday();
         return;
       }
     };
