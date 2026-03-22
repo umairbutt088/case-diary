@@ -269,6 +269,8 @@ function caseToCalendarItem(c: CaseRow, date: string): CalendarCaseItem {
     title,
     subtitle,
     date,
+    nextHearingDate: c.next_hearing_date ?? null,
+    updatedAt: c.updated_at,
   };
 }
 

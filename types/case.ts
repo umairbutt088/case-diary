@@ -50,6 +50,21 @@ export function getTodayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * Overdue = next hearing date exists but is in the past.
+ * Once a new future/current next hearing date is set, overdue clears automatically.
+ */
+export function isCaseOverdue(params: {
+  nextHearingDate: string | null | undefined;
+  updatedAt: string | null | undefined;
+  todayISO?: string;
+}): boolean {
+  const today = params.todayISO ?? getTodayISO();
+  const nextDate = params.nextHearingDate?.slice(0, 10) ?? null;
+  if (!nextDate) return false;
+  return nextDate < today;
+}
+
 /** Current week bounds (Sunday–Saturday) in YYYY-MM-DD */
 export function getWeekBounds(): { weekStart: string; weekEnd: string } {
   const d = new Date();

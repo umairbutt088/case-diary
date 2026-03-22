@@ -30,18 +30,30 @@ export async function addCaseHearingEntry(input: AddCaseHearingInput) {
   return !error;
 }
 
-export async function getCaseHearingHistory(caseId: string, userId: string) {
+export async function getCaseHearingHistory(
+  caseId: string,
+  userId: string,
+  options?: { limit?: number; offset?: number },
+) {
   if (!isSupabaseConfigured || !caseId || !userId) {
     return [] as CaseHearingRow[];
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("case_hearings")
     .select("*")
     .eq("case_id", caseId)
     .eq("user_id", userId)
     .order("hearing_date", { ascending: false })
     .order("created_at", { ascending: false });
+
+  if (typeof options?.offset === "number" || typeof options?.limit === "number") {
+    const offset = Math.max(0, options?.offset ?? 0);
+    const limit = Math.max(1, options?.limit ?? 20);
+    query = query.range(offset, offset + limit - 1);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) return [] as CaseHearingRow[];
   return data as CaseHearingRow[];

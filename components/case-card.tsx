@@ -15,7 +15,7 @@ import { COURT_TIERS } from "@/constants/case-form";
 import { ThemedText } from "@/components/themed-text";
 import { theme } from "@/constants/theme";
 import type { CaseRow } from "@/types/case";
-import { formatCaseDate, getCaseDisplayTitle } from "@/types/case";
+import { formatCaseDate, getCaseDisplayTitle, isCaseOverdue } from "@/types/case";
 
 const CASE_DETAILS_SNIPPET_LENGTH = 80;
 const WalkthroughableView = walkthroughable(View);
@@ -69,6 +69,10 @@ export function CaseCard({
   const title = getCaseDisplayTitle(caseItem);
   const snippet = getCaseDetailsSnippet(caseItem);
   const nextDate = formatCaseDate(caseItem.next_hearing_date);
+  const isOverdue = isCaseOverdue({
+    nextHearingDate: caseItem.next_hearing_date,
+    updatedAt: caseItem.updated_at,
+  });
   const caseNumber = caseItem.case_number?.trim() || "—";
   const courtName = getCourtDisplay(caseItem);
   const proceeding = caseItem.next_status?.trim() || caseItem.current_status?.trim() || "—";
@@ -192,16 +196,21 @@ export function CaseCard({
             <MaterialIcons
               name="event"
               size={18}
-              color={theme.colors.gray50}
+              color={isOverdue ? theme.colors.themeRed : theme.colors.gray50}
               style={styles.nextDateIcon}
             />
             <ThemedText
-              style={styles.nextDateText}
-              lightColor={theme.colors.gray50}
-              darkColor={theme.colors.gray50}
+              style={[styles.nextDateText, isOverdue && styles.nextDateTextOverdue]}
+              lightColor={isOverdue ? theme.colors.themeRed : theme.colors.gray50}
+              darkColor={isOverdue ? theme.colors.themeRed : theme.colors.gray50}
             >
               Next: {nextDate}
             </ThemedText>
+            {isOverdue ? (
+              <View style={styles.overdueBadge}>
+                <ThemedText style={styles.overdueBadgeText}>OVERDUE</ThemedText>
+              </View>
+            ) : null}
           </View>
           <View style={styles.actions}>
             {onDelete ? (
@@ -369,6 +378,24 @@ const styles = StyleSheet.create({
   },
   nextDateText: {
     fontSize: 13,
+  },
+  nextDateTextOverdue: {
+    fontWeight: "700",
+  },
+  overdueBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: theme.colors.themeRed + "22",
+    borderWidth: 1,
+    borderColor: theme.colors.themeRed,
+  },
+  overdueBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    color: theme.colors.themeRed,
   },
   actions: {
     flexDirection: "row",
