@@ -481,9 +481,9 @@ export default function ProfileScreen() {
 
       {!editing ? (
         <View style={styles.card}>
-          <SectionTitle title="Reference Data" />
+          <SectionTitle title="Manage Clients & Judges" />
           <ThemedText style={styles.referenceHint}>
-            Manage your saved clients and judges in one place.
+            Open your saved clients and judges lists.
           </ThemedText>
           <View style={styles.referenceActions}>
             <Pressable
