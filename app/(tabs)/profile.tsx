@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import { Image } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -8,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -246,6 +248,17 @@ export default function ProfileScreen() {
     : profile?.avatar_url?.trim();
   const displayAvatarUrl =
     getAvatarDisplayUrl(avatarUrl || undefined) ?? (avatarUrl || undefined);
+  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+  const iosBuild = Constants.expoConfig?.ios?.buildNumber;
+  const androidBuild = Constants.expoConfig?.android?.versionCode;
+  const buildLabel =
+    Platform.OS === "ios"
+      ? iosBuild
+        ? `Build ${iosBuild}`
+        : null
+      : androidBuild
+        ? `Build ${androidBuild}`
+        : null;
 
   const content = (
     <>
@@ -541,6 +554,11 @@ export default function ProfileScreen() {
           </Pressable>
         </WalkthroughableView>
       </CopilotStep>
+
+      <ThemedText style={styles.versionText}>
+        Version {appVersion}
+        {buildLabel ? ` • ${buildLabel}` : ""}
+      </ThemedText>
     </>
   );
 
@@ -829,6 +847,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
     color: theme.colors.pureWhite,
+  },
+  versionText: {
+    marginTop: 12,
+    textAlign: "center",
+    fontSize: 12,
+    color: theme.colors.gray50,
   },
   resetTourButton: {
     width: "100%",
