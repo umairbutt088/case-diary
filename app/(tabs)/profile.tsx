@@ -1,9 +1,9 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { Image } from "expo-image";
-import { useIsFocused } from "@react-navigation/native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,15 +20,16 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
-import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { getAvatarDisplayUrl } from "@/lib/cloudinary";
 import { APP_TIMEZONE, syncPushTokenForUser } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ProfileRow } from "@/types/profile";
 import { getDisplayName } from "@/types/profile";
+import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 
 const WalkthroughableView = walkthroughable(View);
 
@@ -54,6 +55,7 @@ function SectionTitle({ title }: { title: string }) {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { edit: editParam } = useLocalSearchParams<{ edit?: string }>();
   const isFocused = useIsFocused();
   const { session, signOut } = useAuth();
   const { start, copilotEvents } = useCopilot();
@@ -66,7 +68,6 @@ export default function ProfileScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [syncingToken, setSyncingToken] = useState(false);
   const [tokenSyncMessage, setTokenSyncMessage] = useState<string | null>(null);
-
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -111,6 +112,14 @@ export default function ProfileScreen() {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  useEffect(() => {
+    const wantEdit =
+      editParam === "1" || editParam === "true" || editParam === "yes";
+    if (!wantEdit || loading || !profile) return;
+    setEditing(true);
+    router.setParams({ edit: undefined });
+  }, [editParam, loading, profile, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -234,6 +243,18 @@ export default function ProfileScreen() {
     setSaveError(null);
     setEditing(false);
   }, [profile]);
+
+  const settingsHeaderButton = (
+    <Pressable
+      onPress={() => router.push("/settings")}
+      style={({ pressed }) => [styles.headerIconBtn, pressed && styles.headerIconBtnPressed]}
+      accessibilityRole="button"
+      accessibilityLabel="Settings"
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+    >
+      <MaterialIcons name="settings" size={24} color={theme.colors.themeBlack} />
+    </Pressable>
+  );
 
   const displayName = profile ? getDisplayName(profile) : "";
   const initials =
@@ -419,23 +440,6 @@ export default function ProfileScreen() {
               <FieldRow label="Mobile number" value={profile?.phone} />
               <SectionTitle title="Address" />
               <FieldRow label="Address" value={profile?.address} />
-              <CopilotStep
-                text="Tap here to edit your profile details."
-                order={2}
-                name="profile-edit"
-                active={isFocused}
-              >
-                <WalkthroughableView>
-                  <Pressable
-                    style={styles.editButton}
-                    onPress={() => setEditing(true)}
-                  >
-                    <ThemedText style={styles.editButtonText}>
-                      Edit profile
-                    </ThemedText>
-                  </Pressable>
-                </WalkthroughableView>
-              </CopilotStep>
             </>
           )}
         </View>
@@ -493,78 +497,45 @@ export default function ProfileScreen() {
       ) : null}
 
       {!editing ? (
-        <View style={styles.card}>
-          <SectionTitle title="Manage Clients & Judges" />
-          <ThemedText style={styles.referenceHint}>
-            Open your saved clients and judges lists.
-          </ThemedText>
-          <View style={styles.referenceActions}>
-            <Pressable
-              style={styles.referenceBtn}
-              onPress={() => router.push("/clients")}
-            >
-              <MaterialIcons name="groups-2" size={18} color={theme.colors.black} />
-              <ThemedText style={styles.referenceBtnText}>Clients</ThemedText>
-            </Pressable>
-            <Pressable
-              style={styles.referenceBtn}
-              onPress={() => router.push("/judges")}
-            >
-              <MaterialIcons name="gavel" size={18} color={theme.colors.black} />
-              <ThemedText style={styles.referenceBtnText}>Judges</ThemedText>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
-
-      <Pressable
-        style={styles.resetTourButton}
-        onPress={async () => {
-          await AsyncStorage.multiRemove([
-            "hasSeenHomeTourCopilot",
-            "hasSeenCalendarTourCopilot",
-            "hasSeenProfileTourCopilot",
-            "hasSeenDiaryTourCopilot",
-          ]);
-          router.push("/(tabs)");
-        }}
-      >
-        <ThemedText style={styles.resetTourText}>
-          Start a walkthrough
-        </ThemedText>
-      </Pressable>
-
-      <CopilotStep
-        text="Tap here to sign out of your account."
-        order={3}
-        name="profile-signout"
-        active={isFocused}
-      >
-        <WalkthroughableView>
-          <Pressable
-            style={styles.signOutButton}
-            onPress={() =>
-              Alert.alert("Sign out?", "You can sign in again anytime.", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Sign out", style: "destructive", onPress: signOut },
-              ])
-            }
+        <>
+          <CopilotStep
+            text="Tap here to sign out of your account."
+            order={2}
+            name="profile-signout"
+            active={isFocused}
           >
-            <ThemedText style={styles.signOutText}>Sign out</ThemedText>
-          </Pressable>
-        </WalkthroughableView>
-      </CopilotStep>
+            <WalkthroughableView>
+              <Pressable
+                style={styles.signOutButton}
+                onPress={() =>
+                  Alert.alert("Sign out?", "You can sign in again anytime.", [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Sign out", style: "destructive", onPress: signOut },
+                  ])
+                }
+              >
+                <ThemedText style={styles.signOutText}>Sign out</ThemedText>
+              </Pressable>
+            </WalkthroughableView>
+          </CopilotStep>
 
-      <ThemedText style={styles.versionText}>
-        Version {appVersion}
-        {buildLabel ? ` • ${buildLabel}` : ""}
-      </ThemedText>
+          <ThemedText style={styles.versionText}>
+            Version {appVersion}
+            {buildLabel ? ` • ${buildLabel}` : ""}
+          </ThemedText>
+        </>
+      ) : null}
     </>
   );
 
   if (loading && !profile) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader
+          title="Profile"
+          showBack={false}
+          rightComponent={settingsHeaderButton}
+        />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.black} />
         </View>
@@ -574,6 +545,11 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScreenHeader
+        title="Profile"
+        showBack={false}
+        rightComponent={settingsHeaderButton}
+      />
       {editing ? (
         <KeyboardAwareScrollView
           style={styles.scroll}
@@ -608,8 +584,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 40,
+  },
+  headerIconBtn: {
+    padding: 8,
+    borderRadius: 8,
+  },
+  headerIconBtnPressed: {
+    opacity: 0.55,
   },
   centered: {
     flex: 1,
@@ -753,19 +736,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.pureWhite,
   },
-  editButton: {
-    marginTop: 24,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-  },
-  editButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
   errorText: {
     fontSize: 15,
     color: theme.colors.themeRed,
@@ -808,33 +778,6 @@ const styles = StyleSheet.create({
   registerButton: {
     marginTop: 16,
   },
-  referenceHint: {
-    fontSize: 14,
-    color: theme.colors.gray50,
-    marginBottom: 12,
-  },
-  referenceActions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  referenceBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  referenceBtnText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
   signOutButton: {
     width: "100%",
     alignItems: "center",
@@ -853,18 +796,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 12,
     color: theme.colors.gray50,
-  },
-  resetTourButton: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: 14,
-    backgroundColor: theme.colors.grey100,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  resetTourText: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: theme.colors.black,
   },
 });

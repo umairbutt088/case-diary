@@ -91,14 +91,17 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
     marginRight: 8,
+    flexShrink: 0,
   },
   leftWrap: {
     marginRight: 8,
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
   },
   headerTitleWrap: {
     flex: 1,
+    flexShrink: 1,
     minWidth: 0,
     justifyContent: "center",
   },
@@ -110,5 +113,7 @@ const styles = StyleSheet.create({
   rightWrap: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
+    marginLeft: 8,
   },
 });
