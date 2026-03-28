@@ -10,8 +10,9 @@ import {
 
 import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type Props = {
@@ -48,6 +49,115 @@ function mergeAndSortNames(
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
+function createLinkExistingClientStyles(C: AppColors) {
+  return StyleSheet.create({
+    dropdownWrap: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      overflow: "hidden",
+    },
+    triggerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      minHeight: 48,
+      backgroundColor: C.pureWhite,
+      gap: 8,
+    },
+    trigger: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+    },
+    triggerText: {
+      fontSize: 16,
+      flex: 1,
+      color: C.black,
+    },
+    placeholder: {
+      color: C.gray50,
+    },
+    clearBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    clearBtnText: {
+      fontSize: 14,
+      color: C.btnBlue,
+      fontWeight: "500",
+    },
+    dropdown: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: C.grey100,
+      backgroundColor: C.grey100,
+      padding: 12,
+    },
+    searchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      backgroundColor: C.pureWhite,
+      marginBottom: 10,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: C.black,
+      paddingVertical: 10,
+      minHeight: 40,
+    },
+    listLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.gray50,
+      marginBottom: 6,
+    },
+    loadingWrap: {
+      padding: 12,
+      alignItems: "center",
+    },
+    loadingText: {
+      fontSize: 14,
+    },
+    emptyHint: {
+      fontSize: 14,
+      paddingVertical: 8,
+    },
+    list: {
+      maxHeight: 200,
+      backgroundColor: C.pureWhite,
+      borderRadius: 10,
+      overflow: "hidden",
+    },
+    option: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.grey100,
+    },
+    optionText: {
+      fontSize: 16,
+      color: C.black,
+    },
+    optionTextSelected: {
+      fontWeight: "600",
+      color: C.black,
+    },
+  });
+}
+
 export function LinkExistingClientField({
   label,
   value,
@@ -57,6 +167,8 @@ export function LinkExistingClientField({
   hint,
 }: Props) {
   const { session } = useAuth();
+  const C = useThemePalette();
+  const styles = useMemo(() => createLinkExistingClientStyles(C), [C]);
   const [open, setOpen] = useState(false);
   const [names, setNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,8 +233,8 @@ export function LinkExistingClientField({
           >
             <ThemedText
               style={[styles.triggerText, !value && styles.placeholder]}
-              lightColor={!value ? theme.colors.gray50 : undefined}
-              darkColor={!value ? theme.colors.gray50 : undefined}
+              lightColor={!value ? C.gray50 : undefined}
+              darkColor={!value ? C.gray50 : undefined}
               numberOfLines={1}
             >
               {displayText}
@@ -130,7 +242,7 @@ export function LinkExistingClientField({
             <MaterialIcons
               name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
               size={24}
-              color={theme.colors.gray50}
+              color={C.gray50}
             />
           </Pressable>
           {value ? (
@@ -149,7 +261,7 @@ export function LinkExistingClientField({
               <MaterialIcons
                 name="search"
                 size={20}
-                color={theme.colors.gray50}
+                color={C.gray50}
                 style={styles.searchIcon}
               />
               <TextInput
@@ -157,7 +269,7 @@ export function LinkExistingClientField({
                 value={search}
                 onChangeText={setSearch}
                 placeholder="Search by name..."
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 autoCapitalize="words"
               />
             </View>
@@ -168,8 +280,8 @@ export function LinkExistingClientField({
               <View style={styles.loadingWrap}>
                 <ThemedText
                   style={styles.loadingText}
-                  lightColor={theme.colors.gray50}
-                  darkColor={theme.colors.gray50}
+                  lightColor={C.gray50}
+                  darkColor={C.gray50}
                 >
                   Loading...
                 </ThemedText>
@@ -177,8 +289,8 @@ export function LinkExistingClientField({
             ) : filteredNames.length === 0 ? (
               <ThemedText
                 style={styles.emptyHint}
-                lightColor={theme.colors.gray50}
-                darkColor={theme.colors.gray50}
+                lightColor={C.gray50}
+                darkColor={C.gray50}
               >
                 {search.trim()
                   ? "No names match."
@@ -206,11 +318,7 @@ export function LinkExistingClientField({
                       {name}
                     </ThemedText>
                     {value === name ? (
-                      <MaterialIcons
-                        name="check"
-                        size={22}
-                        color={theme.colors.themeBlack}
-                      />
+                      <MaterialIcons name="check" size={22} color={C.themeBlack} />
                     ) : null}
                   </Pressable>
                 ))}
@@ -222,110 +330,3 @@ export function LinkExistingClientField({
     </FormField>
   );
 }
-
-const styles = StyleSheet.create({
-  dropdownWrap: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  triggerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    minHeight: 48,
-    backgroundColor: theme.colors.pureWhite,
-    gap: 8,
-  },
-  trigger: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-  },
-  triggerText: {
-    fontSize: 16,
-    flex: 1,
-    color: theme.colors.black,
-  },
-  placeholder: {
-    color: theme.colors.gray50,
-  },
-  clearBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  clearBtnText: {
-    fontSize: 14,
-    color: theme.colors.btnBlue,
-    fontWeight: "500",
-  },
-  dropdown: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.grey100,
-    backgroundColor: theme.colors.grey100,
-    padding: 12,
-  },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    backgroundColor: theme.colors.pureWhite,
-    marginBottom: 10,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: theme.colors.black,
-    paddingVertical: 10,
-    minHeight: 40,
-  },
-  listLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    marginBottom: 6,
-  },
-  loadingWrap: {
-    padding: 12,
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: 14,
-  },
-  emptyHint: {
-    fontSize: 14,
-    paddingVertical: 8,
-  },
-  list: {
-    maxHeight: 200,
-    backgroundColor: theme.colors.pureWhite,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.grey100,
-  },
-  optionText: {
-    fontSize: 16,
-    color: theme.colors.black,
-  },
-  optionTextSelected: {
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-});

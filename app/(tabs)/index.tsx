@@ -26,9 +26,15 @@ import { CaseCard } from "@/components/case-card";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable, Spacer } from "@/components/ui";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import {
+  type AppColors,
+  modalSheetBackground,
+} from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getActivityNotesStorageKey, sanitizeActivityNotes } from "@/lib/activity-notes";
 import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
 import { addPendingCaseDelete, getPendingCasesCount } from "@/lib/offline-queue";
@@ -186,6 +192,13 @@ export default function HomeScreen() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(
+    () => createHomeStyles(C, modalSheet),
+    [C, modalSheet],
+  );
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
@@ -471,9 +484,9 @@ export default function HomeScreen() {
       disabled={isExporting}
     >
       {isExporting ? (
-        <ActivityIndicator size="small" color={theme.colors.black} />
+        <ActivityIndicator size="small" color={C.black} />
       ) : (
-        <MaterialIcons name="share" size={21} color={theme.colors.black} />
+        <MaterialIcons name="share" size={21} color={C.black} />
       )}
     </Bounceable>
   ) : null;
@@ -484,7 +497,7 @@ export default function HomeScreen() {
       onPress={() => router.push("/notes")}
       accessibilityLabel="Open notes"
     >
-      <MaterialIcons name="sticky-note-2" size={16} color={theme.colors.pureWhite} />
+      <MaterialIcons name="sticky-note-2" size={16} color={C.pureWhite} />
       <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
       {notesCount > 0 ? (
         <View style={styles.notesCountBadge}>
@@ -501,7 +514,7 @@ export default function HomeScreen() {
       style={styles.menuHeaderButton}
       accessibilityLabel="Open menu"
     >
-      <MaterialIcons name="menu" size={21} color={theme.colors.black} />
+      <MaterialIcons name="menu" size={21} color={C.black} />
     </Bounceable>
   );
   const headerActions = (
@@ -525,7 +538,7 @@ export default function HomeScreen() {
               style={styles.sidebarCloseButton}
               onPress={() => setIsSidebarOpen(false)}
             >
-              <MaterialIcons name="close" size={20} color={theme.colors.black} />
+              <MaterialIcons name="close" size={20} color={C.black} />
             </Bounceable>
           </View>
 
@@ -536,7 +549,7 @@ export default function HomeScreen() {
               router.push("/notes");
             }}
           >
-            <MaterialIcons name="sticky-note-2" size={19} color={theme.colors.black} />
+            <MaterialIcons name="sticky-note-2" size={19} color={C.black} />
             <ThemedText style={styles.sidebarItemText}>Notes</ThemedText>
           </Bounceable>
 
@@ -547,7 +560,7 @@ export default function HomeScreen() {
               router.push("/clients");
             }}
           >
-            <MaterialIcons name="groups-2" size={19} color={theme.colors.black} />
+            <MaterialIcons name="groups-2" size={19} color={C.black} />
             <ThemedText style={styles.sidebarItemText}>Manage clients</ThemedText>
           </Bounceable>
 
@@ -558,7 +571,7 @@ export default function HomeScreen() {
               router.push("/judges");
             }}
           >
-            <MaterialIcons name="gavel" size={19} color={theme.colors.black} />
+            <MaterialIcons name="gavel" size={19} color={C.black} />
             <ThemedText style={styles.sidebarItemText}>Manage judges</ThemedText>
           </Bounceable>
 
@@ -569,7 +582,7 @@ export default function HomeScreen() {
               handleShareCases();
             }}
           >
-            <MaterialIcons name="share" size={19} color={theme.colors.black} />
+            <MaterialIcons name="share" size={19} color={C.black} />
             <ThemedText style={styles.sidebarItemText}>Share case list</ThemedText>
           </Bounceable>
         </RNPressable>
@@ -587,7 +600,7 @@ export default function HomeScreen() {
           rightComponent={headerActions}
         />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
+          <ActivityIndicator size="large" color={C.black} />
         </View>
         {sidebarMenu}
       </SafeAreaView>
@@ -634,7 +647,7 @@ export default function HomeScreen() {
             <MaterialIcons
               name="cloud-upload"
               size={18}
-              color={theme.colors.zodiacColour}
+              color={C.zodiacColour}
             />
             <ThemedText style={styles.pendingBannerText}>
               {pendingCount} case{pendingCount !== 1 ? "s" : ""} waiting to sync
@@ -701,7 +714,7 @@ export default function HomeScreen() {
               <MaterialIcons
                 name={isOffline ? "cloud-off" : "today"}
                 size={40}
-                color={theme.colors.zodiacColour}
+                color={C.zodiacColour}
               />
             </View>
             <ThemedText style={styles.heading}>
@@ -732,7 +745,7 @@ export default function HomeScreen() {
                   <MaterialIcons
                     name="add"
                     size={22}
-                    color={theme.colors.pureWhite}
+                    color={C.pureWhite}
                   />
                   <ThemedText style={styles.addButtonText}>
                     Add Case
@@ -750,7 +763,7 @@ export default function HomeScreen() {
               <MaterialIcons
                 name="chevron-right"
                 size={20}
-                color={theme.colors.black}
+                color={C.black}
               />
             </Bounceable>
           </View>
@@ -782,7 +795,7 @@ export default function HomeScreen() {
           <MaterialIcons
             name="cloud-upload"
             size={18}
-            color={theme.colors.zodiacColour}
+            color={C.zodiacColour}
           />
           <ThemedText style={styles.pendingBannerText}>
             {pendingCount} case{pendingCount !== 1 ? "s" : ""} waiting to sync
@@ -855,8 +868,8 @@ export default function HomeScreen() {
               <RefreshControl
                 refreshing={loading}
                 onRefresh={fetchCases}
-                colors={[theme.colors.black]}
-                tintColor={theme.colors.black}
+                colors={[C.black]}
+                tintColor={C.black}
               />
             }
             contentContainerStyle={styles.listContent}
@@ -929,10 +942,11 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createHomeStyles(C: AppColors, modalSheet: string) {
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: C.background,
   },
   pendingBanner: {
     flexDirection: "row",
@@ -941,21 +955,21 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: theme.colors.zodiacColour + "20",
+    backgroundColor: C.zodiacColour + "20",
     marginHorizontal: 24,
     marginTop: 8,
     borderRadius: 8,
   },
   pendingBannerText: {
     fontSize: 14,
-    color: theme.colors.zodiacColour,
+    color: C.zodiacColour,
     fontWeight: "500",
   },
   container: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
-    backgroundColor: theme.colors.background,
+    backgroundColor: C.background,
   },
   centered: {
     flex: 1,
@@ -965,8 +979,8 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: 12,
     alignSelf: "center",
-    color: theme.colors.black,
-    backgroundColor: theme.colors.background,
+    color: C.black,
+    backgroundColor: C.background,
   },
   filterRow: {
     flexDirection: "row",
@@ -976,7 +990,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.borderGray,
+    borderColor: C.borderGray,
   },
   filterBtnWrapper: {
     width: "45%",
@@ -985,21 +999,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
     borderRadius: 12,
-    backgroundColor: theme.colors.grey100,
+    backgroundColor: C.grey100,
     borderWidth: 1,
     borderColor: "transparent",
   },
   filterBtnActive: {
-    backgroundColor: theme.colors.themeBlack,
-    borderColor: theme.colors.themeBlack,
+    backgroundColor: C.themeBlack,
+    borderColor: C.themeBlack,
   },
   filterBtnText: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.gray50,
+    color: C.gray50,
   },
   filterBtnTextActive: {
-    color: theme.colors.pureWhite,
+    color: C.pureWhite,
   },
   section: {
     marginBottom: 20,
@@ -1007,7 +1021,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.gray50,
+    color: C.gray50,
     marginBottom: 8,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -1022,14 +1036,14 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   exportCaptureCanvas: {
-    backgroundColor: theme.colors.pureWhite,
+    backgroundColor: C.pureWhite,
     padding: 16,
     borderRadius: 12,
   },
   exportCaptureHeading: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.black,
+    color: C.black,
     marginBottom: 12,
   },
   exportSection: {
@@ -1038,13 +1052,13 @@ const styles = StyleSheet.create({
   exportSectionTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.gray50,
+    color: C.gray50,
     marginBottom: 8,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   exportRow: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: C.background,
     borderRadius: 10,
     padding: 10,
     marginBottom: 8,
@@ -1052,15 +1066,15 @@ const styles = StyleSheet.create({
   exportRowTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: theme.colors.black,
+    color: C.black,
     marginBottom: 2,
   },
   exportRowMeta: {
     fontSize: 12,
-    color: theme.colors.gray50,
+    color: C.gray50,
   },
   errorText: {
-    color: theme.colors.themeRed,
+    color: C.themeRed,
     marginTop: 8,
   },
   shareButton: {
@@ -1080,7 +1094,7 @@ const styles = StyleSheet.create({
     minWidth: 76,
     minHeight: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.zodiacColour,
+    backgroundColor: C.zodiacColour,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -1089,7 +1103,7 @@ const styles = StyleSheet.create({
     ...theme.shadow,
   },
   notesHeaderButtonText: {
-    color: theme.colors.pureWhite,
+    color: C.pureWhite,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -1100,14 +1114,14 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: theme.colors.themeRed,
+    backgroundColor: C.themeRed,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 2,
   },
   notesCountText: {
     fontSize: 8,
-    color: theme.colors.pureWhite,
+    color: C.pureWhite,
     fontWeight: "700",
   },
   menuHeaderButton: {
@@ -1116,7 +1130,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.background,
+    backgroundColor: C.background,
   },
   sidebarOverlay: {
     flex: 1,
@@ -1126,7 +1140,7 @@ const styles = StyleSheet.create({
   sidebarPanel: {
     width: "78%",
     maxWidth: 320,
-    backgroundColor: theme.colors.pureWhite,
+    backgroundColor: modalSheet,
     height: "100%",
     paddingTop: 52,
     paddingHorizontal: 16,
@@ -1140,7 +1154,7 @@ const styles = StyleSheet.create({
   sidebarTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.black,
+    color: C.black,
   },
   sidebarCloseButton: {
     minHeight: 34,
@@ -1148,7 +1162,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.background,
+    backgroundColor: C.background,
   },
   sidebarItem: {
     flexDirection: "row",
@@ -1161,10 +1175,10 @@ const styles = StyleSheet.create({
   sidebarItemText: {
     fontSize: 15,
     fontWeight: "600",
-    color: theme.colors.black,
+    color: C.black,
   },
   card: {
-    backgroundColor: theme.colors.pureWhite,
+    backgroundColor: C.pureWhite,
     borderRadius: 16,
     paddingVertical: 32,
     paddingHorizontal: 28,
@@ -1176,7 +1190,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: theme.colors.gray100,
+    backgroundColor: C.gray100,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
@@ -1184,12 +1198,12 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.black,
+    color: C.black,
     marginBottom: 8,
   },
   subtext: {
     fontSize: 15,
-    color: theme.colors.gray50,
+    color: C.gray50,
     marginBottom: 24,
     textAlign: "center",
   },
@@ -1198,13 +1212,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: theme.colors.themeBlack,
+    backgroundColor: C.themeBlack,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
   addButtonText: {
-    color: theme.colors.pureWhite,
+    color: C.pureWhite,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -1216,7 +1230,8 @@ const styles = StyleSheet.create({
   },
   diaryLinkText: {
     fontSize: 15,
-    color: theme.colors.black,
+    color: C.black,
     fontWeight: "500",
   },
-});
+  });
+}

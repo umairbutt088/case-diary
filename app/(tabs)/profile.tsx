@@ -4,7 +4,7 @@ import { useIsFocused } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { Image } from "expo-image";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,9 +20,16 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
+import { SegmentedTwoOption } from "@/components/ui/segmented-two-option";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import type {
+  AppearancePreference,
+  AppColors,
+} from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { getAvatarDisplayUrl } from "@/lib/cloudinary";
 import { APP_TIMEZONE, syncPushTokenForUser } from "@/lib/notifications";
@@ -33,10 +40,241 @@ import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 
 const WalkthroughableView = walkthroughable(View);
 
+function createProfileStyles(C: AppColors) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 24,
+      paddingTop: 8,
+      paddingBottom: 40,
+    },
+    headerIconBtn: {
+      padding: 8,
+      borderRadius: 8,
+    },
+    headerIconBtnPressed: {
+      opacity: 0.55,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    title: {
+      marginBottom: 20,
+      color: C.black,
+    },
+    card: {
+      backgroundColor: C.pureWhite,
+      borderRadius: 16,
+      padding: 24,
+      marginBottom: 24,
+      ...theme.shadow,
+    },
+    avatarSection: {
+      alignItems: "center",
+      marginBottom: 28,
+    },
+    avatarPressable: {
+      alignSelf: "center",
+    },
+    avatarWrap: {
+      width: 112,
+      height: 112,
+      borderRadius: 56,
+      backgroundColor: C.grey100,
+      justifyContent: "center",
+      alignItems: "center",
+      overflow: "hidden",
+      position: "relative",
+    },
+    avatarOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: 56,
+    },
+    avatarEditBadge: {
+      position: "absolute",
+      bottom: 4,
+      right: 4,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: C.themeBlack,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarImage: {
+      width: 112,
+      height: 112,
+      borderRadius: 56,
+    },
+    avatarInitials: {
+      fontSize: 36,
+      fontWeight: "700",
+      color: C.gray50,
+    },
+    displayName: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: C.black,
+      marginTop: 12,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.gray50,
+      marginBottom: 12,
+      marginTop: 20,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    fieldRow: {
+      marginBottom: 14,
+    },
+    fieldLabel: {
+      fontSize: 13,
+      color: C.gray50,
+      marginBottom: 4,
+    },
+    fieldValue: {
+      fontSize: 16,
+      color: C.black,
+    },
+    inputLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: C.black,
+      marginBottom: 6,
+      marginTop: 4,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: C.black,
+      marginBottom: 4,
+    },
+    inputMultiline: {
+      minHeight: 88,
+      textAlignVertical: "top",
+    },
+    saveError: {
+      fontSize: 14,
+      color: C.themeRed,
+      marginTop: 12,
+    },
+    editButtons: {
+      flexDirection: "row",
+      gap: 12,
+      marginTop: 24,
+    },
+    btn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    btnSecondary: {
+      backgroundColor: C.themeGray3,
+    },
+    btnSecondaryText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.black,
+    },
+    btnPrimary: {
+      backgroundColor: C.themeBlack,
+    },
+    btnPrimaryText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.pureWhite,
+    },
+    errorText: {
+      fontSize: 15,
+      color: C.themeRed,
+      marginBottom: 16,
+    },
+    reminderHint: {
+      fontSize: 14,
+      color: C.gray50,
+      marginBottom: 12,
+    },
+    reminderSchedule: {
+      fontSize: 14,
+      color: C.black,
+    },
+    timezoneText: {
+      marginTop: 8,
+      fontSize: 13,
+      color: C.gray50,
+    },
+    tokenStatus: {
+      marginTop: 12,
+      fontSize: 14,
+      color: C.themeGreen,
+    },
+    tokenStatusMuted: {
+      marginTop: 12,
+      fontSize: 14,
+      color: C.gray50,
+    },
+    tokenSyncSuccess: {
+      marginTop: 8,
+      fontSize: 14,
+      color: C.themeGreen,
+    },
+    tokenSyncError: {
+      marginTop: 8,
+      fontSize: 14,
+      color: C.themeRed,
+    },
+    registerButton: {
+      marginTop: 16,
+    },
+    signOutButton: {
+      width: "100%",
+      alignItems: "center",
+      paddingVertical: 14,
+      backgroundColor: C.themeRed,
+      borderRadius: 10,
+      alignSelf: "flex-start",
+    },
+    signOutText: {
+      fontWeight: "600",
+      fontSize: 16,
+      color: C.pureWhite,
+    },
+    versionText: {
+      marginTop: 12,
+      textAlign: "center",
+      fontSize: 12,
+      color: C.gray50,
+    },
+  });
+}
+
+type ProfileStyles = ReturnType<typeof createProfileStyles>;
+
 function FieldRow({
+  styles,
   label,
   value,
 }: {
+  styles: ProfileStyles;
   label: string;
   value: string | null | undefined;
 }) {
@@ -49,7 +287,13 @@ function FieldRow({
   );
 }
 
-function SectionTitle({ title }: { title: string }) {
+function SectionTitle({
+  styles,
+  title,
+}: {
+  styles: ProfileStyles;
+  title: string;
+}) {
   return <ThemedText style={styles.sectionTitle}>{title}</ThemedText>;
 }
 
@@ -77,6 +321,10 @@ export default function ProfileScreen() {
     address: "",
     avatar_url: "",
   });
+
+  const C = useThemePalette();
+  const { isDark, setPreference } = useAppTheme();
+  const styles = useMemo(() => createProfileStyles(C), [C]);
 
   const fetchProfile = useCallback(async () => {
     if (!session?.user?.id || !isSupabaseConfigured) {
@@ -252,7 +500,7 @@ export default function ProfileScreen() {
       accessibilityLabel="Settings"
       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
     >
-      <MaterialIcons name="settings" size={24} color={theme.colors.themeBlack} />
+      <MaterialIcons name="settings" size={24} color={C.themeBlack} />
     </Pressable>
   );
 
@@ -319,7 +567,7 @@ export default function ProfileScreen() {
                   <View style={styles.avatarOverlay}>
                     <ActivityIndicator
                       size="large"
-                      color={theme.colors.black}
+                      color={C.black}
                     />
                   </View>
                 )}
@@ -328,7 +576,7 @@ export default function ProfileScreen() {
                     <MaterialIcons
                       name="edit"
                       size={18}
-                      color={theme.colors.pureWhite}
+                      color={C.pureWhite}
                     />
                   </View>
                 )}
@@ -344,14 +592,14 @@ export default function ProfileScreen() {
 
           {editing ? (
             <>
-              <SectionTitle title="Personal" />
+              <SectionTitle styles={styles} title="Personal" />
               <ThemedText style={styles.inputLabel}>First name</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.first_name}
                 onChangeText={(v) => updateForm({ first_name: v })}
                 placeholder="First name"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
               <ThemedText style={styles.inputLabel}>Last name</ThemedText>
               <TextInput
@@ -359,7 +607,7 @@ export default function ProfileScreen() {
                 value={form.last_name}
                 onChangeText={(v) => updateForm({ last_name: v })}
                 placeholder="Last name"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
               <ThemedText style={styles.inputLabel}>Full name</ThemedText>
               <TextInput
@@ -367,17 +615,17 @@ export default function ProfileScreen() {
                 value={form.full_name}
                 onChangeText={(v) => updateForm({ full_name: v })}
                 placeholder="Full name (optional)"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
 
-              <SectionTitle title="Contact" />
+              <SectionTitle styles={styles} title="Contact" />
               <ThemedText style={styles.inputLabel}>Email</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.email}
                 onChangeText={(v) => updateForm({ email: v })}
                 placeholder="Email"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -387,17 +635,17 @@ export default function ProfileScreen() {
                 value={form.phone}
                 onChangeText={(v) => updateForm({ phone: v })}
                 placeholder="Phone number"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 keyboardType="phone-pad"
               />
 
-              <SectionTitle title="Address" />
+              <SectionTitle styles={styles} title="Address" />
               <TextInput
                 style={[styles.input, styles.inputMultiline]}
                 value={form.address}
                 onChangeText={(v) => updateForm({ address: v })}
                 placeholder="Full address"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 multiline
                 numberOfLines={3}
               />
@@ -423,7 +671,7 @@ export default function ProfileScreen() {
                   {saving ? (
                     <ActivityIndicator
                       size="small"
-                      color={theme.colors.black}
+                      color={C.black}
                     />
                   ) : (
                     <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
@@ -433,13 +681,13 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
-              <SectionTitle title="Personal" />
-              <FieldRow label="Name" value={displayName || null} />
-              <SectionTitle title="Contact" />
-              <FieldRow label="Email" value={profile?.email} />
-              <FieldRow label="Mobile number" value={profile?.phone} />
-              <SectionTitle title="Address" />
-              <FieldRow label="Address" value={profile?.address} />
+              <SectionTitle styles={styles} title="Personal" />
+              <FieldRow styles={styles} label="Name" value={displayName || null} />
+              <SectionTitle styles={styles} title="Contact" />
+              <FieldRow styles={styles} label="Email" value={profile?.email} />
+              <FieldRow styles={styles} label="Mobile number" value={profile?.phone} />
+              <SectionTitle styles={styles} title="Address" />
+              <FieldRow styles={styles} label="Address" value={profile?.address} />
             </>
           )}
         </View>
@@ -447,7 +695,20 @@ export default function ProfileScreen() {
 
       {!editing ? (
         <View style={styles.card}>
-          <SectionTitle title="Cause List Reminder" />
+          <SectionTitle styles={styles} title="Appearance" />
+          <SegmentedTwoOption<AppearancePreference>
+            value={isDark ? "dark" : "light"}
+            onChange={(v) => void setPreference(v)}
+            left={{ label: "Light", value: "light" }}
+            right={{ label: "Dark", value: "dark" }}
+            accessibilityLabel="Appearance"
+          />
+        </View>
+      ) : null}
+
+      {!editing ? (
+        <View style={styles.card}>
+          <SectionTitle styles={styles} title="Cause List Reminder" />
           <ThemedText style={styles.reminderHint}>
             Nightly reminders are sent automatically at 8:00 PM with tomorrow&apos;s
             hearing list.
@@ -484,7 +745,7 @@ export default function ProfileScreen() {
             disabled={syncingToken}
           >
             {syncingToken ? (
-              <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+              <ActivityIndicator size="small" color={C.pureWhite} />
             ) : (
               <ThemedText style={styles.btnPrimaryText}>
                 {profile?.expo_push_token
@@ -537,7 +798,7 @@ export default function ProfileScreen() {
           rightComponent={settingsHeaderButton}
         />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
+          <ActivityIndicator size="large" color={C.black} />
         </View>
       </SafeAreaView>
     );
@@ -573,228 +834,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingTop: 8,
-    paddingBottom: 40,
-  },
-  headerIconBtn: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  headerIconBtnPressed: {
-    opacity: 0.55,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    marginBottom: 20,
-    color: theme.colors.black,
-  },
-  card: {
-    backgroundColor: theme.colors.pureWhite,
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
-    ...theme.shadow,
-  },
-  avatarSection: {
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  avatarPressable: {
-    alignSelf: "center",
-  },
-  avatarWrap: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: theme.colors.grey100,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    position: "relative",
-  },
-  avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 56,
-  },
-  avatarEditBadge: {
-    position: "absolute",
-    bottom: 4,
-    right: 4,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.themeBlack,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarImage: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-  },
-  avatarInitials: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: theme.colors.gray50,
-  },
-  displayName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginTop: 12,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    marginBottom: 12,
-    marginTop: 20,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  fieldRow: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-    marginBottom: 4,
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: theme.colors.black,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.black,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: theme.colors.black,
-    marginBottom: 4,
-  },
-  inputMultiline: {
-    minHeight: 88,
-    textAlignVertical: "top",
-  },
-  saveError: {
-    fontSize: 14,
-    color: theme.colors.themeRed,
-    marginTop: 12,
-  },
-  editButtons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 24,
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnSecondary: {
-    backgroundColor: theme.colors.themeGray3,
-  },
-  btnSecondaryText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  btnPrimary: {
-    backgroundColor: theme.colors.themeBlack,
-  },
-  btnPrimaryText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.pureWhite,
-  },
-  errorText: {
-    fontSize: 15,
-    color: theme.colors.themeRed,
-    marginBottom: 16,
-  },
-  reminderHint: {
-    fontSize: 14,
-    color: theme.colors.gray50,
-    marginBottom: 12,
-  },
-  reminderSchedule: {
-    fontSize: 14,
-    color: theme.colors.black,
-  },
-  timezoneText: {
-    marginTop: 8,
-    fontSize: 13,
-    color: theme.colors.gray50,
-  },
-  tokenStatus: {
-    marginTop: 12,
-    fontSize: 14,
-    color: theme.colors.themeGreen,
-  },
-  tokenStatusMuted: {
-    marginTop: 12,
-    fontSize: 14,
-    color: theme.colors.gray50,
-  },
-  tokenSyncSuccess: {
-    marginTop: 8,
-    fontSize: 14,
-    color: theme.colors.themeGreen,
-  },
-  tokenSyncError: {
-    marginTop: 8,
-    fontSize: 14,
-    color: theme.colors.themeRed,
-  },
-  registerButton: {
-    marginTop: 16,
-  },
-  signOutButton: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: 14,
-    backgroundColor: theme.colors.themeRed,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-  },
-  signOutText: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: theme.colors.pureWhite,
-  },
-  versionText: {
-    marginTop: 12,
-    textAlign: "center",
-    fontSize: 12,
-    color: theme.colors.gray50,
-  },
-});

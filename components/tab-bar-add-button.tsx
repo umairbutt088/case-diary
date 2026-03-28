@@ -5,7 +5,9 @@ import { useRouter } from "expo-router";
 import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
-import { TabBarColors, theme } from "@/constants/theme";
+import { TabBarColors } from "@/constants/theme";
+import { useAppTheme } from "@/context/app-theme-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 const ADD_BUTTON_SIZE = 56;
@@ -13,7 +15,12 @@ const ADD_ICON_SIZE = 28;
 
 export function TabBarAddButton(props: BottomTabBarButtonProps) {
   const router = useRouter();
+  const { isDark } = useAppTheme();
+  const C = useThemePalette();
   const scale = useSharedValue(1);
+
+  const addButtonBg = isDark ? C.themeBlack : TabBarColors.addButtonBg;
+  const addIconColor = isDark ? C.black : "#FFFFFF";
 
   const handlePress = () => {
     if (process.env.EXPO_OS === "ios") {
@@ -54,14 +61,14 @@ export function TabBarAddButton(props: BottomTabBarButtonProps) {
             width: ADD_BUTTON_SIZE,
             height: ADD_BUTTON_SIZE,
             borderRadius: ADD_BUTTON_SIZE / 2,
-            backgroundColor: TabBarColors.addButtonBg,
+            backgroundColor: addButtonBg,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 3,
             borderColor: "rgba(255,255,255,0.12)",
           }}
         >
-          <MaterialIcons name="add" size={ADD_ICON_SIZE} color={theme.colors.pureWhite} />
+          <MaterialIcons name="add" size={ADD_ICON_SIZE} color={addIconColor} />
         </PlatformPressable>
       </Animated.View>
     </View>

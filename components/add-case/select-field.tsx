@@ -1,10 +1,15 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import {
+  type AppColors,
+  modalSheetBackground,
+} from "@/constants/color-palette";
+import { useAppTheme } from "@/context/app-theme-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type Props = {
   label: string;
@@ -18,6 +23,102 @@ type Props = {
   error?: string | null;
 };
 
+function createSelectFieldStyles(C: AppColors, modalSheet: string) {
+  return StyleSheet.create({
+    triggerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      minHeight: 48,
+    },
+    trigger: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+    },
+    triggerText: {
+      fontSize: 16,
+      flex: 1,
+      color: C.black,
+    },
+    placeholder: {
+      color: C.gray50,
+    },
+    hint: {
+      fontSize: 13,
+      marginTop: 6,
+      color: C.black,
+    },
+    triggerRowError: {
+      borderColor: C.themeRed,
+    },
+    errorText: {
+      fontSize: 13,
+      color: C.themeRed,
+      marginTop: 4,
+    },
+    triggerDisabled: {
+      opacity: 0.6,
+    },
+    overlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0,0,0,0.4)",
+    },
+    sheet: {
+      backgroundColor: modalSheet,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      minHeight: 280,
+      maxHeight: "70%",
+    },
+    sheetHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: C.grey100,
+    },
+    sheetTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: C.black,
+    },
+    sheetClose: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: C.black,
+    },
+    list: {
+      minHeight: 120,
+      maxHeight: 320,
+    },
+    option: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.grey100,
+    },
+    optionText: {
+      fontSize: 16,
+      color: C.black,
+    },
+    optionTextSelected: {
+      fontWeight: "600",
+      color: C.black,
+    },
+  });
+}
+
 export function SelectField({
   label,
   required,
@@ -29,6 +130,13 @@ export function SelectField({
   hint,
   error,
 }: Props) {
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(
+    () => createSelectFieldStyles(C, modalSheet),
+    [C, modalSheet],
+  );
   const [open, setOpen] = useState(false);
 
   const onSelect = (opt: string) => {
@@ -51,24 +159,16 @@ export function SelectField({
         >
           <ThemedText
             style={[styles.triggerText, !value && styles.placeholder]}
-            lightColor={!value ? theme.colors.gray50 : undefined}
-            darkColor={!value ? theme.colors.gray50 : undefined}
+            lightColor={!value ? C.gray50 : undefined}
+            darkColor={!value ? C.gray50 : undefined}
           >
             {value || placeholder}
           </ThemedText>
-          <MaterialIcons
-            name="keyboard-arrow-down"
-            size={24}
-            color={theme.colors.gray50}
-          />
+          <MaterialIcons name="keyboard-arrow-down" size={24} color={C.gray50} />
         </Pressable>
       </View>
       {hint ? (
-        <ThemedText
-          style={styles.hint}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
-        >
+        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
           {hint}
         </ThemedText>
       ) : null}
@@ -98,11 +198,7 @@ export function SelectField({
                     {opt}
                   </ThemedText>
                   {value === opt ? (
-                    <MaterialIcons
-                      name="check"
-                      size={22}
-                      color={theme.colors.themeBlack}
-                    />
+                    <MaterialIcons name="check" size={22} color={C.themeBlack} />
                   ) : null}
                 </Pressable>
               ))}
@@ -113,97 +209,3 @@ export function SelectField({
     </FormField>
   );
 }
-
-const styles = StyleSheet.create({
-  triggerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    minHeight: 48,
-  },
-  trigger: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-  },
-  triggerText: {
-    fontSize: 16,
-    flex: 1,
-    color: theme.colors.black,
-  },
-  placeholder: {
-    color: theme.colors.gray50,
-  },
-  hint: {
-    fontSize: 13,
-    marginTop: 6,
-    color: theme.colors.black,
-  },
-  triggerRowError: {
-    borderColor: theme.colors.themeRed,
-  },
-  errorText: {
-    fontSize: 13,
-    color: theme.colors.themeRed,
-    marginTop: 4,
-  },
-  triggerDisabled: {
-    opacity: 0.6,
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  sheet: {
-    backgroundColor: theme.colors.pureWhite,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    minHeight: 280,
-    maxHeight: "70%",
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.grey100,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  sheetClose: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  list: {
-    minHeight: 120,
-    maxHeight: 320,
-  },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.grey100,
-  },
-  optionText: {
-    fontSize: 16,
-    color: theme.colors.black,
-  },
-  optionTextSelected: {
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-});

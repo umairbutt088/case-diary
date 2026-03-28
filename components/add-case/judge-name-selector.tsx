@@ -13,9 +13,10 @@ import { Swipeable } from "react-native-gesture-handler";
 
 import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import {
   getCachedJudges,
   getCachedJudgesForTier,
@@ -44,6 +45,168 @@ type Props = {
   error?: string | null;
 };
 
+function createJudgeNameSelectorStyles(C: AppColors) {
+  return StyleSheet.create({
+    dropdownWrap: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      overflow: "hidden",
+      backgroundColor: C.pureWhite,
+    },
+    triggerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      minHeight: 48,
+      backgroundColor: C.pureWhite,
+    },
+    trigger: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+    },
+    triggerText: {
+      fontSize: 16,
+      flex: 1,
+      color: C.black,
+    },
+    placeholder: {
+      color: C.gray50,
+    },
+    triggerRowError: {
+      borderColor: C.themeRed,
+    },
+    dropdown: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: C.grey100,
+      backgroundColor: C.grey100,
+      padding: 12,
+    },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: C.black,
+      backgroundColor: C.pureWhite,
+    },
+    listLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.gray50,
+      marginTop: 12,
+      marginBottom: 6,
+    },
+    loadingWrap: {
+      padding: 16,
+      alignItems: "center",
+    },
+    emptyHint: {
+      fontSize: 14,
+      color: C.gray50,
+    },
+    list: {
+      maxHeight: 220,
+      backgroundColor: C.pureWhite,
+      borderRadius: 10,
+      overflow: "hidden",
+    },
+    option: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.grey100,
+    },
+    deleteAction: {
+      width: 92,
+      backgroundColor: C.themeRed,
+      justifyContent: "center",
+      alignItems: "center",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.grey100,
+      gap: 4,
+    },
+    deleteActionDisabled: {
+      opacity: 0.8,
+    },
+    deleteActionText: {
+      color: C.pureWhite,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    optionTextWrap: {
+      flex: 1,
+      marginRight: 8,
+    },
+    optionText: {
+      fontSize: 16,
+      color: C.black,
+    },
+    optionTextSelected: {
+      fontWeight: "600",
+      color: C.black,
+    },
+    optionSubText: {
+      fontSize: 12,
+      color: C.gray50,
+      marginTop: 2,
+    },
+    optionSubTextMuted: {
+      fontSize: 12,
+      color: C.gray50,
+      marginTop: 2,
+      opacity: 0.8,
+    },
+    addJudgeBtn: {
+      marginTop: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      backgroundColor: C.pureWhite,
+      paddingVertical: 11,
+      paddingHorizontal: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    addJudgeBtnText: {
+      fontSize: 15,
+      color: C.black,
+      fontWeight: "600",
+    },
+    fetchErrorRow: {
+      marginTop: 8,
+      gap: 8,
+    },
+    retryBtn: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: C.btnGray,
+    },
+    retryBtnText: {
+      fontSize: 13,
+      color: C.GrayBtnTitle,
+      fontWeight: "600",
+    },
+    errorText: {
+      fontSize: 13,
+      color: C.themeRed,
+      marginTop: 4,
+    },
+  });
+}
+
 export function JudgeNameSelector({
   label,
   required = false,
@@ -58,6 +221,8 @@ export function JudgeNameSelector({
 }: Props) {
   const { session } = useAuth();
   const isOnline = useIsOnline();
+  const C = useThemePalette();
+  const styles = useMemo(() => createJudgeNameSelectorStyles(C), [C]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [judges, setJudges] = useState<JudgeRecord[]>([]);
@@ -258,15 +423,15 @@ export function JudgeNameSelector({
                 styles.triggerText,
                 (!value || !courtTier) && styles.placeholder,
               ]}
-              lightColor={!value || !courtTier ? theme.colors.gray50 : undefined}
-              darkColor={!value || !courtTier ? theme.colors.gray50 : undefined}
+              lightColor={!value || !courtTier ? C.gray50 : undefined}
+              darkColor={!value || !courtTier ? C.gray50 : undefined}
             >
               {!courtTier ? "Select court tier first" : value || placeholder}
             </ThemedText>
             <MaterialIcons
               name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
               size={24}
-              color={theme.colors.gray50}
+              color={C.gray50}
             />
           </Pressable>
         </View>
@@ -278,7 +443,7 @@ export function JudgeNameSelector({
               value={query}
               onChangeText={setQuery}
               placeholder="Search judges..."
-              placeholderTextColor={theme.colors.gray50}
+              placeholderTextColor={C.gray50}
             />
 
             {fetchError ? (
@@ -296,7 +461,7 @@ export function JudgeNameSelector({
 
             {loading ? (
               <View style={styles.loadingWrap}>
-                <ActivityIndicator size="small" color={theme.colors.black} />
+                <ActivityIndicator size="small" color={C.black} />
               </View>
             ) : filteredJudges.length === 0 ? (
               <ThemedText style={styles.emptyHint}>
@@ -323,13 +488,13 @@ export function JudgeNameSelector({
                         disabled={deletingJudgeName === judge.name}
                       >
                         {deletingJudgeName === judge.name ? (
-                          <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                          <ActivityIndicator size="small" color={C.pureWhite} />
                         ) : (
                           <>
                             <MaterialIcons
                               name="delete-outline"
                               size={18}
-                              color={theme.colors.pureWhite}
+                              color={C.pureWhite}
                             />
                             <ThemedText style={styles.deleteActionText}>Delete</ThemedText>
                           </>
@@ -361,11 +526,7 @@ export function JudgeNameSelector({
                         )}
                       </View>
                       {value === judge.name ? (
-                        <MaterialIcons
-                          name="check"
-                          size={22}
-                          color={theme.colors.themeBlack}
-                        />
+                        <MaterialIcons name="check" size={22} color={C.themeBlack} />
                       ) : null}
                     </Pressable>
                   </Swipeable>
@@ -378,11 +539,7 @@ export function JudgeNameSelector({
 
       {onPressAddJudge ? (
         <Pressable style={styles.addJudgeBtn} onPress={handlePressAddJudge}>
-          <MaterialIcons
-            name="person-add-alt-1"
-            size={18}
-            color={theme.colors.black}
-          />
+          <MaterialIcons name="person-add-alt-1" size={18} color={C.black} />
           <ThemedText style={styles.addJudgeBtnText}>Add Judge</ThemedText>
         </Pressable>
       ) : null}
@@ -391,163 +548,3 @@ export function JudgeNameSelector({
     </FormField>
   );
 }
-
-const styles = StyleSheet.create({
-  dropdownWrap: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: theme.colors.pureWhite,
-  },
-  triggerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    minHeight: 48,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  trigger: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-  },
-  triggerText: {
-    fontSize: 16,
-    flex: 1,
-    color: theme.colors.black,
-  },
-  placeholder: {
-    color: theme.colors.gray50,
-  },
-  triggerRowError: {
-    borderColor: theme.colors.themeRed,
-  },
-  dropdown: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.grey100,
-    backgroundColor: theme.colors.grey100,
-    padding: 12,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: theme.colors.black,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  listLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  loadingWrap: {
-    padding: 16,
-    alignItems: "center",
-  },
-  emptyHint: {
-    fontSize: 14,
-    color: theme.colors.gray50,
-  },
-  list: {
-    maxHeight: 220,
-    backgroundColor: theme.colors.pureWhite,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.grey100,
-  },
-  deleteAction: {
-    width: 92,
-    backgroundColor: theme.colors.themeRed,
-    justifyContent: "center",
-    alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.grey100,
-    gap: 4,
-  },
-  deleteActionDisabled: {
-    opacity: 0.8,
-  },
-  deleteActionText: {
-    color: theme.colors.pureWhite,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  optionTextWrap: {
-    flex: 1,
-    marginRight: 8,
-  },
-  optionText: {
-    fontSize: 16,
-    color: theme.colors.black,
-  },
-  optionTextSelected: {
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  optionSubText: {
-    fontSize: 12,
-    color: theme.colors.gray50,
-    marginTop: 2,
-  },
-  optionSubTextMuted: {
-    fontSize: 12,
-    color: theme.colors.gray50,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-  addJudgeBtn: {
-    marginTop: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    backgroundColor: theme.colors.pureWhite,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  addJudgeBtnText: {
-    fontSize: 15,
-    color: theme.colors.black,
-    fontWeight: "600",
-  },
-  fetchErrorRow: {
-    marginTop: 8,
-    gap: 8,
-  },
-  retryBtn: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: theme.colors.btnGray,
-  },
-  retryBtnText: {
-    fontSize: 13,
-    color: theme.colors.GrayBtnTitle,
-    fontWeight: "600",
-  },
-  errorText: {
-    fontSize: 13,
-    color: theme.colors.themeRed,
-    marginTop: 4,
-  },
-});

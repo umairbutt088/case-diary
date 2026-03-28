@@ -3,25 +3,32 @@ import {
   DateTimePickerAndroid,
   type AndroidNativeProps,
 } from "@react-native-community/datetimepicker";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import {
+  type AppColors,
+  modalSheetBackground,
+} from "@/constants/color-palette";
+import { useAppTheme } from "@/context/app-theme-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
-const CALENDAR_THEME = {
-  calendarBackground: theme.colors.pureWhite,
-  textSectionTitleColor: theme.colors.black,
-  selectedDayBackgroundColor: theme.colors.black,
-  selectedDayTextColor: theme.colors.pureWhite,
-  todayTextColor: theme.colors.black,
-  dayTextColor: theme.colors.black,
-  textDisabledColor: theme.colors.gray40,
-  textInactiveColor: theme.colors.gray40,
-  monthTextColor: theme.colors.black,
-  arrowColor: theme.colors.black,
-};
+function buildDateFieldCalendarTheme(C: AppColors, modalSheet: string) {
+  return {
+    calendarBackground: modalSheet,
+    textSectionTitleColor: C.black,
+    selectedDayBackgroundColor: C.black,
+    selectedDayTextColor: C.pureWhite,
+    todayTextColor: C.black,
+    dayTextColor: C.black,
+    textDisabledColor: C.gray40,
+    textInactiveColor: C.gray40,
+    monthTextColor: C.black,
+    arrowColor: C.black,
+  };
+}
 
 /** Format YYYY-MM-DD to DD/MM/YYYY for display */
 export function formatDateForDisplay(isoDate: string): string {
@@ -57,6 +64,90 @@ export function formatDateToValue(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function createDateFieldStyles(C: AppColors, modalSheet: string) {
+  return StyleSheet.create({
+    wrap: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 8,
+    },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: C.themeGray3,
+      borderRadius: 10,
+      paddingLeft: 14,
+      paddingRight: 14,
+      minHeight: 48,
+      paddingVertical: 12,
+    },
+    inputRowError: {
+      borderColor: C.themeRed,
+    },
+    inputText: {
+      fontSize: 16,
+      flex: 1,
+    },
+    placeholder: {
+      opacity: 0.8,
+    },
+    icon: {
+      marginLeft: 8,
+    },
+    hint: {
+      fontSize: 13,
+      marginTop: 6,
+    },
+    error: {
+      fontSize: 13,
+      color: C.themeRed,
+      marginTop: 4,
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 24,
+    },
+    modalContent: {
+      backgroundColor: modalSheet,
+      borderRadius: 16,
+      paddingBottom: 24,
+      width: "100%",
+      maxWidth: 400,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: C.themeGray3,
+    },
+    modalCancel: {
+      fontSize: 17,
+      color: C.gray50,
+    },
+    modalDone: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: C.btnBlue,
+    },
+    pickerContainer: {
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+    },
+  });
+}
+
 type DateFieldProps = {
   label: string;
   required?: boolean;
@@ -76,6 +167,18 @@ export function DateField({
   onChange,
   placeholder = "e.g. 08/09/2025",
 }: DateFieldProps) {
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(
+    () => createDateFieldStyles(C, modalSheet),
+    [C, modalSheet],
+  );
+  const calendarTheme = useMemo(
+    () => buildDateFieldCalendarTheme(C, modalSheet),
+    [C, modalSheet],
+  );
+
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState(() => parseToDate(value));
 
@@ -127,24 +230,15 @@ export function DateField({
       >
         <ThemedText
           style={[styles.inputText, !displayText && styles.placeholder]}
-          lightColor={displayText ? theme.colors.black : theme.colors.gray50}
-          darkColor={displayText ? theme.colors.black : theme.colors.gray50}
+          lightColor={displayText ? C.black : C.gray50}
+          darkColor={displayText ? C.black : C.gray50}
         >
           {displayText || placeholder}
         </ThemedText>
-        <MaterialIcons
-          name="event"
-          size={22}
-          color={theme.colors.gray50}
-          style={styles.icon}
-        />
+        <MaterialIcons name="event" size={22} color={C.gray50} style={styles.icon} />
       </Pressable>
       {hint ? (
-        <ThemedText
-          style={styles.hint}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
-        >
+        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
           {hint}
         </ThemedText>
       ) : null}
@@ -183,11 +277,11 @@ export function DateField({
                   markedDates={{
                     [formatDateToValue(tempDate)]: {
                       selected: true,
-                      selectedColor: theme.colors.black,
-                      selectedTextColor: theme.colors.pureWhite,
+                      selectedColor: C.black,
+                      selectedTextColor: C.pureWhite,
                     },
                   }}
-                  theme={CALENDAR_THEME}
+                  theme={calendarTheme}
                   minDate="1900-01-01"
                   maxDate="2100-12-31"
                 />
@@ -199,85 +293,3 @@ export function DateField({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginBottom: 8,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: theme.colors.themeGray3,
-    borderRadius: 10,
-    paddingLeft: 14,
-    paddingRight: 14,
-    minHeight: 48,
-    paddingVertical: 12,
-  },
-  inputRowError: {
-    borderColor: theme.colors.themeRed,
-  },
-  inputText: {
-    fontSize: 16,
-    flex: 1,
-  },
-  placeholder: {
-    opacity: 0.8,
-  },
-  icon: {
-    marginLeft: 8,
-  },
-  hint: {
-    fontSize: 13,
-    marginTop: 6,
-  },
-  error: {
-    fontSize: 13,
-    color: theme.colors.themeRed,
-    marginTop: 4,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.pureWhite,
-    borderRadius: 16,
-    paddingBottom: 24,
-    width: "100%",
-    maxWidth: 400,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.themeGray3,
-  },
-  modalCancel: {
-    fontSize: 17,
-    color: theme.colors.gray50,
-  },
-  modalDone: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.btnBlue,
-  },
-  pickerContainer: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-});

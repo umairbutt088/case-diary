@@ -1,9 +1,10 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { Colors, theme } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import type { AppColors } from "@/constants/color-palette";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type TermsCheckboxProps = {
   checked: boolean;
@@ -16,6 +17,38 @@ type TermsCheckboxProps = {
   disabled?: boolean;
 };
 
+function createTermsCheckboxStyles(C: AppColors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 16,
+      marginBottom: 4,
+      gap: 10,
+    },
+    labelWrap: {
+      flex: 1,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+    },
+    label: {
+      fontSize: 14,
+      color: C.black,
+    },
+    link: {
+      textDecorationLine: "underline",
+      fontSize: 14,
+      color: C.btnBlue,
+    },
+    error: {
+      color: C.themeRed,
+      fontSize: 14,
+      marginBottom: 8,
+    },
+  });
+}
+
 export function TermsCheckbox({
   checked,
   onToggle,
@@ -26,8 +59,8 @@ export function TermsCheckbox({
   error,
   disabled,
 }: TermsCheckboxProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const C = useThemePalette();
+  const styles = useMemo(() => createTermsCheckboxStyles(C), [C]);
 
   return (
     <>
@@ -43,7 +76,7 @@ export function TermsCheckbox({
           <MaterialIcons
             name={checked ? "check-box" : "check-box-outline-blank"}
             size={24}
-            color={checked ? theme.colors.black : theme.colors.gray30}
+            color={checked ? C.themeBlack : C.gray50}
           />
         </Pressable>
         <View style={styles.labelWrap}>
@@ -54,9 +87,7 @@ export function TermsCheckbox({
             accessibilityRole="link"
             accessibilityLabel={termsLabel}
           >
-            <ThemedText type="link" style={styles.link}>
-              {termsLabel}
-            </ThemedText>
+            <ThemedText style={styles.link}>{termsLabel}</ThemedText>
           </Pressable>
           <ThemedText style={styles.label}> and </ThemedText>
           <Pressable
@@ -65,9 +96,7 @@ export function TermsCheckbox({
             accessibilityRole="link"
             accessibilityLabel={privacyLabel}
           >
-            <ThemedText type="link" style={styles.link}>
-              {privacyLabel}
-            </ThemedText>
+            <ThemedText style={styles.link}>{privacyLabel}</ThemedText>
           </Pressable>
           <ThemedText style={styles.label}> by using this app.</ThemedText>
         </View>
@@ -76,32 +105,3 @@ export function TermsCheckbox({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 16,
-    marginBottom: 4,
-    gap: 10,
-  },
-  labelWrap: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-  },
-  label: {
-    fontSize: 14,
-    color: theme.colors.black,
-  },
-  link: {
-    textDecorationLine: "underline",
-    fontSize: 14,
-  },
-  error: {
-    color: "#c00",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-});

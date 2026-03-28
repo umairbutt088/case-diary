@@ -1,19 +1,37 @@
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet } from "react-native";
+import { useEffect, useMemo } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 /**
  * Central auth navigator: routes based on session.
  * Login/signup screens must NOT navigate after success; this component reacts to auth state.
  */
+function createAuthOverlayStyles(C: AppColors) {
+  return StyleSheet.create({
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 999,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: C.background,
+    },
+    loadingText: {
+      marginTop: 12,
+      color: C.black,
+    },
+  });
+}
+
 export function AuthNavigator({ children }: { children: React.ReactNode }) {
   const { session, isLoading } = useAuth();
   const router = useRouter();
+  const C = useThemePalette();
+  const overlayStyles = useMemo(() => createAuthOverlayStyles(C), [C]);
 
   const isAuthenticated = !!session?.user;
 
@@ -38,24 +56,13 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
     <>
       {children}
       {!ready ? (
-        <ThemedView style={styles.overlay}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
-          <ThemedText style={styles.loadingText}>Starting app...</ThemedText>
-        </ThemedView>
+        <View style={overlayStyles.overlay}>
+          <ActivityIndicator size="large" color={C.black} />
+          <ThemedText style={overlayStyles.loadingText}>
+            Starting app...
+          </ThemedText>
+        </View>
       ) : null}
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 999,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.96)",
-  },
-  loadingText: {
-    marginTop: 12,
-  },
-});

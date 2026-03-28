@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -13,16 +13,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
 import { ThemedText } from "@/components/themed-text";
+import { COURT_TIERS } from "@/constants/case-form";
 import {
-  COURT_TIERS,
-} from "@/constants/case-form";
-import { theme } from "@/constants/theme";
+  type AppColors,
+  modalSheetBackground,
+} from "@/constants/color-palette";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useIsOnline } from "@/hooks/use-is-online";
-import {
-  addCachedJudge,
-  queueAddJudge,
-} from "@/lib/offline-reference-data";
+import { addCachedJudge, queueAddJudge } from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export type SavedJudge = {
@@ -48,6 +48,91 @@ const initialForm: AddJudgeForm = {
   courtRoomAddress: "",
 };
 
+function createAddJudgeBottomSheetStyles(
+  C: AppColors,
+  onPrimary: string,
+  modalSheet: string,
+) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.4)",
+    },
+    sheet: {
+      backgroundColor: modalSheet,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      maxHeight: "90%",
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: C.grey100,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: C.black,
+    },
+    cancel: {
+      fontSize: 16,
+      color: C.btnBlue,
+      fontWeight: "500",
+    },
+    scroll: {
+      maxHeight: 520,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 32,
+    },
+    errorText: {
+      fontSize: 14,
+      color: C.themeRed,
+      marginTop: 8,
+    },
+    selectedTierText: {
+      fontSize: 14,
+      color: C.gray50,
+    },
+    buttons: {
+      flexDirection: "row",
+      gap: 12,
+      marginTop: 24,
+    },
+    btn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    btnSecondary: {
+      backgroundColor: C.themeGray3,
+    },
+    btnSecondaryText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.black,
+    },
+    btnPrimary: {
+      backgroundColor: C.themeBlack,
+    },
+    btnPrimaryText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: onPrimary,
+    },
+  });
+}
+
 export function AddJudgeBottomSheet({
   visible,
   defaultCourtTier,
@@ -56,6 +141,14 @@ export function AddJudgeBottomSheet({
 }: Props) {
   const { session } = useAuth();
   const isOnline = useIsOnline();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(
+    () => createAddJudgeBottomSheetStyles(C, onPrimary, modalSheet),
+    [C, onPrimary, modalSheet],
+  );
   const [form, setForm] = useState<AddJudgeForm>(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +290,7 @@ export function AddJudgeBottomSheet({
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                  <ActivityIndicator size="small" color={onPrimary} />
                 ) : (
                   <ThemedText style={styles.btnPrimaryText}>Save Judge</ThemedText>
                 )}
@@ -209,82 +302,3 @@ export function AddJudgeBottomSheet({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  sheet: {
-    backgroundColor: theme.colors.pureWhite,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: "90%",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.grey100,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
-  },
-  cancel: {
-    fontSize: 16,
-    color: theme.colors.btnBlue,
-    fontWeight: "500",
-  },
-  scroll: {
-    maxHeight: 520,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 32,
-  },
-  errorText: {
-    fontSize: 14,
-    color: theme.colors.themeRed,
-    marginTop: 8,
-  },
-  selectedTierText: {
-    fontSize: 14,
-    color: theme.colors.gray50,
-  },
-  buttons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 24,
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnSecondary: {
-    backgroundColor: theme.colors.themeGray3,
-  },
-  btnSecondaryText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  btnPrimary: {
-    backgroundColor: theme.colors.themeBlack,
-  },
-  btnPrimaryText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.pureWhite,
-  },
-});

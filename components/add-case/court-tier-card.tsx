@@ -1,8 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type Props = {
   label: string;
@@ -11,12 +13,53 @@ type Props = {
   onSelect: () => void;
 };
 
+function createCourtTierCardStyles(C: AppColors) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      marginBottom: 10,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: C.borderGray,
+      backgroundColor: C.pureWhite,
+    },
+    cardSelected: {
+      borderColor: C.themeBlack,
+      backgroundColor: C.gray100,
+    },
+    content: {
+      flex: 1,
+      marginRight: 12,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.black,
+      marginBottom: 4,
+    },
+    labelSelected: {
+      color: C.themeBlack,
+    },
+    description: {
+      fontSize: 13,
+      lineHeight: 18,
+    },
+  });
+}
+
 export function CourtTierCard({
   label,
   description,
   selected,
   onSelect,
 }: Props) {
+  const C = useThemePalette();
+  const styles = useMemo(() => createCourtTierCardStyles(C), [C]);
+
   return (
     <Pressable
       style={[styles.card, selected && styles.cardSelected]}
@@ -30,55 +73,15 @@ export function CourtTierCard({
         </ThemedText>
         <ThemedText
           style={styles.description}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
+          lightColor={C.gray50}
+          darkColor={C.gray50}
         >
           {description}
         </ThemedText>
       </View>
       {selected ? (
-        <MaterialIcons
-          name="check-circle"
-          size={24}
-          color={theme.colors.themeBlack}
-        />
+        <MaterialIcons name="check-circle" size={24} color={C.themeBlack} />
       ) : null}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: theme.colors.borderGray,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  cardSelected: {
-    borderColor: theme.colors.themeBlack,
-    backgroundColor: theme.colors.gray100,
-  },
-  content: {
-    flex: 1,
-    marginRight: 12,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.black,
-    marginBottom: 4,
-  },
-  labelSelected: {
-    color: theme.colors.themeBlack,
-  },
-  description: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-});

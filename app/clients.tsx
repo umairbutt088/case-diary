@@ -17,8 +17,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import {
+  type AppColors,
+  modalSheetBackground,
+} from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ClientRow } from "@/types/client";
 
@@ -38,8 +44,208 @@ const initialForm: ClientFormState = {
   care_of: "",
 };
 
+function createClientsStyles(
+  C: AppColors,
+  onPrimary: string,
+  modalSheet: string,
+) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    container: {
+      flex: 1,
+      padding: 20,
+    },
+    headerAction: {
+      minWidth: 34,
+      minHeight: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    searchWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      backgroundColor: C.pureWhite,
+      paddingHorizontal: 12,
+      marginBottom: 14,
+      gap: 8,
+    },
+    searchInput: {
+      flex: 1,
+      minHeight: 44,
+      fontSize: 15,
+      color: C.black,
+    },
+    listContent: {
+      paddingBottom: 24,
+    },
+    card: {
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 12,
+      backgroundColor: C.pureWhite,
+      ...theme.shadow,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    nameText: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: C.black,
+      flex: 1,
+      marginRight: 8,
+    },
+    cardActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    iconBtn: {
+      minWidth: 32,
+      minHeight: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    metaText: {
+      fontSize: 13,
+      color: C.gray50,
+      marginBottom: 2,
+    },
+    usageText: {
+      marginTop: 4,
+      fontSize: 12,
+      color: C.zodiacColour,
+      fontWeight: "600",
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 20,
+      gap: 10,
+    },
+    errorText: {
+      color: C.themeRed,
+      fontSize: 14,
+      textAlign: "center",
+    },
+    emptyText: {
+      color: C.gray50,
+      fontSize: 14,
+      textAlign: "center",
+    },
+    retryBtn: {
+      borderRadius: 10,
+      backgroundColor: C.themeBlack,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+    },
+    retryBtnText: {
+      color: onPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    modalRoot: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.35)",
+    },
+    modalCard: {
+      backgroundColor: modalSheet,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      maxHeight: "85%",
+      padding: 16,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: C.black,
+    },
+    modalClose: {
+      minWidth: 32,
+      minHeight: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.background,
+    },
+    modalContent: {
+      paddingBottom: 12,
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: C.gray50,
+      textTransform: "uppercase",
+      marginBottom: 6,
+      marginTop: 10,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: C.black,
+      backgroundColor: C.background,
+    },
+    inputMultiline: {
+      minHeight: 76,
+      textAlignVertical: "top",
+    },
+    formErrorText: {
+      marginTop: 10,
+      color: C.themeRed,
+      fontSize: 13,
+    },
+    saveBtn: {
+      marginTop: 16,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.themeBlack,
+    },
+    saveBtnText: {
+      color: onPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+  });
+}
+
 export default function ClientsScreen() {
   const { session } = useAuth();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(
+    () => createClientsStyles(C, onPrimary, modalSheet),
+    [C, onPrimary, modalSheet],
+  );
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [usageByClientId, setUsageByClientId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -262,18 +468,18 @@ export default function ClientsScreen() {
         title="Clients"
         rightComponent={
           <Bounceable style={styles.headerAction} onPress={openAddModal}>
-            <MaterialIcons name="person-add-alt-1" size={20} color={theme.colors.black} />
+            <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />
           </Bounceable>
         }
       />
 
       <View style={styles.container}>
         <View style={styles.searchWrap}>
-          <MaterialIcons name="search" size={20} color={theme.colors.gray50} />
+          <MaterialIcons name="search" size={20} color={C.gray50} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search clients..."
-            placeholderTextColor={theme.colors.gray50}
+            placeholderTextColor={C.gray50}
             value={search}
             onChangeText={setSearch}
             autoCapitalize="words"
@@ -282,7 +488,7 @@ export default function ClientsScreen() {
 
         {loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={theme.colors.black} />
+            <ActivityIndicator size="large" color={C.black} />
           </View>
         ) : error ? (
           <View style={styles.centered}>
@@ -313,14 +519,14 @@ export default function ClientsScreen() {
                       onPress={() => openEditModal(client)}
                       accessibilityLabel={`Edit ${client.name}`}
                     >
-                      <MaterialIcons name="edit" size={18} color={theme.colors.black} />
+                      <MaterialIcons name="edit" size={18} color={C.black} />
                     </Bounceable>
                     <Bounceable
                       style={styles.iconBtn}
                       onPress={() => confirmDeleteClient(client)}
                       accessibilityLabel={`Delete ${client.name}`}
                     >
-                      <MaterialIcons name="delete-outline" size={20} color={theme.colors.themeRed} />
+                      <MaterialIcons name="delete-outline" size={20} color={C.themeRed} />
                     </Bounceable>
                   </View>
                 </View>
@@ -350,7 +556,7 @@ export default function ClientsScreen() {
                 {editingClient ? "Edit Client" : "Add Client"}
               </ThemedText>
               <Bounceable style={styles.modalClose} onPress={closeModal}>
-                <MaterialIcons name="close" size={20} color={theme.colors.black} />
+                <MaterialIcons name="close" size={20} color={C.black} />
               </Bounceable>
             </View>
             <ScrollView
@@ -364,7 +570,7 @@ export default function ClientsScreen() {
                 value={form.name}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, name: v }))}
                 placeholder="Client name"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
 
               <ThemedText style={styles.inputLabel}>Phone</ThemedText>
@@ -373,7 +579,7 @@ export default function ClientsScreen() {
                 value={form.phone}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, phone: v }))}
                 placeholder="Phone number"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 keyboardType="phone-pad"
               />
 
@@ -383,7 +589,7 @@ export default function ClientsScreen() {
                 value={form.email}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, email: v }))}
                 placeholder="Email"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
@@ -394,7 +600,7 @@ export default function ClientsScreen() {
                 value={form.care_of}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, care_of: v }))}
                 placeholder="Care of"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
 
               <ThemedText style={styles.inputLabel}>Address</ThemedText>
@@ -403,7 +609,7 @@ export default function ClientsScreen() {
                 value={form.address}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, address: v }))}
                 placeholder="Address"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 multiline
               />
 
@@ -411,7 +617,7 @@ export default function ClientsScreen() {
 
               <Bounceable style={styles.saveBtn} onPress={() => void saveClient()} disabled={saving}>
                 {saving ? (
-                  <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                  <ActivityIndicator size="small" color={onPrimary} />
                 ) : (
                   <ThemedText style={styles.saveBtnText}>
                     {editingClient ? "Update client" : "Save client"}
@@ -425,189 +631,3 @@ export default function ClientsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  headerAction: {
-    minWidth: 34,
-    minHeight: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    paddingHorizontal: 12,
-    marginBottom: 14,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    minHeight: 44,
-    fontSize: 15,
-    color: theme.colors.black,
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  card: {
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    backgroundColor: theme.colors.pureWhite,
-    ...theme.shadow,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  nameText: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: theme.colors.black,
-    flex: 1,
-    marginRight: 8,
-  },
-  cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  iconBtn: {
-    minWidth: 32,
-    minHeight: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  metaText: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-    marginBottom: 2,
-  },
-  usageText: {
-    marginTop: 4,
-    fontSize: 12,
-    color: theme.colors.zodiacColour,
-    fontWeight: "600",
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  errorText: {
-    color: theme.colors.themeRed,
-    fontSize: 14,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: theme.colors.gray50,
-    fontSize: 14,
-    textAlign: "center",
-  },
-  retryBtn: {
-    borderRadius: 10,
-    backgroundColor: theme.colors.themeBlack,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  retryBtnText: {
-    color: theme.colors.pureWhite,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  modalCard: {
-    backgroundColor: theme.colors.pureWhite,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: "85%",
-    padding: 16,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
-  },
-  modalClose: {
-    minWidth: 32,
-    minHeight: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.background,
-  },
-  modalContent: {
-    paddingBottom: 12,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    textTransform: "uppercase",
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: theme.colors.black,
-    backgroundColor: theme.colors.background,
-  },
-  inputMultiline: {
-    minHeight: 76,
-    textAlignVertical: "top",
-  },
-  formErrorText: {
-    marginTop: 10,
-    color: theme.colors.themeRed,
-    fontSize: 13,
-  },
-  saveBtn: {
-    marginTop: 16,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.themeBlack,
-  },
-  saveBtnText: {
-    color: theme.colors.pureWhite,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});
