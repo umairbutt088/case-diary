@@ -1,18 +1,28 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TextInputProps } from "react-native";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import type { AppColors } from "@/constants/color-palette";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type PasswordInputProps = TextInputProps & {
   error?: string | null;
   onClearError?: () => void;
-  /** Use when the input is on a light background (e.g. auth screens) so text stays visible. */
+  /** Elevated field (e.g. auth) — gray card surface in dark mode. */
   lightBackground?: boolean;
 };
+
+function createPasswordInputStyles(C: AppColors) {
+  return StyleSheet.create({
+    error: {
+      color: C.themeRed,
+      fontSize: 14,
+      marginBottom: 8,
+    },
+  });
+}
 
 export function PasswordInput({
   error,
@@ -23,10 +33,8 @@ export function PasswordInput({
   ...rest
 }: PasswordInputProps) {
   const [show, setShow] = useState(false);
-  const colorScheme = useColorScheme();
-  const colors = lightBackground
-    ? Colors.light
-    : Colors[colorScheme ?? "light"];
+  const C = useThemePalette();
+  const themed = useMemo(() => createPasswordInputStyles(C), [C]);
 
   const handleChange = (text: string) => {
     if (onClearError) onClearError();
@@ -39,10 +47,14 @@ export function PasswordInput({
         <TextInput
           style={[
             styles.input,
-            { color: colors.text, borderColor: colors.icon },
+            {
+              color: C.black,
+              borderColor: C.borderGray,
+              backgroundColor: lightBackground ? C.pureWhite : "transparent",
+            },
             style,
           ]}
-          placeholderTextColor={colors.icon}
+          placeholderTextColor={C.gray50}
           secureTextEntry={!show}
           onChangeText={handleChange}
           {...rest}
@@ -55,11 +67,11 @@ export function PasswordInput({
           <MaterialIcons
             name={show ? "visibility-off" : "visibility"}
             size={24}
-            color={colors.icon}
+            color={C.gray50}
           />
         </Pressable>
       </View>
-      {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+      {error ? <ThemedText style={themed.error}>{error}</ThemedText> : null}
     </>
   );
 }
@@ -83,10 +95,5 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: "center",
-  },
-  error: {
-    color: "#c00",
-    fontSize: 14,
-    marginBottom: 8,
   },
 });

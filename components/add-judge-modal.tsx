@@ -6,11 +6,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
+import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { ThemedText } from "@/components/themed-text";
 import {
   type AppColors,
@@ -19,32 +20,28 @@ import {
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useThemePalette } from "@/hooks/use-theme-palette";
+import { addCachedJudge } from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
-export type NewClientForm = {
+type JudgeFormState = {
   name: string;
-  address: string;
-  phone: string;
-  email: string;
-  careOf: string;
+  court_tier: string;
+  court_room_address: string;
+};
+
+const initialForm: JudgeFormState = {
+  name: "",
+  court_tier: "",
+  court_room_address: "",
 };
 
 type Props = {
   visible: boolean;
-  initialName?: string;
   onClose: () => void;
-  onSaved: (clientId: string) => void;
+  onSaved?: (judgeId: string) => void;
 };
 
-const initialForm: NewClientForm = {
-  name: "",
-  address: "",
-  phone: "",
-  email: "",
-  careOf: "",
-};
-
-function createAddNewClientModalStyles(
+function createAddJudgeModalStyles(
   C: AppColors,
   onPrimary: string,
   modalSheet: string,
@@ -83,16 +80,37 @@ function createAddNewClientModalStyles(
       fontWeight: "500",
     },
     scroll: {
-      maxHeight: 480,
+      maxHeight: 520,
     },
     scrollContent: {
       padding: 20,
       paddingBottom: 32,
     },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: C.gray50,
+      textTransform: "uppercase",
+      marginBottom: 6,
+      marginTop: 10,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: C.black,
+      backgroundColor: C.background,
+    },
+    tierPickerWrap: {
+      marginTop: 8,
+    },
     errorText: {
       fontSize: 14,
       color: C.themeRed,
-      marginTop: 8,
+      marginTop: 12,
     },
     buttons: {
       flexDirection: "row",
@@ -125,87 +143,92 @@ function createAddNewClientModalStyles(
   });
 }
 
-export function AddNewClientModal({
-  visible,
-  initialName = "",
-  onClose,
-  onSaved,
-}: Props) {
+export function AddJudgeModal({ visible, onClose, onSaved }: Props) {
   const { session } = useAuth();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const onPrimary = isDark ? C.black : C.pureWhite;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
-    () => createAddNewClientModalStyles(C, onPrimary, modalSheet),
+    () => createAddJudgeModalStyles(C, onPrimary, modalSheet),
     [C, onPrimary, modalSheet],
   );
-  const [form, setForm] = useState<NewClientForm>({
-    ...initialForm,
-    name: initialName.trim(),
-  });
+  const [form, setForm] = useState<JudgeFormState>(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const update = useCallback((updates: Partial<NewClientForm>) => {
-    setForm((prev) => ({ ...prev, ...updates }));
-    setError(null);
-  }, []);
-
   useEffect(() => {
     if (visible) {
-      setForm((prev) => ({ ...prev, name: initialName.trim() }));
+      setForm(initialForm);
       setError(null);
     }
-  }, [visible, initialName]);
-
-  const resetForm = useCallback(() => {
-    setForm({ ...initialForm, name: initialName.trim() });
-    setError(null);
-  }, [initialName]);
+  }, [visible]);
 
   const handleClose = useCallback(() => {
+    if (saving) return;
     Keyboard.dismiss();
-    resetForm();
+    setForm(initialForm);
+    setError(null);
     onClose();
-  }, [onClose, resetForm]);
+  }, [onClose, saving]);
 
   const handleSave = useCallback(async () => {
     const name = form.name.trim();
+    const courtTier = form.court_tier.trim();
     if (!name) {
-      setError("Name is required.");
+      setError("Judge name is required.");
+      return;
+    }
+    if (!courtTier) {
+      setError("Court tier is required.");
       return;
     }
     if (!session?.user?.id || !isSupabaseConfigured) {
-      setError("You must be signed in to add a client.");
+      setError("You must be signed in to add a judge.");
       return;
     }
+
     setSaving(true);
     setError(null);
+
+    const payload = {
+      name,
+      court_tier: courtTier,
+      court_room_address: form.court_room_address.trim() || null,
+    };
+
     const { data, error: e } = await supabase
-      .from("clients")
+      .from("judges")
       .insert({
+        ...payload,
         user_id: session.user.id,
-        name,
-        address: form.address.trim() || null,
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
-        care_of: form.careOf.trim() || null,
       })
       .select("id")
       .single();
+
     setSaving(false);
     if (e) {
-      setError(e.message || "Failed to add client.");
+      if (e.code === "23505") {
+        setError("This judge already exists.");
+      } else {
+        setError(e.message || "Failed to add judge.");
+      }
       return;
     }
-    if (data?.id) {
+
+    const id = data?.id as string | undefined;
+    if (id) {
+      await addCachedJudge(session.user.id, {
+        name: payload.name,
+        courtTier: payload.court_tier,
+        courtRoomAddress: payload.court_room_address,
+      });
       Keyboard.dismiss();
-      resetForm();
-      onSaved(data.id);
+      setForm(initialForm);
+      onSaved?.(id);
       onClose();
     }
-  }, [form, session?.user?.id, onSaved, onClose, resetForm]);
+  }, [form, session?.user?.id, onSaved, onClose]);
 
   if (!visible) return null;
 
@@ -215,8 +238,8 @@ export function AddNewClientModal({
         <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <ThemedText style={styles.title}>Add New Client</ThemedText>
-            <Pressable onPress={handleClose} hitSlop={12}>
+            <ThemedText style={styles.title}>Add judge</ThemedText>
+            <Pressable onPress={handleClose} hitSlop={12} disabled={saving}>
               <ThemedText style={styles.cancel}>Cancel</ThemedText>
             </Pressable>
           </View>
@@ -226,45 +249,45 @@ export function AddNewClientModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <FormFieldWithHint
-              label="Name"
-              required
+            <ThemedText style={styles.inputLabel}>Judge name</ThemedText>
+            <TextInput
+              style={styles.input}
               value={form.name}
-              onChangeText={(v) => update({ name: v })}
-              placeholder="Client name"
+              onChangeText={(v) => {
+                setForm((prev) => ({ ...prev, name: v }));
+                setError(null);
+              }}
+              placeholder="Judge name"
+              placeholderTextColor={C.gray50}
             />
-            <FormFieldWithHint
-              label="Address"
-              value={form.address}
-              onChangeText={(v) => update({ address: v })}
-              placeholder="Full address"
-              multiline
-              numberOfLines={3}
+
+            <View style={styles.tierPickerWrap}>
+              <CourtTierPicker
+                label="Court tier"
+                required
+                value={form.court_tier}
+                onChange={(v) => {
+                  setForm((prev) => ({ ...prev, court_tier: v }));
+                  setError(null);
+                }}
+                hint="Use the same tier list as case creation."
+              />
+            </View>
+
+            <ThemedText style={styles.inputLabel}>Court room address</ThemedText>
+            <TextInput
+              style={styles.input}
+              value={form.court_room_address}
+              onChangeText={(v) => {
+                setForm((prev) => ({ ...prev, court_room_address: v }));
+                setError(null);
+              }}
+              placeholder="e.g. Building A, 2nd Floor"
+              placeholderTextColor={C.gray50}
             />
-            <FormFieldWithHint
-              label="Phone"
-              value={form.phone}
-              onChangeText={(v) => update({ phone: v })}
-              placeholder="Phone number"
-              keyboardType="phone-pad"
-            />
-            <FormFieldWithHint
-              label="Email"
-              value={form.email}
-              onChangeText={(v) => update({ email: v })}
-              placeholder="Email (if any)"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <FormFieldWithHint
-              label="Care of"
-              value={form.careOf}
-              onChangeText={(v) => update({ careOf: v })}
-              placeholder="Care of (e.g. father's name)"
-            />
-            {error ? (
-              <ThemedText style={styles.errorText}>{error}</ThemedText>
-            ) : null}
+
+            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+
             <View style={styles.buttons}>
               <Pressable
                 style={[styles.btn, styles.btnSecondary]}
@@ -275,13 +298,13 @@ export function AddNewClientModal({
               </Pressable>
               <Pressable
                 style={[styles.btn, styles.btnPrimary]}
-                onPress={handleSave}
+                onPress={() => void handleSave()}
                 disabled={saving}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color={onPrimary} />
                 ) : (
-                  <ThemedText style={styles.btnPrimaryText}>Save Client</ThemedText>
+                  <ThemedText style={styles.btnPrimaryText}>Save judge</ThemedText>
                 )}
               </Pressable>
             </View>

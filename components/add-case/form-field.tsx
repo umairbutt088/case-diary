@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type Props = {
   label: string;
@@ -10,7 +12,28 @@ type Props = {
   children: React.ReactNode;
 };
 
+function createFormFieldStyles(C: AppColors) {
+  return StyleSheet.create({
+    wrap: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: C.black90,
+      marginBottom: 4,
+    },
+    hint: {
+      fontSize: 13,
+      marginBottom: 8,
+    },
+  });
+}
+
 export function FormField({ label, required, hint, children }: Props) {
+  const C = useThemePalette();
+  const styles = useMemo(() => createFormFieldStyles(C), [C]);
+
   return (
     <View style={styles.wrap}>
       <ThemedText style={styles.label}>
@@ -18,11 +41,7 @@ export function FormField({ label, required, hint, children }: Props) {
         {required ? " *" : ""}
       </ThemedText>
       {hint ? (
-        <ThemedText
-          style={styles.hint}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
-        >
+        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
           {hint}
         </ThemedText>
       ) : null}
@@ -30,19 +49,3 @@ export function FormField({ label, required, hint, children }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.black90,
-    marginBottom: 4,
-  },
-  hint: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
-});

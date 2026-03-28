@@ -13,8 +13,10 @@ import { Swipeable } from "react-native-gesture-handler";
 import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
 import { COURT_TIERS } from "@/constants/case-form";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useIsOnline } from "@/hooks/use-is-online";
 import {
   addCachedCustomCourtTier,
@@ -41,6 +43,133 @@ type CourtTierOption = {
   source: "default" | "custom";
 };
 
+function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
+  return StyleSheet.create({
+    dropdownWrap: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      overflow: "hidden",
+      backgroundColor: C.pureWhite,
+    },
+    trigger: {
+      minHeight: 48,
+      paddingHorizontal: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    triggerText: {
+      fontSize: 16,
+      color: C.black,
+      flex: 1,
+    },
+    placeholder: {
+      color: C.gray50,
+    },
+    triggerRowError: {
+      borderColor: C.themeRed,
+    },
+    dropdown: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: C.grey100,
+      backgroundColor: C.grey100,
+      padding: 12,
+    },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      backgroundColor: C.pureWhite,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: C.black,
+    },
+    addRow: {
+      flexDirection: "row",
+      marginTop: 10,
+      gap: 8,
+    },
+    addInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      backgroundColor: C.pureWhite,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: C.black,
+    },
+    addBtn: {
+      minWidth: 72,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.themeBlack,
+      paddingHorizontal: 12,
+    },
+    addBtnDisabled: {
+      opacity: 0.6,
+    },
+    addBtnText: {
+      color: onPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    list: {
+      maxHeight: 220,
+      marginTop: 10,
+      borderRadius: 10,
+      backgroundColor: C.pureWhite,
+      overflow: "hidden",
+    },
+    option: {
+      minHeight: 44,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.grey100,
+    },
+    optionText: {
+      fontSize: 15,
+      color: C.black,
+      flex: 1,
+      marginRight: 8,
+    },
+    deleteAction: {
+      width: 92,
+      backgroundColor: C.themeRed,
+      justifyContent: "center",
+      alignItems: "center",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.grey100,
+      gap: 4,
+    },
+    deleteActionDisabled: {
+      opacity: 0.8,
+    },
+    deleteActionText: {
+      color: onPrimary,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    loadingWrap: {
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    errorText: {
+      color: C.themeRed,
+      fontSize: 13,
+      marginTop: 6,
+    },
+  });
+}
+
 export function CourtTierPicker({
   label,
   required = false,
@@ -51,6 +180,13 @@ export function CourtTierPicker({
 }: Props) {
   const { session } = useAuth();
   const isOnline = useIsOnline();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const styles = useMemo(
+    () => createCourtTierPickerStyles(C, onPrimary),
+    [C, onPrimary],
+  );
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -228,7 +364,7 @@ export function CourtTierPicker({
           <MaterialIcons
             name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
             size={24}
-            color={theme.colors.gray50}
+            color={C.gray50}
           />
         </Pressable>
 
@@ -239,7 +375,7 @@ export function CourtTierPicker({
               value={search}
               onChangeText={setSearch}
               placeholder="Search court tiers..."
-              placeholderTextColor={theme.colors.gray50}
+              placeholderTextColor={C.gray50}
             />
 
             <View style={styles.addRow}>
@@ -251,7 +387,7 @@ export function CourtTierPicker({
                   setAddError(null);
                 }}
                 placeholder="Add new court tier"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
               <Pressable
                 style={[styles.addBtn, (!newTier.trim() || addingTier) && styles.addBtnDisabled]}
@@ -259,7 +395,7 @@ export function CourtTierPicker({
                 disabled={!newTier.trim() || addingTier}
               >
                 {addingTier ? (
-                  <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                  <ActivityIndicator size="small" color={onPrimary} />
                 ) : (
                   <ThemedText style={styles.addBtnText}>Add</ThemedText>
                 )}
@@ -270,7 +406,7 @@ export function CourtTierPicker({
 
             {loading ? (
               <View style={styles.loadingWrap}>
-                <ActivityIndicator size="small" color={theme.colors.black} />
+                <ActivityIndicator size="small" color={C.black} />
               </View>
             ) : (
               <ScrollView
@@ -294,13 +430,13 @@ export function CourtTierPicker({
                           disabled={deletingTier === opt.value}
                         >
                           {deletingTier === opt.value ? (
-                            <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                            <ActivityIndicator size="small" color={onPrimary} />
                           ) : (
                             <>
                               <MaterialIcons
                                 name="delete-outline"
                                 size={18}
-                                color={theme.colors.pureWhite}
+                                color={onPrimary}
                               />
                               <ThemedText style={styles.deleteActionText}>Delete</ThemedText>
                             </>
@@ -318,7 +454,7 @@ export function CourtTierPicker({
                       >
                         <ThemedText style={styles.optionText}>{opt.label}</ThemedText>
                         {value === opt.value ? (
-                          <MaterialIcons name="check" size={20} color={theme.colors.themeBlack} />
+                          <MaterialIcons name="check" size={20} color={C.themeBlack} />
                         ) : null}
                       </Pressable>
                     </Swipeable>
@@ -334,7 +470,7 @@ export function CourtTierPicker({
                     >
                       <ThemedText style={styles.optionText}>{opt.label}</ThemedText>
                       {value === opt.value ? (
-                        <MaterialIcons name="check" size={20} color={theme.colors.themeBlack} />
+                        <MaterialIcons name="check" size={20} color={C.themeBlack} />
                       ) : null}
                     </Pressable>
                   ),
@@ -348,128 +484,3 @@ export function CourtTierPicker({
     </FormField>
   );
 }
-
-const styles = StyleSheet.create({
-  dropdownWrap: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: theme.colors.pureWhite,
-  },
-  trigger: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  triggerText: {
-    fontSize: 16,
-    color: theme.colors.black,
-    flex: 1,
-  },
-  placeholder: {
-    color: theme.colors.gray50,
-  },
-  triggerRowError: {
-    borderColor: theme.colors.themeRed,
-  },
-  dropdown: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.grey100,
-    backgroundColor: theme.colors.grey100,
-    padding: 12,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: theme.colors.black,
-  },
-  addRow: {
-    flexDirection: "row",
-    marginTop: 10,
-    gap: 8,
-  },
-  addInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: theme.colors.black,
-  },
-  addBtn: {
-    minWidth: 72,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.themeBlack,
-    paddingHorizontal: 12,
-  },
-  addBtnDisabled: {
-    opacity: 0.6,
-  },
-  addBtnText: {
-    color: theme.colors.pureWhite,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  list: {
-    maxHeight: 220,
-    marginTop: 10,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    overflow: "hidden",
-  },
-  option: {
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.grey100,
-  },
-  optionText: {
-    fontSize: 15,
-    color: theme.colors.black,
-    flex: 1,
-    marginRight: 8,
-  },
-  deleteAction: {
-    width: 92,
-    backgroundColor: theme.colors.themeRed,
-    justifyContent: "center",
-    alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.grey100,
-    gap: 4,
-  },
-  deleteActionDisabled: {
-    opacity: 0.8,
-  },
-  deleteActionText: {
-    color: theme.colors.pureWhite,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  loadingWrap: {
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  errorText: {
-    color: theme.colors.themeRed,
-    fontSize: 13,
-    marginTop: 6,
-  },
-});

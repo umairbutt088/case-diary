@@ -1,12 +1,14 @@
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCaseHearingHistory } from "@/lib/case-hearings";
 import { supabase } from "@/lib/supabase";
 import { formatCaseDate, getCaseDisplayTitle, type CaseRow } from "@/types/case";
@@ -14,9 +16,76 @@ import type { CaseHearingRow } from "@/types/case-hearing";
 
 const HEARINGS_PAGE_SIZE = 10;
 
+function createHearingsStyles(C: AppColors) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    caseTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 14,
+    },
+    card: {
+      borderRadius: 12,
+      backgroundColor: C.pureWhite,
+      padding: 14,
+      marginBottom: 12,
+      ...theme.shadow,
+    },
+    dateText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 6,
+    },
+    proceedingText: {
+      fontSize: 16,
+      color: C.black,
+      marginBottom: 6,
+    },
+    nextText: {
+      fontSize: 13,
+      color: C.gray50,
+    },
+    emptyText: {
+      fontSize: 15,
+      color: C.gray50,
+    },
+    errorText: {
+      marginBottom: 10,
+      color: C.themeRed,
+      fontSize: 14,
+    },
+    loadingMoreWrap: {
+      marginTop: 8,
+      paddingVertical: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    loadingMoreText: {
+      fontSize: 13,
+      color: C.gray50,
+    },
+  });
+}
+
 export default function CaseHearingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
+  const C = useThemePalette();
+  const styles = useMemo(() => createHearingsStyles(C), [C]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +169,7 @@ export default function CaseHearingsScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="All hearings" />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
+          <ActivityIndicator size="large" color={C.black} />
         </View>
       </SafeAreaView>
     );
@@ -112,6 +181,7 @@ export default function CaseHearingsScreen() {
       <FlatList
         data={hearingHistory}
         keyExtractor={(entry) => entry.id}
+        style={{ backgroundColor: C.background }}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         onEndReachedThreshold={0.35}
@@ -148,7 +218,7 @@ export default function CaseHearingsScreen() {
           hasMore ? (
             <View style={styles.loadingMoreWrap}>
               {loadingMore ? (
-                <ActivityIndicator size="small" color={theme.colors.black} />
+                <ActivityIndicator size="small" color={C.black} />
               ) : (
                 <ThemedText style={styles.loadingMoreText}>Scroll for more hearings</ThemedText>
               )}
@@ -159,66 +229,3 @@ export default function CaseHearingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  caseTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginBottom: 14,
-  },
-  card: {
-    borderRadius: 12,
-    backgroundColor: theme.colors.pureWhite,
-    padding: 14,
-    marginBottom: 12,
-    ...theme.shadow,
-  },
-  dateText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginBottom: 6,
-  },
-  proceedingText: {
-    fontSize: 16,
-    color: theme.colors.black,
-    marginBottom: 6,
-  },
-  nextText: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: theme.colors.gray50,
-  },
-  errorText: {
-    marginBottom: 10,
-    color: theme.colors.themeRed,
-    fontSize: 14,
-  },
-  loadingMoreWrap: {
-    marginTop: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingMoreText: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-  },
-});

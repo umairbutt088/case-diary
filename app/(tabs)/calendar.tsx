@@ -22,9 +22,10 @@ import {
 } from "@/components/calendar-case-card";
 import { ThemedText } from "@/components/themed-text";
 import { Spacer } from "@/components/ui";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, setCachedCases } from "@/lib/cases-cache";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
@@ -32,25 +33,26 @@ import { getCaseDisplayTitle, getTodayISO } from "@/types/case";
 
 const WalkthroughableView = walkthroughable(View);
 
-// Theme for calendar: white bg, black text, weekends red, selected outline, marked grey
-const CALENDAR_THEME = {
-  calendarBackground: theme.colors.pureWhite,
-  textSectionTitleColor: theme.colors.black,
-  selectedDayBackgroundColor: "transparent",
-  selectedDayTextColor: theme.colors.black,
-  todayTextColor: theme.colors.black,
-  dayTextColor: theme.colors.black,
-  textDisabledColor: theme.colors.gray40,
-  textInactiveColor: theme.colors.gray40,
-  monthTextColor: theme.colors.black,
-  arrowColor: theme.colors.black,
-  textDayFontWeight: "400" as const,
-  textMonthFontWeight: "600" as const,
-  textDayHeaderFontWeight: "500" as const,
-  textDayFontSize: 15,
-  textMonthFontSize: 18,
-  textDayHeaderFontSize: 13,
-};
+function buildCalendarTheme(C: AppColors) {
+  return {
+    calendarBackground: C.pureWhite,
+    textSectionTitleColor: C.black,
+    selectedDayBackgroundColor: "transparent",
+    selectedDayTextColor: C.black,
+    todayTextColor: C.black,
+    dayTextColor: C.black,
+    textDisabledColor: C.gray40,
+    textInactiveColor: C.gray40,
+    monthTextColor: C.black,
+    arrowColor: C.black,
+    textDayFontWeight: "400" as const,
+    textMonthFontWeight: "600" as const,
+    textDayHeaderFontWeight: "500" as const,
+    textDayFontSize: 15,
+    textMonthFontSize: 18,
+    textDayHeaderFontSize: 13,
+  };
+}
 
 /** Build map of date (YYYY-MM-DD) -> number of unique cases (hearing or filing on that date) */
 function buildDateToCount(cases: CaseRow[]): Record<string, number> {
@@ -78,6 +80,7 @@ function getMarkedDates(
   selectedDate: string,
   currentMonth: string,
   dateToCount: Record<string, number>,
+  C: AppColors,
 ) {
   const [year, month] = currentMonth.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -97,12 +100,12 @@ function getMarkedDates(
       marked[dateString] = {
         selected: true,
         selectedColor: "transparent",
-        selectedTextColor: theme.colors.black,
+        selectedTextColor: C.black,
         caseCount,
         customStyles: {
           container: {
             borderWidth: 2,
-            borderColor: theme.colors.cream60,
+            borderColor: C.cream60,
             borderRadius: 20,
             backgroundColor: "transparent",
           },
@@ -114,11 +117,11 @@ function getMarkedDates(
         caseCount,
         customStyles: {
           container: {
-            backgroundColor: theme.colors.grey100,
+            backgroundColor: C.grey100,
             borderRadius: 20,
           },
           text: {
-            color: theme.colors.gray30,
+            color: C.gray30,
           },
         },
       };
@@ -127,7 +130,7 @@ function getMarkedDates(
         caseCount: 0,
         customStyles: {
           text: {
-            color: theme.colors.themeRed,
+            color: C.themeRed,
           },
         },
       };
@@ -138,12 +141,12 @@ function getMarkedDates(
     marked[selectedDate] = {
       selected: true,
       selectedColor: "transparent",
-      selectedTextColor: theme.colors.black,
+      selectedTextColor: C.black,
       caseCount: dateToCount[selectedDate] ?? 0,
       customStyles: {
         container: {
           borderWidth: 2,
-          borderColor: theme.colors.cream60,
+          borderColor: C.cream60,
           borderRadius: 20,
           backgroundColor: "transparent",
         },
@@ -162,6 +165,48 @@ type MarkingWithCount = {
   caseCount?: number;
 };
 
+function createCalendarDayStyles(C: AppColors) {
+  return StyleSheet.create({
+    base: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    selected: {
+      borderWidth: 2,
+      borderColor: C.cream60,
+    },
+    text: {
+      fontSize: 15,
+      color: C.black,
+    },
+    selectedText: {
+      fontWeight: "600",
+    },
+    badge: {
+      position: "absolute",
+      bottom: -2,
+      right: -2,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: C.themeBlack,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 4,
+    },
+    badgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: C.pureWhite,
+    },
+  });
+}
+
+type CalendarDayStyles = ReturnType<typeof createCalendarDayStyles>;
+
 /** Custom day: day number + badge with case count */
 function CalendarDayWithBadge(props: {
   date?: DateData;
@@ -170,19 +215,21 @@ function CalendarDayWithBadge(props: {
   theme?: object;
   onPress?: (date: DateData) => void;
   children?: React.ReactNode;
+  calendarDayStyles: CalendarDayStyles;
 }) {
-  const { date, marking, onPress, children } = props;
+  const { date, marking, onPress, children, calendarDayStyles } = props;
+  const ds = calendarDayStyles;
   const caseCount = marking?.caseCount ?? 0;
   const isSelected = marking?.selected ?? props.state === "selected";
   const containerStyle = [
-    dayStyles.base,
+    ds.base,
     marking?.customStyles?.container,
-    isSelected && dayStyles.selected,
+    isSelected && ds.selected,
   ];
   const textStyle = [
-    dayStyles.text,
+    ds.text,
     marking?.customStyles?.text,
-    isSelected && dayStyles.selectedText,
+    isSelected && ds.selectedText,
     isSelected && marking?.selectedTextColor
       ? { color: marking.selectedTextColor }
       : undefined,
@@ -202,8 +249,8 @@ function CalendarDayWithBadge(props: {
         {children}
       </Text>
       {caseCount > 0 && (
-        <View style={dayStyles.badge}>
-          <Text style={dayStyles.badgeText} allowFontScaling={false}>
+        <View style={ds.badge}>
+          <Text style={ds.badgeText} allowFontScaling={false}>
             {caseCount > 99 ? "99+" : caseCount}
           </Text>
         </View>
@@ -211,44 +258,6 @@ function CalendarDayWithBadge(props: {
     </TouchableOpacity>
   );
 }
-
-const dayStyles = StyleSheet.create({
-  base: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  selected: {
-    borderWidth: 2,
-    borderColor: theme.colors.cream60,
-  },
-  text: {
-    fontSize: 15,
-    color: theme.colors.black,
-  },
-  selectedText: {
-    fontWeight: "600",
-  },
-  badge: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: theme.colors.themeBlack,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: theme.colors.pureWhite,
-  },
-});
 
 /** Map CaseRow to CalendarCaseItem for a given date (subtitle = Hearing / Filed / both) */
 function caseToCalendarItem(c: CaseRow, date: string): CalendarCaseItem {
@@ -274,6 +283,88 @@ function caseToCalendarItem(c: CaseRow, date: string): CalendarCaseItem {
   };
 }
 
+function createCalendarScreenStyles(C: AppColors) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 24,
+    },
+    calendarWrap: {
+      backgroundColor: C.pureWhite,
+      paddingHorizontal: 8,
+    },
+    addDateSection: {
+      marginHorizontal: 20,
+      marginTop: 16,
+    },
+    addDateButton: {
+      backgroundColor: C.themeBlack,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    addDateButtonText: {
+      color: C.pureWhite,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    addDateHint: {
+      fontSize: 13,
+      marginTop: 8,
+      paddingHorizontal: 4,
+      textAlign: "center",
+    },
+    caseList: {
+      marginTop: 20,
+      paddingHorizontal: 20,
+    },
+    addDateSectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.black,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    caseListTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.black,
+      marginBottom: 12,
+    },
+    noCases: {
+      fontSize: 14,
+      color: C.gray50,
+    },
+    errorWrap: {
+      marginTop: 4,
+    },
+    errorText: {
+      fontSize: 14,
+      color: C.themeRed,
+      marginBottom: 12,
+    },
+    retryButton: {
+      alignSelf: "flex-start",
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 10,
+      backgroundColor: C.btnBlue,
+    },
+    retryButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: C.pureWhite,
+    },
+  });
+}
+
 export default function CalendarScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date?: string }>();
@@ -290,6 +381,10 @@ export default function CalendarScreen() {
 
   const { session } = useAuth();
   const isOnline = useIsOnline();
+  const C = useThemePalette();
+  const styles = useMemo(() => createCalendarScreenStyles(C), [C]);
+  const calendarTheme = useMemo(() => buildCalendarTheme(C), [C]);
+  const calendarDayStyles = useMemo(() => createCalendarDayStyles(C), [C]);
 
   useFocusEffect(
     useCallback(() => {
@@ -380,8 +475,8 @@ export default function CalendarScreen() {
   const dateToCount = useMemo(() => buildDateToCount(cases), [cases]);
 
   const markedDates = useMemo(
-    () => getMarkedDates(selectedDate, currentMonth, dateToCount),
-    [selectedDate, currentMonth, dateToCount],
+    () => getMarkedDates(selectedDate, currentMonth, dateToCount, C),
+    [selectedDate, currentMonth, dateToCount, C],
   );
 
   const casesForSelectedDate = useMemo(() => {
@@ -415,8 +510,8 @@ export default function CalendarScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[theme.colors.black]}
-            tintColor={theme.colors.black}
+            colors={[C.black]}
+            tintColor={C.black}
           />
         }
       >
@@ -427,11 +522,16 @@ export default function CalendarScreen() {
             onMonthChange={onMonthChange}
             markedDates={markedDates}
             markingType="custom"
-            theme={CALENDAR_THEME}
+            theme={calendarTheme}
             enableSwipeMonths
             hideExtraDays={false}
             firstDay={0}
-            dayComponent={(props) => <CalendarDayWithBadge {...props} />}
+            dayComponent={(props) => (
+              <CalendarDayWithBadge
+                {...props}
+                calendarDayStyles={calendarDayStyles}
+              />
+            )}
           />
         </View>
         <Spacer.Column numberOfSpaces={5} />
@@ -464,8 +564,8 @@ export default function CalendarScreen() {
           </CopilotStep>
           <ThemedText
             style={styles.addDateHint}
-            lightColor={theme.colors.gray50}
-            darkColor={theme.colors.gray50}
+            lightColor={C.gray50}
+            darkColor={C.gray50}
           >
             Pick a case from the list.{"\n"}Its next hearing date will be set to
             this day.
@@ -505,83 +605,3 @@ export default function CalendarScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  calendarWrap: {
-    backgroundColor: theme.colors.pureWhite,
-    paddingHorizontal: 8,
-  },
-  addDateSection: {
-    marginHorizontal: 20,
-    marginTop: 16,
-  },
-  addDateButton: {
-    backgroundColor: theme.colors.themeBlack,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  addDateButtonText: {
-    color: theme.colors.pureWhite,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  addDateHint: {
-    fontSize: 13,
-    marginTop: 8,
-    paddingHorizontal: 4,
-    textAlign: "center",
-  },
-  caseList: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  addDateSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.black,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  caseListTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.black,
-    marginBottom: 12,
-  },
-  noCases: {
-    fontSize: 14,
-    color: theme.colors.gray50,
-  },
-  errorWrap: {
-    marginTop: 4,
-  },
-  errorText: {
-    fontSize: 14,
-    color: theme.colors.themeRed,
-    marginBottom: 12,
-  },
-  retryButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    backgroundColor: theme.colors.btnBlue,
-  },
-  retryButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.pureWhite,
-  },
-});

@@ -8,112 +8,141 @@ import { Platform, StatusBar as RNStatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
-
-
 import { AuthNavigator } from "@/components/auth-navigator";
 import { OfflineSyncProvider } from "@/components/offline-sync-provider";
 import { PushNotificationProvider } from "@/components/push-notification-provider";
+import { AppThemeProvider, useAppTheme } from "@/context/app-theme-context";
 import { AuthProvider } from "@/context/auth-context";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { CopilotProvider } from "react-native-copilot";
 
 export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+const NavigationDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: "#FFFFFF",
+    background: "#000000",
+    card: "#3A3A3C",
+    text: "#FFFFFF",
+    border: "#48484A",
+    notification: "#FF453A",
+  },
+};
+
+function RootLayoutInner() {
+  const { isDark, colors } = useAppTheme();
   const isAndroid = Platform.OS === "android";
   const statusBarStyle = isAndroid
-    ? "dark-content"
-    : colorScheme === "dark"
+    ? isDark
+      ? "light-content"
+      : "dark-content"
+    : isDark
       ? "light-content"
       : "dark-content";
   const statusBarBackground = isAndroid
-    ? "#F9F9FB"
-    : colorScheme === "dark"
-      ? "#1A1A1A"
-      : "#F9F9FB";
+    ? colors.background
+    : colors.background;
+
+  const navigationTheme = isDark ? NavigationDarkTheme : DefaultTheme;
 
   return (
+    <ThemeProvider value={navigationTheme}>
+      <AuthProvider>
+        <OfflineSyncProvider>
+          <PushNotificationProvider>
+            <CopilotProvider
+              overlay="svg"
+              backdropColor="rgba(0,0,0,0.75)"
+              animated={true}
+              verticalOffset={
+                Platform.OS === "android"
+                  ? RNStatusBar.currentHeight ?? 24
+                  : 0
+              }
+            >
+              <AuthNavigator>
+                <Stack>
+                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="add-case-flow"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="add-date-to-case"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="case/[id]"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="case/[id]/edit"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="case/[id]/hearings"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="notes"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="clients"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="judges"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="settings"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                </Stack>
+              </AuthNavigator>
+            </CopilotProvider>
+          </PushNotificationProvider>
+        </OfflineSyncProvider>
+      </AuthProvider>
+      <RNStatusBar
+        barStyle={statusBarStyle}
+        backgroundColor={statusBarBackground}
+        translucent={false}
+        hidden={false}
+      />
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <AuthProvider>
-          <OfflineSyncProvider>
-            <PushNotificationProvider>
-              <CopilotProvider
-                overlay="svg"
-                backdropColor="rgba(0,0,0,0.75)"
-                animated={true}
-                verticalOffset={
-                  Platform.OS === "android"
-                    ? RNStatusBar.currentHeight ?? 24
-                    : 0
-                }
-              >
-                <AuthNavigator>
-                  <Stack>
-                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen
-                      name="add-case-flow"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
-                      name="add-date-to-case"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="case/[id]"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
-                      name="case/[id]/edit"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
-                      name="case/[id]/hearings"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
-                      name="notes"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
-                      name="clients"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
-                      name="judges"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                  </Stack>
-                </AuthNavigator>
-              </CopilotProvider>
-            </PushNotificationProvider>
-          </OfflineSyncProvider>
-        </AuthProvider>
-        <RNStatusBar
-          barStyle={statusBarStyle}
-          backgroundColor={statusBarBackground}
-          translucent={false}
-          hidden={false}
-        />
-      </ThemeProvider>
+      <AppThemeProvider>
+        <RootLayoutInner />
+      </AppThemeProvider>
     </GestureHandlerRootView>
   );
 }

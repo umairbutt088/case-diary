@@ -3,7 +3,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,8 +24,14 @@ import { ThemedText } from "@/components/themed-text";
 import { DateField } from "@/components/add-case/date-field";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import {
+  type AppColors,
+  modalSheetBackground,
+} from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useIsOnline } from "@/hooks/use-is-online";
 import {
   getCachedCaseById,
@@ -43,6 +49,323 @@ import type { ClientRow } from "@/types/client";
 import { getPartyTerminology } from "@/constants/case-form";
 
 const DETAIL_HEARING_PAGE_SIZE = 20;
+
+type CaseDetailStyles = ReturnType<typeof createCaseDetailStyles>;
+
+function createCaseDetailStyles(
+  C: AppColors,
+  onPrimary: string,
+  modalSheet: string,
+) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    editBtn: {
+      minWidth: 34,
+      minHeight: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 6,
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    shareBtn: {
+      minWidth: 34,
+      minHeight: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 6,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    card: {
+      backgroundColor: C.pureWhite,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 16,
+      ...theme.shadow,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.gray50,
+      marginBottom: 16,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    detailRow: {
+      marginBottom: 14,
+    },
+    detailLabel: {
+      fontSize: 13,
+      color: C.gray50,
+      marginBottom: 4,
+    },
+    detailValue: {
+      fontSize: 16,
+      color: C.black,
+    },
+    historyItem: {
+      marginBottom: 14,
+      paddingBottom: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.borderGray,
+    },
+    historyDate: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: C.black,
+      marginBottom: 4,
+    },
+    historyProceeding: {
+      fontSize: 15,
+      color: C.black,
+      marginBottom: 4,
+    },
+    historyNext: {
+      fontSize: 13,
+      color: C.gray50,
+    },
+    currentHearingCard: {
+      marginBottom: 14,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: C.cream50,
+    },
+    currentHearingTitle: {
+      fontSize: 12,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+      color: C.gray50,
+      marginBottom: 4,
+      fontWeight: "600",
+    },
+    currentHearingDate: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 6,
+    },
+    currentHearingDetail: {
+      fontSize: 15,
+      color: C.black,
+    },
+    previousHeading: {
+      fontSize: 12,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+      color: C.gray50,
+      marginBottom: 10,
+      fontWeight: "600",
+    },
+    seeAllBtn: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+    },
+    seeAllBtnText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: C.black,
+    },
+    addProceedingBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 14,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      backgroundColor: C.cream50,
+    },
+    addProceedingText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: C.black,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.35)",
+    },
+    modalRoot: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: modalSheet,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      padding: 16,
+      maxHeight: "80%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: C.black,
+    },
+    modalClose: {
+      minWidth: 32,
+      minHeight: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 16,
+      backgroundColor: C.background,
+    },
+    proceedingForm: {
+      flexGrow: 0,
+      maxHeight: "100%",
+    },
+    proceedingFormContent: {
+      marginBottom: 8,
+      padding: 8,
+      borderRadius: 10,
+      backgroundColor: C.background,
+    },
+    previousInfoBox: {
+      marginBottom: 10,
+      borderRadius: 8,
+      backgroundColor: C.cream50,
+      padding: 10,
+    },
+    previousInfoLabel: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: C.gray50,
+      textTransform: "uppercase",
+      marginBottom: 4,
+    },
+    previousInfoDate: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 2,
+    },
+    previousInfoText: {
+      fontSize: 14,
+      color: C.black,
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: C.gray50,
+      marginBottom: 6,
+      marginTop: 8,
+      textTransform: "uppercase",
+    },
+    textInput: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: C.black,
+      backgroundColor: C.background,
+    },
+    textArea: {
+      minHeight: 72,
+      textAlignVertical: "top",
+    },
+    formErrorText: {
+      marginTop: 10,
+      fontSize: 13,
+      color: C.themeRed,
+    },
+    saveProceedingBtn: {
+      marginTop: 12,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: "center",
+      backgroundColor: C.themeBlack,
+    },
+    saveProceedingBtnText: {
+      color: onPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    detailValueRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      width: "100%",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    detailValuePressable: {
+      flex: 1,
+    },
+    copyIconButton: {
+      padding: 4,
+      alignSelf: "flex-end",
+    },
+    copyToastWrap: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    copyToastText: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      fontSize: 14,
+      color: "#FFFFFF",
+      backgroundColor: "rgba(0,0,0,0.82)",
+      overflow: "hidden",
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    errorText: {
+      color: C.themeRed,
+      fontSize: 16,
+    },
+    deleteButton: {
+      marginTop: 24,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      alignItems: "center",
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: C.themeRed,
+    },
+    deleteButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.themeRed,
+    },
+  });
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -141,41 +464,45 @@ function DetailRow({
   onValueLongPress,
   valueAccessibilityHint,
   onCopyPress,
+  s,
+  C,
 }: {
   label: string;
   value: string | null | undefined;
   onValueLongPress?: () => void;
   valueAccessibilityHint?: string;
   onCopyPress?: () => void;
+  s: CaseDetailStyles;
+  C: AppColors;
 }) {
   const text = value?.trim() || "—";
   return (
-    <View style={styles.detailRow}>
-      <ThemedText style={styles.detailLabel}>{label}</ThemedText>
-      <View style={styles.detailValueRow}>
+    <View style={s.detailRow}>
+      <ThemedText style={s.detailLabel}>{label}</ThemedText>
+      <View style={s.detailValueRow}>
         {onValueLongPress ? (
           <Pressable
             onLongPress={onValueLongPress}
             delayLongPress={250}
             accessibilityLabel={`${label}: ${text}`}
             accessibilityHint={valueAccessibilityHint}
-            style={styles.detailValuePressable}
+            style={s.detailValuePressable}
           >
-            <ThemedText style={styles.detailValue}>{text}</ThemedText>
+            <ThemedText style={s.detailValue}>{text}</ThemedText>
           </Pressable>
         ) : (
-          <ThemedText style={[styles.detailValue, styles.detailValuePressable]}>
+          <ThemedText style={[s.detailValue, s.detailValuePressable]}>
             {text}
           </ThemedText>
         )}
         {onCopyPress ? (
           <Bounceable
             onPress={onCopyPress}
-            style={styles.copyIconButton}
+            style={s.copyIconButton}
             hitSlop={8}
             accessibilityLabel={`Copy ${label}`}
           >
-            <MaterialIcons name="content-copy" size={16} color={theme.colors.gray50} />
+            <MaterialIcons name="content-copy" size={16} color={C.gray50} />
           </Bounceable>
         ) : null}
       </View>
@@ -186,13 +513,15 @@ function DetailRow({
 function SectionCard({
   title,
   children,
+  s,
 }: {
   title: string;
   children: React.ReactNode;
+  s: CaseDetailStyles;
 }) {
   return (
-    <View style={styles.card}>
-      <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
+    <View style={s.card}>
+      <ThemedText style={s.sectionTitle}>{title}</ThemedText>
       {children}
     </View>
   );
@@ -203,6 +532,14 @@ export default function CaseDetailScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const isOnline = useIsOnline();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(
+    () => createCaseDetailStyles(C, onPrimary, modalSheet),
+    [C, onPrimary, modalSheet],
+  );
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
   const [linkedClient, setLinkedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -329,7 +666,7 @@ export default function CaseDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
+          <ActivityIndicator size="large" color={C.black} />
         </View>
       </SafeAreaView>
     );
@@ -511,9 +848,9 @@ export default function CaseDetailScreen() {
               accessibilityLabel="Share case summary"
             >
               {isSharingCase ? (
-                <ActivityIndicator size="small" color={theme.colors.black} />
+                <ActivityIndicator size="small" color={C.black} />
               ) : (
-                <MaterialIcons name="share" size={20} color={theme.colors.black} />
+                <MaterialIcons name="share" size={20} color={C.black} />
               )}
             </Bounceable>
             <Bounceable
@@ -521,7 +858,7 @@ export default function CaseDetailScreen() {
               onPress={() => router.push(`/case/${id}/edit`)}
               accessibilityLabel="Edit case"
             >
-              <MaterialIcons name="edit" size={20} color={theme.colors.black} />
+              <MaterialIcons name="edit" size={20} color={C.black} />
             </Bounceable>
           </View>
         }
@@ -532,28 +869,32 @@ export default function CaseDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
-          <SectionCard title="Parties & type">
-            <DetailRow label={partyTerms.firstParty} value={caseData.petitioner_name} />
-            <DetailRow label={partyTerms.secondParty} value={caseData.respondent_name} />
+          <SectionCard s={styles} title="Parties & type">
+            <DetailRow s={styles} C={C} label={partyTerms.firstParty} value={caseData.petitioner_name} />
+            <DetailRow s={styles} C={C} label={partyTerms.secondParty} value={caseData.respondent_name} />
             <DetailRow
+              s={styles}
+              C={C}
               label="Case number"
               value={caseData.case_number}
               onValueLongPress={() => void copyCaseNumber()}
               onCopyPress={() => void copyCaseNumber()}
               valueAccessibilityHint="Long press to copy case number"
             />
-            <DetailRow label="Case type" value={caseData.case_type} />
-            <DetailRow label="Type of case" value={caseData.case_sub_type} />
+            <DetailRow s={styles} C={C} label="Case type" value={caseData.case_type} />
+            <DetailRow s={styles} C={C} label="Type of case" value={caseData.case_sub_type} />
           </SectionCard>
 
-          <SectionCard title="Court">
-            <DetailRow label="Court tier" value={caseData.court_tier} />
-            <DetailRow label="Court room location" value={caseData.court_room} />
-            <DetailRow label="Judge name" value={caseData.judge_name} />
+          <SectionCard s={styles} title="Court">
+            <DetailRow s={styles} C={C} label="Court tier" value={caseData.court_tier} />
+            <DetailRow s={styles} C={C} label="Court room location" value={caseData.court_room} />
+            <DetailRow s={styles} C={C} label="Judge name" value={caseData.judge_name} />
           </SectionCard>
 
-          <SectionCard title="Client">
+          <SectionCard s={styles} title="Client">
             <DetailRow
+              s={styles}
+              C={C}
               label="My client is"
               value={
                 caseData.my_client_is === "petitioner"
@@ -565,30 +906,34 @@ export default function CaseDetailScreen() {
             />
             {linkedClient ? (
               <>
-                <DetailRow label="Client name" value={linkedClient.name} />
+                <DetailRow s={styles} C={C} label="Client name" value={linkedClient.name} />
                 {linkedClient.care_of?.trim() ? (
-                  <DetailRow label="Care of" value={linkedClient.care_of} />
+                  <DetailRow s={styles} C={C} label="Care of" value={linkedClient.care_of} />
                 ) : null}
                 {linkedClient.address?.trim() ? (
-                  <DetailRow label="Address" value={linkedClient.address} />
+                  <DetailRow s={styles} C={C} label="Address" value={linkedClient.address} />
                 ) : null}
                 {linkedClient.phone?.trim() ? (
-                  <DetailRow label="Phone" value={linkedClient.phone} />
+                  <DetailRow s={styles} C={C} label="Phone" value={linkedClient.phone} />
                 ) : null}
                 {linkedClient.email?.trim() ? (
-                  <DetailRow label="Email" value={linkedClient.email} />
+                  <DetailRow s={styles} C={C} label="Email" value={linkedClient.email} />
                 ) : null}
               </>
             ) : caseData.linked_client_name ? (
               <DetailRow
+                s={styles}
+                C={C}
                 label="Linked client"
                 value={caseData.linked_client_name}
               />
             ) : null}
           </SectionCard>
 
-          <SectionCard title="Dates & status">
+          <SectionCard s={styles} title="Dates & status">
             <DetailRow
+              s={styles}
+              C={C}
               label="Date of filing"
               value={
                 caseData.date_of_filing
@@ -597,6 +942,8 @@ export default function CaseDetailScreen() {
               }
             />
             <DetailRow
+              s={styles}
+              C={C}
               label="Next hearing date"
               value={
                 caseData.next_hearing_date
@@ -604,11 +951,11 @@ export default function CaseDetailScreen() {
                   : null
               }
             />
-            <DetailRow label="Current status" value={caseData.current_status} />
-            <DetailRow label="Next status" value={caseData.next_status} />
+            <DetailRow s={styles} C={C} label="Current status" value={caseData.current_status} />
+            <DetailRow s={styles} C={C} label="Next status" value={caseData.next_status} />
           </SectionCard>
 
-          <SectionCard title="Hearing history">
+          <SectionCard s={styles} title="Hearing history">
             <Bounceable
               style={styles.addProceedingBtn}
               onPress={() => {
@@ -619,7 +966,7 @@ export default function CaseDetailScreen() {
               <MaterialIcons
                 name={showProceedingForm ? "close" : "add"}
                 size={18}
-                color={theme.colors.black}
+                color={C.black}
               />
               <ThemedText style={styles.addProceedingText}>
                 Add proceeding
@@ -641,7 +988,7 @@ export default function CaseDetailScreen() {
             <ThemedText style={styles.previousHeading}>Previous hearings</ThemedText>
 
             {recentHearings.length === 0 ? (
-              <DetailRow label="Proceedings" value="No history yet" />
+              <DetailRow s={styles} C={C} label="Proceedings" value="No history yet" />
             ) : (
               recentHearings.map((entry) => (
                 <View key={entry.id} style={styles.historyItem}>
@@ -667,17 +1014,13 @@ export default function CaseDetailScreen() {
                 onPress={() => router.push(`/case/${id}/hearings`)}
               >
                 <ThemedText style={styles.seeAllBtnText}>See all hearings</ThemedText>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={18}
-                  color={theme.colors.black}
-                />
+                <MaterialIcons name="chevron-right" size={18} color={C.black} />
               </Bounceable>
             ) : null}
           </SectionCard>
 
-          <SectionCard title="Notes">
-            <DetailRow label="Notes" value={caseData.notes} />
+          <SectionCard s={styles} title="Notes">
+            <DetailRow s={styles} C={C} label="Notes" value={caseData.notes} />
           </SectionCard>
 
           <Bounceable
@@ -753,7 +1096,7 @@ export default function CaseDetailScreen() {
                   if (!savingProceeding) setShowProceedingForm(false);
                 }}
               >
-                <MaterialIcons name="close" size={20} color={theme.colors.black} />
+                <MaterialIcons name="close" size={20} color={C.black} />
               </Bounceable>
             </View>
 
@@ -779,7 +1122,7 @@ export default function CaseDetailScreen() {
                 value={nextStatusDraft}
                 onChangeText={setNextStatusDraft}
                 placeholder="e.g. Evidence, Final arguments"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 multiline
               />
 
@@ -817,312 +1160,3 @@ export default function CaseDetailScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  editBtn: {
-    minWidth: 34,
-    minHeight: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  shareBtn: {
-    minWidth: 34,
-    minHeight: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  card: {
-    backgroundColor: theme.colors.pureWhite,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    ...theme.shadow,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    marginBottom: 16,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  detailRow: {
-    marginBottom: 14,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: theme.colors.black,
-  },
-  historyItem: {
-    marginBottom: 14,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.borderGray,
-  },
-  historyDate: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.black,
-    marginBottom: 4,
-  },
-  historyProceeding: {
-    fontSize: 15,
-    color: theme.colors.black,
-    marginBottom: 4,
-  },
-  historyNext: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-  },
-  currentHearingCard: {
-    marginBottom: 14,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: theme.colors.cream50,
-  },
-  currentHearingTitle: {
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    color: theme.colors.gray50,
-    marginBottom: 4,
-    fontWeight: "600",
-  },
-  currentHearingDate: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginBottom: 6,
-  },
-  currentHearingDetail: {
-    fontSize: 15,
-    color: theme.colors.black,
-  },
-  previousHeading: {
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    color: theme.colors.gray50,
-    marginBottom: 10,
-    fontWeight: "600",
-  },
-  seeAllBtn: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-  },
-  seeAllBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  addProceedingBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: theme.colors.cream50,
-  },
-  addProceedingText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: theme.colors.pureWhite,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
-    maxHeight: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
-  },
-  modalClose: {
-    minWidth: 32,
-    minHeight: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    backgroundColor: theme.colors.background,
-  },
-  proceedingForm: {
-    flexGrow: 0,
-    maxHeight: "100%",
-  },
-  proceedingFormContent: {
-    marginBottom: 8,
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  previousInfoBox: {
-    marginBottom: 10,
-    borderRadius: 8,
-    backgroundColor: theme.colors.cream50,
-    padding: 10,
-  },
-  previousInfoLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  previousInfoDate: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginBottom: 2,
-  },
-  previousInfoText: {
-    fontSize: 14,
-    color: theme.colors.black,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    marginBottom: 6,
-    marginTop: 8,
-    textTransform: "uppercase",
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: theme.colors.black,
-    backgroundColor: theme.colors.background,
-  },
-  textArea: {
-    minHeight: 72,
-    textAlignVertical: "top",
-  },
-  formErrorText: {
-    marginTop: 10,
-    fontSize: 13,
-    color: theme.colors.themeRed,
-  },
-  saveProceedingBtn: {
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: theme.colors.black,
-  },
-  saveProceedingBtnText: {
-    color: theme.colors.pureWhite,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  detailValueRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  detailValuePressable: {
-    flex: 1,
-  },
-  copyIconButton: {
-    padding: 4,
-    alignSelf: "flex-end",
-  },
-  copyToastWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  copyToastText: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    fontSize: 14,
-    color: theme.colors.pureWhite,
-    backgroundColor: theme.colors.black + "CC",
-    overflow: "hidden",
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  errorText: {
-    color: theme.colors.themeRed,
-    fontSize: 16,
-  },
-  deleteButton: {
-    marginTop: 24,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: theme.colors.themeRed,
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.themeRed,
-  },
-});

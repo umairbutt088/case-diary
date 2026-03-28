@@ -1,8 +1,10 @@
 import type { TextInputProps } from "react-native";
+import { useMemo } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type Props = {
   label: string;
@@ -21,7 +23,61 @@ type Props = {
   | "numberOfLines"
   | "placeholderTextColor"
   | "onFocus"
+  | "keyboardType"
+  | "autoCapitalize"
 >;
+
+function createFormFieldWithHintStyles(C: AppColors) {
+  return StyleSheet.create({
+    wrap: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 8,
+    },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: C.themeGray3,
+      borderRadius: 10,
+      paddingLeft: 14,
+      paddingRight: 14,
+      minHeight: 48,
+    },
+    inputRowMultiline: {
+      alignItems: "flex-start",
+      minHeight: 100,
+    },
+    inputRowError: {
+      borderColor: C.themeRed,
+    },
+    input: {
+      flex: 1,
+      fontSize: 16,
+      color: C.black,
+      paddingVertical: 12,
+      minHeight: 44,
+      maxHeight: 120,
+    },
+    inputMultiline: {
+      minHeight: 100,
+      maxHeight: 200,
+    },
+    hint: {
+      fontSize: 13,
+      marginTop: 6,
+    },
+    error: {
+      fontSize: 13,
+      color: C.themeRed,
+      marginTop: 4,
+    },
+  });
+}
 
 export function FormFieldWithHint({
   label,
@@ -34,10 +90,16 @@ export function FormFieldWithHint({
   editable = true,
   multiline,
   numberOfLines,
-  placeholderTextColor = theme.colors.gray50,
+  placeholderTextColor,
   onFocus,
+  keyboardType,
+  autoCapitalize,
   inputStyle,
 }: Props) {
+  const C = useThemePalette();
+  const styles = useMemo(() => createFormFieldWithHintStyles(C), [C]);
+  const ph = placeholderTextColor ?? C.gray50;
+
   return (
     <View style={styles.wrap}>
       {label ? (
@@ -58,20 +120,18 @@ export function FormFieldWithHint({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={placeholderTextColor}
+          placeholderTextColor={ph}
           editable={editable}
           multiline={multiline}
           numberOfLines={numberOfLines}
           textAlignVertical={multiline ? "top" : "center"}
           onFocus={onFocus}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
         />
       </View>
       {hint ? (
-        <ThemedText
-          style={styles.hint}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
-        >
+        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
           {hint}
         </ThemedText>
       ) : null}
@@ -79,53 +139,3 @@ export function FormFieldWithHint({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginBottom: 8,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.themeGray3,
-    borderRadius: 10,
-    paddingLeft: 14,
-    paddingRight: 14,
-    minHeight: 48,
-  },
-  inputRowMultiline: {
-    alignItems: "flex-start",
-    minHeight: 100,
-  },
-  inputRowError: {
-    borderColor: theme.colors.themeRed,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: theme.colors.black,
-    paddingVertical: 12,
-    minHeight: 44,
-    maxHeight: 120,
-  },
-  inputMultiline: {
-    minHeight: 100,
-    maxHeight: 200,
-  },
-  hint: {
-    fontSize: 13,
-    marginTop: 6,
-  },
-  error: {
-    fontSize: 13,
-    color: theme.colors.themeRed,
-    marginTop: 4,
-  },
-});

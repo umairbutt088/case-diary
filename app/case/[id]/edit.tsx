@@ -32,9 +32,11 @@ import {
   type AddCaseFormState,
   type CaseType,
 } from "@/constants/case-form";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
 import {
   getCachedCaseById,
@@ -78,11 +80,114 @@ function caseRowToFormState(row: CaseRow): AddCaseFormState {
   };
 }
 
+function createEditCaseStyles(C: AppColors, onPrimary: string) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.gray50,
+      marginBottom: 12,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    fieldError: {
+      color: C.themeRed,
+      fontSize: 14,
+      marginTop: 4,
+      marginBottom: 4,
+    },
+    statusInput: {
+      minHeight: 100,
+    },
+    addClientBtn: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+      alignItems: "center",
+    },
+    addClientBtnSelected: {
+      borderColor: C.themeBlack,
+      backgroundColor: C.themeBlack,
+    },
+    addClientText: {
+      fontSize: 16,
+      color: C.gray50,
+    },
+    addClientTextSelected: {
+      color: onPrimary,
+      fontWeight: "600",
+    },
+    saveError: {
+      color: C.themeRed,
+      fontSize: 14,
+      marginTop: 12,
+    },
+    buttons: {
+      flexDirection: "row",
+      gap: 12,
+      marginTop: 24,
+    },
+    btn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    btnSecondary: {
+      backgroundColor: C.btnGray,
+    },
+    btnSecondaryText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.GrayBtnTitle,
+    },
+    btnPrimary: {
+      backgroundColor: C.themeBlack,
+    },
+    btnPrimaryText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: onPrimary,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    errorText: {
+      color: C.themeRed,
+      fontSize: 16,
+    },
+  });
+}
+
 export default function EditCaseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session } = useAuth();
   const isOnline = useIsOnline();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const styles = useMemo(
+    () => createEditCaseStyles(C, onPrimary),
+    [C, onPrimary],
+  );
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -261,7 +366,7 @@ export default function EditCaseScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
+          <ActivityIndicator size="large" color={C.black} />
         </View>
       </SafeAreaView>
     );
@@ -534,7 +639,7 @@ export default function EditCaseScreen() {
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                <ActivityIndicator size="small" color={onPrimary} />
               ) : (
                 <ThemedText style={styles.btnPrimaryText}>
                   Save changes
@@ -547,97 +652,3 @@ export default function EditCaseScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  fieldError: {
-    color: theme.colors.themeRed,
-    fontSize: 14,
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  statusInput: {
-    minHeight: 100,
-  },
-  addClientBtn: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    alignItems: "center",
-  },
-  addClientBtnSelected: {
-    borderColor: theme.colors.themeBlack,
-    backgroundColor: theme.colors.themeBlack,
-  },
-  addClientText: {
-    fontSize: 16,
-    color: theme.colors.gray50,
-  },
-  addClientTextSelected: {
-    color: theme.colors.pureWhite,
-    fontWeight: "600",
-  },
-  saveError: {
-    color: theme.colors.themeRed,
-    fontSize: 14,
-    marginTop: 12,
-  },
-  buttons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 24,
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnSecondary: {
-    backgroundColor: theme.colors.btnGray,
-  },
-  btnSecondaryText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.GrayBtnTitle,
-  },
-  btnPrimary: {
-    backgroundColor: theme.colors.themeBlack,
-  },
-  btnPrimaryText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.pureWhite,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  errorText: {
-    color: theme.colors.themeRed,
-    fontSize: 16,
-  },
-});

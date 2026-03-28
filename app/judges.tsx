@@ -18,8 +18,14 @@ import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import {
+  type AppColors,
+  modalSheetBackground,
+} from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { setCachedJudges } from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
@@ -44,8 +50,207 @@ const initialForm: JudgeFormState = {
   court_room_address: "",
 };
 
+function createJudgesStyles(
+  C: AppColors,
+  onPrimary: string,
+  modalSheet: string,
+) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    container: {
+      flex: 1,
+      padding: 20,
+    },
+    headerAction: {
+      minWidth: 34,
+      minHeight: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    searchWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      backgroundColor: C.pureWhite,
+      paddingHorizontal: 12,
+      marginBottom: 14,
+      gap: 8,
+    },
+    searchInput: {
+      flex: 1,
+      minHeight: 44,
+      fontSize: 15,
+      color: C.black,
+    },
+    listContent: {
+      paddingBottom: 24,
+    },
+    card: {
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 12,
+      backgroundColor: C.pureWhite,
+      ...theme.shadow,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    nameText: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: C.black,
+      flex: 1,
+      marginRight: 8,
+    },
+    cardActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    iconBtn: {
+      minWidth: 32,
+      minHeight: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    metaText: {
+      fontSize: 13,
+      color: C.gray50,
+      marginBottom: 2,
+    },
+    usageText: {
+      marginTop: 4,
+      fontSize: 12,
+      color: C.zodiacColour,
+      fontWeight: "600",
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 20,
+      gap: 10,
+    },
+    errorText: {
+      color: C.themeRed,
+      fontSize: 14,
+      textAlign: "center",
+    },
+    emptyText: {
+      color: C.gray50,
+      fontSize: 14,
+      textAlign: "center",
+    },
+    retryBtn: {
+      borderRadius: 10,
+      backgroundColor: C.themeBlack,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+    },
+    retryBtnText: {
+      color: onPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    modalRoot: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.35)",
+    },
+    modalCard: {
+      backgroundColor: modalSheet,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      maxHeight: "80%",
+      padding: 16,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: C.black,
+    },
+    modalClose: {
+      minWidth: 32,
+      minHeight: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.background,
+    },
+    modalContent: {
+      paddingBottom: 12,
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: C.gray50,
+      textTransform: "uppercase",
+      marginBottom: 6,
+      marginTop: 10,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: C.black,
+      backgroundColor: C.background,
+    },
+    tierPickerWrap: {
+      marginTop: 8,
+    },
+    formErrorText: {
+      marginTop: 10,
+      color: C.themeRed,
+      fontSize: 13,
+    },
+    saveBtn: {
+      marginTop: 16,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.themeBlack,
+    },
+    saveBtnText: {
+      color: onPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+  });
+}
+
 export default function JudgesScreen() {
   const { session } = useAuth();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(
+    () => createJudgesStyles(C, onPrimary, modalSheet),
+    [C, onPrimary, modalSheet],
+  );
   const [judges, setJudges] = useState<JudgeRow[]>([]);
   const [usageByJudgeId, setUsageByJudgeId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -292,18 +497,18 @@ export default function JudgesScreen() {
         title="Judges"
         rightComponent={
           <Bounceable style={styles.headerAction} onPress={openAddModal}>
-            <MaterialIcons name="person-add-alt-1" size={20} color={theme.colors.black} />
+            <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />
           </Bounceable>
         }
       />
 
       <View style={styles.container}>
         <View style={styles.searchWrap}>
-          <MaterialIcons name="search" size={20} color={theme.colors.gray50} />
+          <MaterialIcons name="search" size={20} color={C.gray50} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search judges..."
-            placeholderTextColor={theme.colors.gray50}
+            placeholderTextColor={C.gray50}
             value={search}
             onChangeText={setSearch}
             autoCapitalize="words"
@@ -312,7 +517,7 @@ export default function JudgesScreen() {
 
         {loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={theme.colors.black} />
+            <ActivityIndicator size="large" color={C.black} />
           </View>
         ) : error ? (
           <View style={styles.centered}>
@@ -343,14 +548,14 @@ export default function JudgesScreen() {
                       onPress={() => openEditModal(judge)}
                       accessibilityLabel={`Edit ${judge.name}`}
                     >
-                      <MaterialIcons name="edit" size={18} color={theme.colors.black} />
+                      <MaterialIcons name="edit" size={18} color={C.black} />
                     </Bounceable>
                     <Bounceable
                       style={styles.iconBtn}
                       onPress={() => confirmDeleteJudge(judge)}
                       accessibilityLabel={`Delete ${judge.name}`}
                     >
-                      <MaterialIcons name="delete-outline" size={20} color={theme.colors.themeRed} />
+                      <MaterialIcons name="delete-outline" size={20} color={C.themeRed} />
                     </Bounceable>
                   </View>
                 </View>
@@ -380,7 +585,7 @@ export default function JudgesScreen() {
                 {editingJudge ? "Edit Judge" : "Add Judge"}
               </ThemedText>
               <Bounceable style={styles.modalClose} onPress={closeModal}>
-                <MaterialIcons name="close" size={20} color={theme.colors.black} />
+                <MaterialIcons name="close" size={20} color={C.black} />
               </Bounceable>
             </View>
             <ScrollView
@@ -394,7 +599,7 @@ export default function JudgesScreen() {
                 value={form.name}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, name: v }))}
                 placeholder="Judge name"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
 
               <View style={styles.tierPickerWrap}>
@@ -413,14 +618,14 @@ export default function JudgesScreen() {
                 value={form.court_room_address}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, court_room_address: v }))}
                 placeholder="e.g. Building A, 2nd Floor"
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
               />
 
               {formError ? <ThemedText style={styles.formErrorText}>{formError}</ThemedText> : null}
 
               <Bounceable style={styles.saveBtn} onPress={() => void saveJudge()} disabled={saving}>
                 {saving ? (
-                  <ActivityIndicator size="small" color={theme.colors.pureWhite} />
+                  <ActivityIndicator size="small" color={onPrimary} />
                 ) : (
                   <ThemedText style={styles.saveBtnText}>
                     {editingJudge ? "Update judge" : "Save judge"}
@@ -434,188 +639,3 @@ export default function JudgesScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  headerAction: {
-    minWidth: 34,
-    minHeight: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    paddingHorizontal: 12,
-    marginBottom: 14,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    minHeight: 44,
-    fontSize: 15,
-    color: theme.colors.black,
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  card: {
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    backgroundColor: theme.colors.pureWhite,
-    ...theme.shadow,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  nameText: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: theme.colors.black,
-    flex: 1,
-    marginRight: 8,
-  },
-  cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  iconBtn: {
-    minWidth: 32,
-    minHeight: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  metaText: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-    marginBottom: 2,
-  },
-  usageText: {
-    marginTop: 4,
-    fontSize: 12,
-    color: theme.colors.zodiacColour,
-    fontWeight: "600",
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  errorText: {
-    color: theme.colors.themeRed,
-    fontSize: 14,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: theme.colors.gray50,
-    fontSize: 14,
-    textAlign: "center",
-  },
-  retryBtn: {
-    borderRadius: 10,
-    backgroundColor: theme.colors.themeBlack,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  retryBtnText: {
-    color: theme.colors.pureWhite,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  modalCard: {
-    backgroundColor: theme.colors.pureWhite,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: "80%",
-    padding: 16,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.black,
-  },
-  modalClose: {
-    minWidth: 32,
-    minHeight: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.background,
-  },
-  modalContent: {
-    paddingBottom: 12,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-    textTransform: "uppercase",
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: theme.colors.black,
-    backgroundColor: theme.colors.background,
-  },
-  tierPickerWrap: {
-    marginTop: 8,
-  },
-  formErrorText: {
-    marginTop: 10,
-    color: theme.colors.themeRed,
-    fontSize: 13,
-  },
-  saveBtn: {
-    marginTop: 16,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.themeBlack,
-  },
-  saveBtnText: {
-    color: theme.colors.pureWhite,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});

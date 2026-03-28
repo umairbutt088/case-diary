@@ -9,8 +9,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import {
   type ActivityNote,
   getActivityNotesStorageKey,
@@ -20,8 +23,210 @@ import { getTodayISO } from "@/types/case";
 
 type NotesFilter = "today" | "all";
 
+function createNotesStyles(C: AppColors, onPrimary: string) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    container: {
+      flex: 1,
+      paddingHorizontal: 24,
+      paddingTop: 14,
+    },
+    filterRow: {
+      flexDirection: "row",
+      backgroundColor: "transparent",
+      width: "100%",
+      paddingVertical: 10,
+      justifyContent: "space-around",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      marginBottom: 12,
+    },
+    filterBtn: {
+      width: "45%",
+      paddingVertical: 10,
+      alignItems: "center",
+      borderRadius: 12,
+      backgroundColor: C.grey100,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    filterBtnActive: {
+      backgroundColor: C.themeBlack,
+      borderColor: C.themeBlack,
+    },
+    filterBtnText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: C.gray50,
+    },
+    filterBtnTextActive: {
+      color: onPrimary,
+    },
+    editorCard: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: C.pureWhite,
+    },
+    notesInput: {
+      minHeight: 86,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      color: C.black,
+      textAlignVertical: "top",
+    },
+    actionsRow: {
+      marginTop: 10,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    primaryButton: {
+      backgroundColor: C.themeBlack,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+    },
+    primaryButtonText: {
+      color: onPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    secondaryButton: {
+      backgroundColor: C.background,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+    },
+    secondaryButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.gray50,
+    },
+    notesList: {
+      marginTop: 12,
+    },
+    notesListContent: {
+      paddingBottom: 104,
+      gap: 10,
+    },
+    composerWrap: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 86,
+      paddingHorizontal: 24,
+      zIndex: 20,
+    },
+    emptyText: {
+      color: C.gray50,
+      fontSize: 14,
+      textAlign: "center",
+      paddingVertical: 24,
+    },
+    noteCard: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: C.pureWhite,
+    },
+    noteTopRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+    },
+    noteContent: {
+      flex: 1,
+      fontSize: 14,
+      color: C.black,
+      lineHeight: 20,
+    },
+    noteContentDone: {
+      color: C.gray50,
+      textDecorationLine: "line-through",
+    },
+    noteStatusBadge: {
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      backgroundColor: C.zodiacColour + "1a",
+      borderWidth: 1,
+      borderColor: C.zodiacColour + "55",
+    },
+    noteStatusBadgeDone: {
+      backgroundColor: C.gray100,
+      borderColor: C.borderGray,
+    },
+    noteStatusText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: C.zodiacColour,
+    },
+    noteStatusTextDone: {
+      color: C.gray50,
+    },
+    noteTime: {
+      marginTop: 6,
+      fontSize: 12,
+      color: C.gray50,
+    },
+    noteActions: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    noteAction: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    noteActionText: {
+      fontSize: 13,
+      color: C.zodiacColour,
+      fontWeight: "600",
+    },
+    noteActionInactive: {
+      color: C.gray50,
+    },
+    noteActionDelete: {
+      color: C.themeRed,
+    },
+    fab: {
+      position: "absolute",
+      right: 24,
+      bottom: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: C.themeBlack,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 30,
+      ...theme.shadow,
+    },
+  });
+}
+
 export default function NotesScreen() {
   const { session } = useAuth();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const styles = useMemo(
+    () => createNotesStyles(C, onPrimary),
+    [C, onPrimary],
+  );
   const [notes, setNotes] = useState<ActivityNote[]>([]);
   const [filter, setFilter] = useState<NotesFilter>("today");
   const [noteInput, setNoteInput] = useState("");
@@ -216,7 +421,7 @@ export default function NotesScreen() {
                     <MaterialIcons
                       name={note.isDone ? "radio-button-unchecked" : "check-circle"}
                       size={16}
-                      color={note.isDone ? theme.colors.gray50 : theme.colors.zodiacColour}
+                      color={note.isDone ? C.gray50 : C.zodiacColour}
                     />
                     <ThemedText
                       style={[styles.noteActionText, note.isDone && styles.noteActionInactive]}
@@ -225,11 +430,11 @@ export default function NotesScreen() {
                     </ThemedText>
                   </Bounceable>
                   <Bounceable style={styles.noteAction} onPress={() => editNote(note)}>
-                    <MaterialIcons name="edit" size={16} color={theme.colors.zodiacColour} />
+                    <MaterialIcons name="edit" size={16} color={C.zodiacColour} />
                     <ThemedText style={styles.noteActionText}>Edit</ThemedText>
                   </Bounceable>
                   <Bounceable style={styles.noteAction} onPress={() => deleteNote(note.id)}>
-                    <MaterialIcons name="delete" size={16} color={theme.colors.themeRed} />
+                    <MaterialIcons name="delete" size={16} color={C.themeRed} />
                     <ThemedText style={[styles.noteActionText, styles.noteActionDelete]}>
                       Delete
                     </ThemedText>
@@ -250,7 +455,7 @@ export default function NotesScreen() {
                     ? "Write a note for today..."
                     : "Write a note (saved for today)..."
                 }
-                placeholderTextColor={theme.colors.gray50}
+                placeholderTextColor={C.gray50}
                 value={noteInput}
                 onChangeText={setNoteInput}
                 multiline
@@ -280,202 +485,9 @@ export default function NotesScreen() {
             setIsComposerOpen(true);
           }}
         >
-          <MaterialIcons name="add" size={28} color={theme.colors.pureWhite} />
+          <MaterialIcons name="add" size={28} color={onPrimary} />
         </Bounceable>
       </Animated.View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 14,
-  },
-  filterRow: {
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    width: "100%",
-    paddingVertical: 10,
-    justifyContent: "space-around",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    marginBottom: 12,
-  },
-  filterBtn: {
-    width: "45%",
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 12,
-    backgroundColor: theme.colors.grey100,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  filterBtnActive: {
-    backgroundColor: theme.colors.themeBlack,
-    borderColor: theme.colors.themeBlack,
-  },
-  filterBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-  },
-  filterBtnTextActive: {
-    color: theme.colors.pureWhite,
-  },
-  editorCard: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  notesInput: {
-    minHeight: 86,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: theme.colors.black,
-    textAlignVertical: "top",
-  },
-  actionsRow: {
-    marginTop: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  primaryButton: {
-    backgroundColor: theme.colors.themeBlack,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  primaryButtonText: {
-    color: theme.colors.pureWhite,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    backgroundColor: theme.colors.background,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  secondaryButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.gray50,
-  },
-  notesList: {
-    marginTop: 12,
-  },
-  notesListContent: {
-    paddingBottom: 104,
-    gap: 10,
-  },
-  composerWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 86,
-    paddingHorizontal: 24,
-    zIndex: 20,
-  },
-  emptyText: {
-    color: theme.colors.gray50,
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 24,
-  },
-  noteCard: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  noteTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  noteContent: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.colors.black,
-    lineHeight: 20,
-  },
-  noteContentDone: {
-    color: theme.colors.gray50,
-    textDecorationLine: "line-through",
-  },
-  noteStatusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: theme.colors.zodiacColour + "1a",
-    borderWidth: 1,
-    borderColor: theme.colors.zodiacColour + "55",
-  },
-  noteStatusBadgeDone: {
-    backgroundColor: theme.colors.gray100,
-    borderColor: theme.colors.borderGray,
-  },
-  noteStatusText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.zodiacColour,
-  },
-  noteStatusTextDone: {
-    color: theme.colors.gray50,
-  },
-  noteTime: {
-    marginTop: 6,
-    fontSize: 12,
-    color: theme.colors.gray50,
-  },
-  noteActions: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  noteAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  noteActionText: {
-    fontSize: 13,
-    color: theme.colors.zodiacColour,
-    fontWeight: "600",
-  },
-  noteActionInactive: {
-    color: theme.colors.gray50,
-  },
-  noteActionDelete: {
-    color: theme.colors.themeRed,
-  },
-  fab: {
-    position: "absolute",
-    right: 24,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.themeBlack,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 30,
-    ...theme.shadow,
-  },
-});

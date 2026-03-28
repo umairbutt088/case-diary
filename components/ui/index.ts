@@ -5,6 +5,7 @@ export { FormInput } from "./form-input";
 export { FormMessage } from "./form-message";
 export { PasswordInput } from "./password-input";
 export { ScreenHeader } from "./screen-header";
+export { SegmentedTwoOption } from "./segmented-two-option";
 export { Spacer } from "./spacer";
 export { TermsCheckbox } from "./terms-checkbox";
 

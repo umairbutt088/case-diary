@@ -25,8 +25,10 @@ import {
 } from "@/components/case-search-selector";
 import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
 import { addPendingCaseDelete } from "@/lib/offline-queue";
@@ -121,12 +123,170 @@ function buildBulkCaseReportHtml(cases: CaseRow[]): string {
   `;
 }
 
+function createDiaryStyles(C: AppColors) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    container: {
+      flex: 1,
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      backgroundColor: C.background,
+    },
+    title: {
+      marginBottom: 12,
+      color: C.black,
+    },
+    listContent: {
+      paddingHorizontal: 2,
+      paddingBottom: 24,
+    },
+    bulkToggleBtn: {
+      minHeight: 34,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      paddingHorizontal: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bulkToggleBtnText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.black,
+    },
+    bulkActionsBar: {
+      borderRadius: 10,
+      backgroundColor: C.pureWhite,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      padding: 10,
+      marginBottom: 10,
+      gap: 8,
+    },
+    bulkCountText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: C.black,
+    },
+    bulkActionsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    bulkActionBtn: {
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: C.pureWhite,
+    },
+    bulkActionBtnText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: C.black,
+    },
+    bulkDeleteBtn: {
+      borderColor: C.themeRed,
+    },
+    bulkDeleteBtnText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: C.themeRed,
+    },
+    bulkRow: {
+      marginBottom: 10,
+      marginHorizontal: 2,
+      borderRadius: 12,
+      backgroundColor: C.pureWhite,
+      ...theme.shadow,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      gap: 10,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: C.gray50,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.pureWhite,
+    },
+    checkboxSelected: {
+      borderColor: C.themeBlack,
+      backgroundColor: C.themeBlack,
+    },
+    checkboxTick: {
+      color: C.pureWhite,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    bulkRowContent: {
+      flex: 1,
+      minWidth: 0,
+    },
+    bulkRowTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 3,
+    },
+    bulkRowMeta: {
+      fontSize: 12,
+      color: C.gray50,
+    },
+    noResultsWrap: {
+      marginTop: 18,
+      padding: 14,
+      borderRadius: 10,
+      backgroundColor: C.pureWhite,
+      ...theme.shadow,
+    },
+    noResultsTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: C.black,
+      textAlign: "center",
+    },
+    noResultsText: {
+      marginTop: 6,
+      fontSize: 13,
+      color: C.gray50,
+      textAlign: "center",
+    },
+    placeholder: {
+      opacity: 0.8,
+      color: C.black,
+    },
+    errorText: {
+      color: C.themeRed,
+      marginTop: 8,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+  });
+}
+
 export default function DiaryScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const isOnline = useIsOnline();
   const { session } = useAuth();
   const { start } = useCopilot();
+  const C = useThemePalette();
+  const styles = useMemo(() => createDiaryStyles(C), [C]);
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [searchMode, setSearchMode] = useState<CaseSearchMode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -412,7 +572,7 @@ export default function DiaryScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Your cases" showBack={false} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.black} />
+          <ActivityIndicator size="large" color={C.black} />
         </View>
       </SafeAreaView>
     );
@@ -517,8 +677,8 @@ export default function DiaryScreen() {
               <RefreshControl
                 refreshing={loading}
                 onRefresh={fetchCases}
-                colors={[theme.colors.black]}
-                tintColor={theme.colors.black}
+                colors={[C.black]}
+                tintColor={C.black}
               />
             }
             renderItem={({ item }) =>
@@ -576,157 +736,3 @@ export default function DiaryScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    backgroundColor: theme.colors.background,
-  },
-  title: {
-    marginBottom: 12,
-    color: theme.colors.black,
-  },
-  listContent: {
-    paddingHorizontal: 2,
-    paddingBottom: 24,
-  },
-  bulkToggleBtn: {
-    minHeight: 34,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bulkToggleBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  bulkActionsBar: {
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    padding: 10,
-    marginBottom: 10,
-    gap: 8,
-  },
-  bulkCountText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  bulkActionsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  bulkActionBtn: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.pureWhite,
-  },
-  bulkActionBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  bulkDeleteBtn: {
-    borderColor: theme.colors.themeRed,
-  },
-  bulkDeleteBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.themeRed,
-  },
-  bulkRow: {
-    marginBottom: 10,
-    marginHorizontal: 2,
-    borderRadius: 12,
-    backgroundColor: theme.colors.pureWhite,
-    ...theme.shadow,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.gray50,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.pureWhite,
-  },
-  checkboxSelected: {
-    borderColor: theme.colors.themeBlack,
-    backgroundColor: theme.colors.themeBlack,
-  },
-  checkboxTick: {
-    color: theme.colors.pureWhite,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  bulkRowContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  bulkRowTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.black,
-    marginBottom: 3,
-  },
-  bulkRowMeta: {
-    fontSize: 12,
-    color: theme.colors.gray50,
-  },
-  noResultsWrap: {
-    marginTop: 18,
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: theme.colors.pureWhite,
-    ...theme.shadow,
-  },
-  noResultsTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.black,
-    textAlign: "center",
-  },
-  noResultsText: {
-    marginTop: 6,
-    fontSize: 13,
-    color: theme.colors.gray50,
-    textAlign: "center",
-  },
-  placeholder: {
-    opacity: 0.8,
-    color: theme.colors.black,
-  },
-  errorText: {
-    color: theme.colors.themeRed,
-    marginTop: 8,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-});

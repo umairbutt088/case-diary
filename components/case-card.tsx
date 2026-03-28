@@ -2,7 +2,7 @@ import { Bounceable } from "@/components/ui/bounceable";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { CopilotStep, walkthroughable } from "react-native-copilot";
 import Animated, {
@@ -13,7 +13,8 @@ import Animated, {
 
 import { COURT_TIERS } from "@/constants/case-form";
 import { ThemedText } from "@/components/themed-text";
-import { theme } from "@/constants/theme";
+import type { AppColors } from "@/constants/color-palette";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle, isCaseOverdue } from "@/types/case";
 
@@ -56,6 +57,124 @@ type CaseCardProps = {
   walkthroughActive?: boolean;
 };
 
+function createCaseCardStyles(C: AppColors) {
+  return StyleSheet.create({
+    cardOuter: {
+      paddingHorizontal: 6,
+      paddingTop: 2,
+      paddingBottom: 6,
+      marginBottom: 6,
+    },
+    card: {
+      backgroundColor: C.cream50,
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.18,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    cardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    titleWrap: {
+      flex: 1,
+      minWidth: 0,
+      marginRight: 8,
+    },
+    title: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: C.black,
+    },
+    detailsButton: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    detailsButtonText: {
+      fontSize: 15,
+      color: C.gray50,
+      marginRight: 2,
+    },
+    snippet: {
+      fontSize: 14,
+      marginBottom: 10,
+      lineHeight: 20,
+    },
+    detailsBlock: {
+      marginBottom: 12,
+      gap: 4,
+    },
+    detailText: {
+      fontSize: 13,
+      color: C.gray50,
+    },
+    footer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    nextDateRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    nextDateIcon: {
+      marginRight: 4,
+    },
+    nextDateText: {
+      fontSize: 13,
+    },
+    nextDateTextOverdue: {
+      fontWeight: "700",
+    },
+    overdueBadge: {
+      marginLeft: 8,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 999,
+      backgroundColor: C.themeRed + "22",
+      borderWidth: 1,
+      borderColor: C.themeRed,
+    },
+    overdueBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+      color: C.themeRed,
+    },
+    actions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    iconButton: {
+      padding: 4,
+    },
+    copyToastWrap: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    copyToastText: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      fontSize: 14,
+      color: C.pureWhite,
+      backgroundColor: C.black + "CC",
+      overflow: "hidden",
+    },
+  });
+}
+
 export function CaseCard({
   caseItem,
   index = 0,
@@ -66,6 +185,8 @@ export function CaseCard({
   walkthroughActive = true,
 }: CaseCardProps) {
   const router = useRouter();
+  const C = useThemePalette();
+  const styles = useMemo(() => createCaseCardStyles(C), [C]);
   const title = getCaseDisplayTitle(caseItem);
   const snippet = getCaseDetailsSnippet(caseItem);
   const nextDate = formatCaseDate(caseItem.next_hearing_date);
@@ -148,7 +269,7 @@ export function CaseCard({
                   <MaterialIcons
                     name="chevron-right"
                     size={20}
-                    color={theme.colors.gray50}
+                    color={C.gray50}
                   />
                 </View>
               </WalkthroughableView>
@@ -159,7 +280,7 @@ export function CaseCard({
               <MaterialIcons
                 name="chevron-right"
                 size={20}
-                color={theme.colors.gray50}
+                color={C.gray50}
               />
             </View>
           )}
@@ -167,8 +288,8 @@ export function CaseCard({
         <ThemedText
           style={styles.snippet}
           numberOfLines={2}
-          lightColor={theme.colors.gray50}
-          darkColor={theme.colors.gray50}
+          lightColor={C.gray50}
+          darkColor={C.gray50}
         >
           {snippet}
         </ThemedText>
@@ -196,13 +317,13 @@ export function CaseCard({
             <MaterialIcons
               name="event"
               size={18}
-              color={isOverdue ? theme.colors.themeRed : theme.colors.gray50}
+              color={isOverdue ? C.themeRed : C.gray50}
               style={styles.nextDateIcon}
             />
             <ThemedText
               style={[styles.nextDateText, isOverdue && styles.nextDateTextOverdue]}
-              lightColor={isOverdue ? theme.colors.themeRed : theme.colors.gray50}
-              darkColor={isOverdue ? theme.colors.themeRed : theme.colors.gray50}
+              lightColor={isOverdue ? C.themeRed : C.gray50}
+              darkColor={isOverdue ? C.themeRed : C.gray50}
             >
               Next: {nextDate}
             </ThemedText>
@@ -231,7 +352,7 @@ export function CaseCard({
                       <MaterialIcons
                         name="delete-outline"
                         size={22}
-                        color={theme.colors.themeRed}
+                        color={C.themeRed}
                       />
                     </Bounceable>
                   </WalkthroughableView>
@@ -246,7 +367,7 @@ export function CaseCard({
                   <MaterialIcons
                     name="delete-outline"
                     size={22}
-                    color={theme.colors.themeRed}
+                    color={C.themeRed}
                   />
                 </Bounceable>
               )
@@ -257,7 +378,7 @@ export function CaseCard({
               hitSlop={8}
               accessibilityLabel="View next date / calendar"
             >
-              <MaterialIcons name="event" size={22} color={theme.colors.gray50} />
+              <MaterialIcons name="event" size={22} color={C.gray50} />
             </Bounceable>
             {onEdit ? (
               walkthroughEnabled ? (
@@ -277,7 +398,7 @@ export function CaseCard({
                       <MaterialIcons
                         name="edit"
                         size={22}
-                        color={theme.colors.gray50}
+                        color={C.gray50}
                       />
                     </Bounceable>
                   </WalkthroughableView>
@@ -292,7 +413,7 @@ export function CaseCard({
                   <MaterialIcons
                     name="edit"
                     size={22}
-                    color={theme.colors.gray50}
+                    color={C.gray50}
                   />
                 </Bounceable>
               )
@@ -308,119 +429,3 @@ export function CaseCard({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  cardOuter: {
-    paddingHorizontal: 6,
-    paddingTop: 2,
-    paddingBottom: 6,
-    marginBottom: 6,
-  },
-  card: {
-    backgroundColor: theme.colors.cream50,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  titleWrap: {
-    flex: 1,
-    minWidth: 0,
-    marginRight: 8,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: theme.colors.black,
-  },
-  detailsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  detailsButtonText: {
-    fontSize: 15,
-    color: theme.colors.gray50,
-    marginRight: 2,
-  },
-  snippet: {
-    fontSize: 14,
-    marginBottom: 10,
-    lineHeight: 20,
-  },
-  detailsBlock: {
-    marginBottom: 12,
-    gap: 4,
-  },
-  detailText: {
-    fontSize: 13,
-    color: theme.colors.gray50,
-  },
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  nextDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  nextDateIcon: {
-    marginRight: 4,
-  },
-  nextDateText: {
-    fontSize: 13,
-  },
-  nextDateTextOverdue: {
-    fontWeight: "700",
-  },
-  overdueBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 999,
-    backgroundColor: theme.colors.themeRed + "22",
-    borderWidth: 1,
-    borderColor: theme.colors.themeRed,
-  },
-  overdueBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-    color: theme.colors.themeRed,
-  },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  copyToastWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  copyToastText: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    fontSize: 14,
-    color: theme.colors.pureWhite,
-    backgroundColor: theme.colors.black + "CC",
-    overflow: "hidden",
-  },
-});

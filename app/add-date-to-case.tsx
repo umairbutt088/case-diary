@@ -14,9 +14,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, patchCachedCase, setCachedCases } from "@/lib/cases-cache";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
 import { addPendingCaseUpdate } from "@/lib/offline-queue";
@@ -36,11 +38,108 @@ function getDateParam(param: string | undefined): string {
   return param.slice(0, 10);
 }
 
+function createAddDateToCaseStyles(C: AppColors) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    processCard: {
+      marginHorizontal: 20,
+      marginTop: 16,
+      marginBottom: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: C.cream50,
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: C.btnBlue,
+    },
+    processTitle: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: C.black,
+      marginBottom: 6,
+    },
+    processSteps: {
+      fontSize: 14,
+      lineHeight: 22,
+    },
+    searchWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: C.pureWhite,
+      marginHorizontal: 20,
+      marginBottom: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: C.black,
+      paddingVertical: 0,
+    },
+    errorText: {
+      fontSize: 14,
+      color: C.themeRed,
+      paddingHorizontal: 20,
+      marginBottom: 8,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    empty: {
+      fontSize: 15,
+      paddingHorizontal: 20,
+      paddingTop: 24,
+    },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 32,
+    },
+    caseRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: C.cream50,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+      ...theme.shadow,
+    },
+    caseRowText: {
+      flex: 1,
+      minWidth: 0,
+      marginRight: 12,
+    },
+    caseRowTitle: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: C.black,
+    },
+    caseRowSubtitle: {
+      fontSize: 13,
+      marginTop: 2,
+    },
+  });
+}
+
 export default function AddDateToCaseScreen() {
   const router = useRouter();
   const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const selectedDate = getDateParam(dateParam);
   const formattedDate = formatCaseDate(selectedDate);
+  const C = useThemePalette();
+  const styles = useMemo(() => createAddDateToCaseStyles(C), [C]);
 
   const { session } = useAuth();
   const isOnline = useIsOnline();
@@ -162,16 +261,16 @@ export default function AddDateToCaseScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <ScreenHeader title={`Add date to ${formattedDate}`} />
 
-      <Animated.View 
-        style={{ flex: 1 }}
+      <Animated.View
+        style={{ flex: 1, backgroundColor: C.background }}
         entering={FadeInUp.duration(400).springify().damping(20)}
       >
         <View style={styles.processCard}>
           <ThemedText style={styles.processTitle}>How it works</ThemedText>
           <ThemedText
             style={styles.processSteps}
-            lightColor={theme.colors.gray50}
-            darkColor={theme.colors.gray50}
+            lightColor={C.gray50}
+            darkColor={C.gray50}
           >
             1. Search or scroll to find your case.{"\n"}
             2. Tap the case to set its next hearing date to {formattedDate}.
@@ -182,7 +281,7 @@ export default function AddDateToCaseScreen() {
           <MaterialIcons
             name="search"
             size={20}
-            color={theme.colors.gray50}
+            color={C.gray50}
             style={styles.searchIcon}
           />
           <TextInput
@@ -190,7 +289,7 @@ export default function AddDateToCaseScreen() {
             value={search}
             onChangeText={setSearch}
             placeholder="Search cases by title, number, or type..."
-            placeholderTextColor={theme.colors.gray50}
+            placeholderTextColor={C.gray50}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -202,13 +301,13 @@ export default function AddDateToCaseScreen() {
 
         {loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={theme.colors.black} />
+            <ActivityIndicator size="large" color={C.black} />
           </View>
         ) : filteredCases.length === 0 ? (
           <ThemedText
             style={styles.empty}
-            lightColor={theme.colors.gray50}
-            darkColor={theme.colors.gray50}
+            lightColor={C.gray50}
+            darkColor={C.gray50}
           >
             {search.trim()
               ? "No cases match your search."
@@ -241,23 +340,20 @@ export default function AddDateToCaseScreen() {
                       <ThemedText
                         style={styles.caseRowSubtitle}
                         numberOfLines={1}
-                        lightColor={theme.colors.gray50}
-                        darkColor={theme.colors.gray50}
+                        lightColor={C.gray50}
+                        darkColor={C.gray50}
                       >
                         {subtitle}
                       </ThemedText>
                     ) : null}
                   </View>
                   {isSaving ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.black}
-                    />
+                    <ActivityIndicator size="small" color={C.black} />
                   ) : (
                     <MaterialIcons
                       name="chevron-right"
                       size={24}
-                      color={theme.colors.gray50}
+                      color={C.gray50}
                     />
                   )}
                 </Pressable>
@@ -269,96 +365,3 @@ export default function AddDateToCaseScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  processCard: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: theme.colors.cream50,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.btnBlue,
-  },
-  processTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.black,
-    marginBottom: 6,
-  },
-  processSteps: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  searchWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.pureWhite,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.borderGray,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: theme.colors.black,
-    paddingVertical: 0,
-  },
-  errorText: {
-    fontSize: 14,
-    color: theme.colors.themeRed,
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  empty: {
-    fontSize: 15,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  caseRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.cream50,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    ...theme.shadow,
-  },
-  caseRowText: {
-    flex: 1,
-    minWidth: 0,
-    marginRight: 12,
-  },
-  caseRowTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.black,
-  },
-  caseRowSubtitle: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-});

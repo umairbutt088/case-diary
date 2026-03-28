@@ -201,13 +201,13 @@ export const Colors = {
     black: colors.black,
   },
   dark: {
-    text: colors.themeWhite,
-    background: colors.themeBlack,
+    text: "#FFFFFF",
+    background: "#000000",
     tint: colors.themeWhite,
     icon: colors.gray70,
     tabIconDefault: colors.gray70,
     tabIconSelected: colors.themeWhite,
-    black: colors.themeWhite,
+    black: "#FFFFFF",
   },
 };
 
