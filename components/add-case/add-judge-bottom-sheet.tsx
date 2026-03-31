@@ -10,10 +10,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
 import { ThemedText } from "@/components/themed-text";
-import { COURT_TIERS } from "@/constants/case-form";
 import {
   type AppColors,
   modalSheetBackground,
@@ -33,7 +33,7 @@ export type SavedJudge = {
 
 type Props = {
   visible: boolean;
-  defaultCourtTier: string;
+  defaultCourtTier?: string;
   onClose: () => void;
   onSaved: (judge: SavedJudge) => void;
 };
@@ -150,17 +150,17 @@ export function AddJudgeBottomSheet({
     [C, onPrimary, modalSheet],
   );
   const [form, setForm] = useState<AddJudgeForm>(initialForm);
+  const [selectedCourtTier, setSelectedCourtTier] = useState(defaultCourtTier ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const selectedTierLabel =
-    COURT_TIERS.find((tier) => tier.value === defaultCourtTier)?.label ??
-    (defaultCourtTier || null);
+  const activeCourtTier = selectedCourtTier.trim();
 
   useEffect(() => {
     if (!visible) return;
     setForm(initialForm);
+    setSelectedCourtTier(defaultCourtTier ?? "");
     setError(null);
-  }, [visible]);
+  }, [visible, defaultCourtTier]);
 
   const update = useCallback((updates: Partial<AddJudgeForm>) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -178,8 +178,8 @@ export function AddJudgeBottomSheet({
       setError("Judge name is required.");
       return;
     }
-    if (!defaultCourtTier) {
-      setError("Select court tier first in the case form.");
+    if (!activeCourtTier) {
+      setError("Court tier is required.");
       return;
     }
     if (!session?.user?.id || !isSupabaseConfigured) {
@@ -190,7 +190,7 @@ export function AddJudgeBottomSheet({
       const offlineJudge = {
         name,
         courtRoomAddress: form.courtRoomAddress.trim() || null,
-        courtTier: defaultCourtTier,
+        courtTier: activeCourtTier,
       };
       await addCachedJudge(session.user.id, offlineJudge);
       await queueAddJudge(session.user.id, offlineJudge);
@@ -205,13 +205,13 @@ export function AddJudgeBottomSheet({
       user_id: session.user.id,
       name,
       court_room_address: form.courtRoomAddress.trim() || null,
-      court_tier: defaultCourtTier,
+      court_tier: activeCourtTier,
     });
     setSaving(false);
 
     if (e) {
       if (e.code === "23505") {
-        setError("This judge already exists in your list.");
+        setError("This judge already exists for the selected court tier.");
       } else if (e.message?.toLowerCase().includes("court_tier")) {
         setError(
           "Judge tier setup is missing in database. Please run latest migrations.",
@@ -225,15 +225,15 @@ export function AddJudgeBottomSheet({
     onSaved({
       name,
       courtRoomAddress: form.courtRoomAddress.trim() || null,
-      courtTier: defaultCourtTier,
+      courtTier: activeCourtTier,
     });
     await addCachedJudge(session.user.id, {
       name,
       courtRoomAddress: form.courtRoomAddress.trim() || null,
-      courtTier: defaultCourtTier,
+      courtTier: activeCourtTier,
     });
     onClose();
-  }, [form, defaultCourtTier, session?.user?.id, onSaved, onClose, isOnline]);
+  }, [form, activeCourtTier, session?.user?.id, onSaved, onClose, isOnline]);
 
   if (!visible) return null;
 
@@ -269,11 +269,15 @@ export function AddJudgeBottomSheet({
               hint="Optional. Auto-fills case court room when this judge is selected."
             />
             <FormField label="Court Tier">
-              <ThemedText style={styles.selectedTierText}>
-                {selectedTierLabel
-                  ? `Selected: ${selectedTierLabel}`
-                  : "No court tier selected"}
-              </ThemedText>
+              <CourtTierPicker
+                value={selectedCourtTier}
+                onChange={(v) => {
+                  setSelectedCourtTier(v);
+                  setError(null);
+                }}
+                required
+                hint="Use the same tier list as case creation."
+              />
             </FormField>
             {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
             <View style={styles.buttons}>

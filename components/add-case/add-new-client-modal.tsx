@@ -196,7 +196,11 @@ export function AddNewClientModal({
       .single();
     setSaving(false);
     if (e) {
-      setError(e.message || "Failed to add client.");
+      if (e.code === "23505") {
+        setError("This client already exists.");
+      } else {
+        setError(e.message || "Failed to add client.");
+      }
       return;
     }
     if (data?.id) {

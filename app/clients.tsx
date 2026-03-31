@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
@@ -254,6 +255,7 @@ export default function ClientsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientRow | null>(null);
   const [form, setForm] = useState<ClientFormState>(initialForm);
 
@@ -344,10 +346,7 @@ export default function ClientsScreen() {
   }, [clients, search]);
 
   const openAddModal = () => {
-    setEditingClient(null);
-    setForm(initialForm);
-    setFormError(null);
-    setIsModalVisible(true);
+    setIsAddModalVisible(true);
   };
 
   const openEditModal = (client: ClientRow) => {
@@ -421,7 +420,11 @@ export default function ClientsScreen() {
 
     setSaving(false);
     if (e) {
-      setFormError(e.message || "Failed to add client.");
+      if (e.code === "23505") {
+        setFormError("This client already exists.");
+      } else {
+        setFormError(e.message || "Failed to add client.");
+      }
       return;
     }
 
@@ -628,6 +631,14 @@ export default function ClientsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <AddNewClientModal
+        visible={isAddModalVisible}
+        onClose={() => setIsAddModalVisible(false)}
+        onSaved={() => {
+          void fetchClients();
+          setIsAddModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
