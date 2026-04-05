@@ -14,6 +14,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   View,
 } from "react-native";
@@ -84,6 +85,8 @@ function createProfileStyles(C: AppColors) {
     },
     avatarPressable: {
       alignSelf: "center",
+      width: 112,
+      height: 112,
     },
     avatarWrap: {
       width: 112,
@@ -93,7 +96,6 @@ function createProfileStyles(C: AppColors) {
       justifyContent: "center",
       alignItems: "center",
       overflow: "hidden",
-      position: "relative",
     },
     avatarOverlay: {
       ...StyleSheet.absoluteFillObject,
@@ -104,14 +106,19 @@ function createProfileStyles(C: AppColors) {
     },
     avatarEditBadge: {
       position: "absolute",
-      bottom: 4,
-      right: 4,
+      bottom: 0,
+      right: 0,
       width: 32,
       height: 32,
       borderRadius: 16,
       backgroundColor: C.themeBlack,
       justifyContent: "center",
       alignItems: "center",
+      elevation: 4,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3,
     },
     avatarImage: {
       width: 112,
@@ -120,8 +127,10 @@ function createProfileStyles(C: AppColors) {
     },
     avatarInitials: {
       fontSize: 36,
+      lineHeight: 44,
       fontWeight: "700",
       color: C.gray50,
+      includeFontPadding: false,
     },
     displayName: {
       fontSize: 20,
@@ -562,40 +571,31 @@ export default function ProfileScreen() {
           >
             <WalkthroughableView style={styles.avatarSection}>
               <Pressable
-              style={styles.avatarPressable}
-              onPress={editing ? pickImage : undefined}
-              disabled={uploading || !editing}
-            >
-              <View style={styles.avatarWrap}>
-                {displayAvatarUrl ? (
-                  <Image
-                    source={{ uri: displayAvatarUrl }}
-                    style={styles.avatarImage}
-                  />
+                style={styles.avatarPressable}
+                onPress={uploading ? undefined : pickImage}
+                disabled={uploading}
+              >
+                <View style={styles.avatarWrap}>
+                  {displayAvatarUrl ? (
+                    <Image
+                      source={{ uri: displayAvatarUrl }}
+                      style={styles.avatarImage}
+                    />
                 ) : (
-                  <ThemedText style={styles.avatarInitials}>
-                    {initials}
-                  </ThemedText>
+                  <Text style={styles.avatarInitials}>{initials}</Text>
                 )}
-                {uploading && (
-                  <View style={styles.avatarOverlay}>
-                    <ActivityIndicator
-                      size="large"
-                      color={C.black}
-                    />
-                  </View>
-                )}
-                {!uploading && !displayAvatarUrl && (
+                  {uploading && (
+                    <View style={styles.avatarOverlay}>
+                      <ActivityIndicator size="large" color={C.black} />
+                    </View>
+                  )}
+                </View>
+                {!uploading && (
                   <View style={styles.avatarEditBadge}>
-                    <MaterialIcons
-                      name="edit"
-                      size={18}
-                      color={C.pureWhite}
-                    />
+                    <MaterialIcons name="edit" size={18} color={C.pureWhite} />
                   </View>
                 )}
-              </View>
-            </Pressable>
+              </Pressable>
             {!editing && (
               <ThemedText style={styles.displayName}>
                 {displayName || "User"}

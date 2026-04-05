@@ -1,6 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Linking } from "react-native";
 
 import { isCloudinaryConfigured, uploadImage } from "@/lib/cloudinary";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -33,9 +33,21 @@ export function useProfilePhoto(
       return;
     }
 
-    const { status: existing } =
+    const { status: existing, canAskAgain } =
       await ImagePicker.getMediaLibraryPermissionsAsync();
     if (existing !== "granted") {
+      if (!canAskAgain) {
+        // OS won't show the dialog again — guide user to Settings
+        Alert.alert(
+          "Photo library access denied",
+          "To set a profile picture, enable photo library access for Legal Diary in your device Settings.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: () => void Linking.openSettings() },
+          ]
+        );
+        return;
+      }
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
