@@ -1,8 +1,11 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
+import * as WebBrowser from "expo-web-browser";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,8 +14,8 @@ import {
   Modal,
   Platform,
   Pressable,
-  Share,
   ScrollView,
+  Share,
   StyleSheet,
   TextInput,
   View,
@@ -20,10 +23,14 @@ import {
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ThemedText } from "@/components/themed-text";
 import { DateField } from "@/components/add-case/date-field";
+import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
+import { DocumentIconPreview } from "@/components/ui/document-icon-preview";
+import { DocumentNameModal } from "@/components/ui/document-name-modal";
+import { ImageViewerModal } from "@/components/ui/image-viewer-modal";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { getPartyTerminology } from "@/constants/case-form";
 import {
   type AppColors,
   modalSheetBackground,
@@ -31,22 +38,28 @@ import {
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
-import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
+import {
+  deleteCaseDocument,
+  getCaseDocuments,
+  getDocumentDownloadUrl,
+  uploadCaseDocument
+} from "@/lib/case-documents";
+import { addCaseHearingEntry, getCaseHearingHistory } from "@/lib/case-hearings";
 import {
   getCachedCaseById,
   patchCachedCase,
   removeCachedCase,
   upsertCachedCase,
 } from "@/lib/cases-cache";
-import { addCaseHearingEntry, getCaseHearingHistory } from "@/lib/case-hearings";
 import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle, getTodayISO } from "@/types/case";
+import type { CaseDocumentRow } from "@/types/case-document";
 import type { CaseHearingRow } from "@/types/case-hearing";
 import type { ClientRow } from "@/types/client";
-import { getPartyTerminology } from "@/constants/case-form";
 
 const DETAIL_HEARING_PAGE_SIZE = 20;
 
@@ -553,6 +566,20 @@ export default function CaseDetailScreen() {
   const [proceedingError, setProceedingError] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [isSharingCase, setIsSharingCase] = useState(false);
+  
+  // Documents state
+  const [documents, setDocuments] = useState<CaseDocumentRow[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  // Pending file waiting for the user to name it before upload
+  const [pendingFile, setPendingFile] = useState<{
+    uri: string;
+    suggestedName: string;
+    mimeType: string;
+    size?: number;
+  } | null>(null);
+
   const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showCopyNotice = (message: string) => {
@@ -598,6 +625,18 @@ export default function CaseDetailScreen() {
       setCaseData(row);
       if (session?.user?.id) {
         await upsertCachedCase(session.user.id, row);
+      }
+      
+      if (isOnline) {
+        setLoadingDocs(true);
+        try {
+          const docs = await getCaseDocuments(id.toString());
+          if (!cancelled) setDocuments(docs);
+        } catch (err) {
+          console.error("Failed to load documents", err);
+        } finally {
+          if (!cancelled) setLoadingDocs(false);
+        }
       }
     })();
     return () => {
@@ -834,6 +873,174 @@ export default function CaseDetailScreen() {
     setSavingProceeding(false);
   };
 
+  const handleUploadResult = async (fileUri: string, fileName: string, mimeType: string, fileSize?: number) => {
+    if (fileSize && fileSize > 20 * 1024 * 1024) {
+      Alert.alert("File too large", "Please select a file smaller than 20MB.");
+      return;
+    }
+    
+    if (!caseData?.id || !session?.user?.id) return;
+    setUploadingDoc(true);
+    try {
+      const newDoc = await uploadCaseDocument({
+        caseId: caseData.id,
+        userId: session.user.id,
+        fileUri,
+        fileName,
+        mimeType,
+        fileSize,
+      });
+
+      setDocuments((prev) => [newDoc, ...prev]);
+      Alert.alert("Success", "Document uploaded successfully.");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Upload Failed", err instanceof Error ? err.message : "An error occurred.");
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        type: "*/*",
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        const file = result.assets[0];
+        setPendingFile({
+          uri: file.uri,
+          suggestedName: file.name,
+          mimeType: file.mimeType || "application/octet-stream",
+          size: file.size,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        const file = result.assets[0];
+        const suggestedName = file.fileName || file.uri.split('/').pop() || "image.jpg";
+        setPendingFile({
+          uri: file.uri,
+          suggestedName,
+          mimeType: file.mimeType || "image/jpeg",
+          size: file.fileSize,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Permission Required", "Camera access is needed to take photos.");
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        const file = result.assets[0];
+        const suggestedName = file.fileName || file.uri.split('/').pop() || "photo.jpg";
+        setPendingFile({
+          uri: file.uri,
+          suggestedName,
+          mimeType: file.mimeType || "image/jpeg",
+          size: file.fileSize,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDocumentNameConfirmed = async (chosenName: string) => {
+    if (!pendingFile) return;
+    const { uri, mimeType, size } = pendingFile;
+    await handleUploadResult(uri, chosenName, mimeType, size);
+    setPendingFile(null);
+  };
+
+  const handleDocumentNameCancelled = () => {
+    setPendingFile(null);
+  };
+
+  const handleAddDocument = async () => {
+    if (!caseData?.id || !session?.user?.id) return;
+    if (!isOnline) {
+      Alert.alert("Offline", "You need to be online to upload documents.");
+      return;
+    }
+
+    Alert.alert(
+      "Attach Document",
+      "Choose a source",
+      [
+        { text: "Camera", onPress: () => void handleTakePhoto() },
+        { text: "Gallery", onPress: () => void handlePickImage() },
+        { text: "Choose a File", onPress: () => void handlePickDocument() },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const handleDeleteDocument = (docId: string, filePath: string) => {
+    if (!isOnline) {
+      Alert.alert("Offline", "You need to be online to delete documents.");
+      return;
+    }
+    
+    Alert.alert(
+      "Delete Document?",
+      "Are you sure you want to permanently delete this document?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await deleteCaseDocument(docId, filePath);
+              setDocuments((prev) => prev.filter((d) => d.id !== docId));
+            } catch (error) {
+              Alert.alert("Error", "Could not delete document.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleViewDocument = async (doc: CaseDocumentRow) => {
+    try {
+      const url = await getDocumentDownloadUrl(doc.file_path);
+      if (doc.mime_type?.startsWith("image/")) {
+        setViewerUrl(url);
+      } else {
+        await WebBrowser.openBrowserAsync(url, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not open document.");
+    }
+  };
+
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader
@@ -1023,6 +1230,61 @@ export default function CaseDetailScreen() {
             <DetailRow s={styles} C={C} label="Notes" value={caseData.notes} />
           </SectionCard>
 
+          <SectionCard s={styles} title="Documents">
+            <Bounceable
+              style={styles.addProceedingBtn}
+              onPress={handleAddDocument}
+              disabled={uploadingDoc}
+            >
+              {uploadingDoc ? (
+                <ActivityIndicator size="small" color={C.black} />
+              ) : (
+                <MaterialIcons name="upload-file" size={18} color={C.black} />
+              )}
+              <ThemedText style={styles.addProceedingText}>
+                {uploadingDoc ? "Uploading..." : "Add Document"}
+              </ThemedText>
+            </Bounceable>
+
+            {loadingDocs ? (
+              <ActivityIndicator size="small" color={C.black} />
+            ) : documents.length === 0 ? (
+              <DetailRow s={styles} C={C} label="Files" value="No documents attached yet" />
+            ) : (
+              <>
+                {documents.slice(0, 2).map((doc) => (
+                  <View key={doc.id} style={styles.historyItem}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                      <Bounceable style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingRight: 8 }} onPress={() => void handleViewDocument(doc)}>
+                        <DocumentIconPreview filePath={doc.file_path} mimeType={doc.mime_type} C={C} />
+                        <View style={{ flex: 1 }}>
+                          <ThemedText style={styles.historyDate} numberOfLines={1}>{doc.file_name}</ThemedText>
+                          <ThemedText style={styles.historyNext}>
+                            {doc.size_bytes ? (doc.size_bytes / 1024).toFixed(1) + " KB" : "Unknown size"} • {formatCaseDate(doc.created_at)}
+                          </ThemedText>
+                        </View>
+                      </Bounceable>
+                      <View style={{ flexDirection: "row", gap: 12 }}>
+                        <Bounceable onPress={() => handleDeleteDocument(doc.id, doc.file_path)}>
+                          <MaterialIcons name="delete-outline" size={20} color={C.themeRed} />
+                        </Bounceable>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+                {documents.length > 2 && (
+                  <Bounceable
+                    style={styles.seeAllBtn}
+                    onPress={() => router.push(`/case/${id}/documents`)}
+                  >
+                    <ThemedText style={styles.seeAllBtnText}>See all documents ({documents.length})</ThemedText>
+                    <MaterialIcons name="chevron-right" size={18} color={C.black} />
+                  </Bounceable>
+                )}
+              </>
+            )}
+          </SectionCard>
+
           <Bounceable
             style={styles.deleteButton}
             onPress={() => {
@@ -1157,6 +1419,20 @@ export default function CaseDetailScreen() {
           <ThemedText style={styles.copyToastText}>{copyNotice}</ThemedText>
         </View>
       ) : null}
+
+      <ImageViewerModal
+        visible={viewerUrl !== null}
+        imageUrl={viewerUrl}
+        onClose={() => setViewerUrl(null)}
+      />
+
+      <DocumentNameModal
+        visible={pendingFile !== null}
+        suggestedName={pendingFile?.suggestedName ?? ""}
+        saving={uploadingDoc}
+        onConfirm={(name) => void handleDocumentNameConfirmed(name)}
+        onCancel={handleDocumentNameCancelled}
+      />
     </SafeAreaView>
   );
 }
