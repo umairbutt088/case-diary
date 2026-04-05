@@ -59,6 +59,17 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   return pushToken.data;
 }
 
+/**
+ * Returns the current OS notification permission status without requesting it.
+ * Useful for checking state before deciding whether to prompt.
+ */
+export async function getNotificationPermissionStatus(): Promise<"granted" | "denied" | "undetermined"> {
+  if (Platform.OS === "web") return "denied";
+  const { status } = await Notifications.getPermissionsAsync();
+  // Expo returns "granted" | "denied" | "undetermined"
+  return status as "granted" | "denied" | "undetermined";
+}
+
 export type SyncTokenResult = { ok: true } | { ok: false; error: string };
 
 export async function syncPushTokenForUser(userId: string): Promise<SyncTokenResult> {

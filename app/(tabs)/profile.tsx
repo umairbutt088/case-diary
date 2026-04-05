@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -32,7 +33,7 @@ import { useAuth } from "@/context/auth-context";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { getAvatarDisplayUrl } from "@/lib/cloudinary";
-import { APP_TIMEZONE, syncPushTokenForUser } from "@/lib/notifications";
+import { APP_TIMEZONE, getNotificationPermissionStatus, syncPushTokenForUser } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ProfileRow } from "@/types/profile";
 import { getDisplayName } from "@/types/profile";
@@ -222,13 +223,19 @@ function createProfileStyles(C: AppColors) {
       fontSize: 13,
       color: C.gray50,
     },
-    tokenStatus: {
+    notifStatusRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
       marginTop: 12,
+    },
+    tokenStatus: {
+      flex: 1,
       fontSize: 14,
       color: C.themeGreen,
     },
     tokenStatusMuted: {
-      marginTop: 12,
+      flex: 1,
       fontSize: 14,
       color: C.gray50,
     },
@@ -312,6 +319,7 @@ export default function ProfileScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [syncingToken, setSyncingToken] = useState(false);
   const [tokenSyncMessage, setTokenSyncMessage] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<"granted" | "denied" | "undetermined" | null>(null);
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -375,6 +383,12 @@ export default function ProfileScreen() {
       (async () => {
         await fetchProfile();
         if (cancelled) return;
+
+        // Refresh permission status every time the screen comes into focus
+        // so the card reflects changes made in the OS Settings app.
+        const status = await getNotificationPermissionStatus();
+        if (!cancelled) setPermissionStatus(status);
+
         const hasSeenTour = await AsyncStorage.getItem(
           "hasSeenProfileTourCopilot",
         );
@@ -713,21 +727,37 @@ export default function ProfileScreen() {
             Nightly reminders are sent automatically at 8:00 PM with tomorrow&apos;s
             hearing list.
           </ThemedText>
-          <ThemedText style={styles.reminderSchedule}>
-            Reminder time: 8:00 PM (court opening at 8:00 AM)
-          </ThemedText>
           <ThemedText style={styles.timezoneText}>
             Timezone: {APP_TIMEZONE}
           </ThemedText>
-          {profile?.expo_push_token ? (
-            <ThemedText style={styles.tokenStatus}>
-              You&apos;re registered for push notifications.
-            </ThemedText>
+
+          {/* ── Status row ─────────────────────────────────────── */}
+          {permissionStatus === "denied" ? (
+            // Permission was denied by the user in OS settings
+            <View style={styles.notifStatusRow}>
+              <MaterialIcons name="notifications-off" size={18} color={C.themeRed} />
+              <ThemedText style={styles.tokenStatusMuted}>
+                Notifications are turned off for this app.
+              </ThemedText>
+            </View>
+          ) : profile?.expo_push_token ? (
+            // Permission granted and token saved — fully active
+            <View style={styles.notifStatusRow}>
+              <MaterialIcons name="check-circle" size={18} color={C.themeGreen} />
+              <ThemedText style={styles.tokenStatus}>
+                Active — reminders are enabled.
+              </ThemedText>
+            </View>
           ) : (
-            <ThemedText style={styles.tokenStatusMuted}>
-              Not registered. Tap below to register.
-            </ThemedText>
+            // Permission granted (or undetermined) but token not yet saved
+            <View style={styles.notifStatusRow}>
+              <MaterialIcons name="notifications-none" size={18} color={C.themeWarm} />
+              <ThemedText style={styles.tokenStatusMuted}>
+                Not yet registered for reminders.
+              </ThemedText>
+            </View>
           )}
+
           {tokenSyncMessage ? (
             <ThemedText
               style={
@@ -739,21 +769,36 @@ export default function ProfileScreen() {
               {tokenSyncMessage}
             </ThemedText>
           ) : null}
-          <Pressable
-            style={[styles.btn, styles.btnPrimary, styles.registerButton]}
-            onPress={handleRegisterForReminders}
-            disabled={syncingToken}
-          >
-            {syncingToken ? (
-              <ActivityIndicator size="small" color={C.pureWhite} />
-            ) : (
+
+          {/* ── Action button — only shown when action is needed ── */}
+          {permissionStatus === "denied" ? (
+            // Guide user to OS settings to re-enable
+            <Pressable
+              style={[styles.btn, styles.btnPrimary, styles.registerButton]}
+              onPress={() => void Linking.openSettings()}
+            >
+              <MaterialIcons name="settings" size={16} color={C.pureWhite} />
               <ThemedText style={styles.btnPrimaryText}>
-                {profile?.expo_push_token
-                  ? "Re-register for reminders"
-                  : "Register for reminders"}
+                Enable in Settings
               </ThemedText>
-            )}
-          </Pressable>
+            </Pressable>
+          ) : !profile?.expo_push_token ? (
+            // Permission granted/undetermined but token not yet saved — register
+            <Pressable
+              style={[styles.btn, styles.btnPrimary, styles.registerButton]}
+              onPress={handleRegisterForReminders}
+              disabled={syncingToken}
+            >
+              {syncingToken ? (
+                <ActivityIndicator size="small" color={C.pureWhite} />
+              ) : (
+                <ThemedText style={styles.btnPrimaryText}>
+                  Register for reminders
+                </ThemedText>
+              )}
+            </Pressable>
+          ) : null
+          /* Token is saved + permission granted — no button needed */ }
         </View>
       ) : null}
 
