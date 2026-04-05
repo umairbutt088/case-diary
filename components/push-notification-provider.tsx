@@ -1,9 +1,13 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
+import { Alert, Linking } from "react-native";
 
 import { useAuth } from "@/context/auth-context";
-import { syncPushTokenForUser } from "@/lib/notifications";
+import { getNotificationPermissionStatus, syncPushTokenForUser } from "@/lib/notifications";
+
+const DENIED_ALERT_KEY = "@legal_diary/notif_denied_alert_shown";
 
 type NotificationRouteData = {
   screen?: string;
@@ -38,7 +42,37 @@ export function PushNotificationProvider({
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
-    syncPushTokenForUser(userId);
+
+    // Delay by 2 seconds so the OS permission dialog appears after the
+    // login/app-open transition has settled, not during it.
+    const timer = setTimeout(async () => {
+      const result = await syncPushTokenForUser(userId);
+
+      if (!result.ok) {
+        // Check if the failure was due to the user denying the permission.
+        const status = await getNotificationPermissionStatus();
+        if (status === "denied") {
+          // Only show this alert once — never repeat on subsequent app opens.
+          const alreadyShown = await AsyncStorage.getItem(DENIED_ALERT_KEY);
+          if (!alreadyShown) {
+            await AsyncStorage.setItem(DENIED_ALERT_KEY, "true");
+            Alert.alert(
+              "Reminders are off",
+              "You won't receive nightly hearing reminders because notifications are turned off for Legal Diary.\n\nYou can enable them any time from Profile → Cause List Reminder.",
+              [
+                {
+                  text: "Enable now",
+                  onPress: () => void Linking.openSettings(),
+                },
+                { text: "Maybe later", style: "cancel" },
+              ],
+            );
+          }
+        }
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, [session?.user?.id]);
 
   useEffect(() => {
