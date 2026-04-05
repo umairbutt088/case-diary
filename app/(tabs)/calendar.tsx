@@ -24,6 +24,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Spacer } from "@/components/ui";
 import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, setCachedCases } from "@/lib/cases-cache";
@@ -39,7 +40,8 @@ function buildCalendarTheme(C: AppColors) {
     textSectionTitleColor: C.black,
     selectedDayBackgroundColor: "transparent",
     selectedDayTextColor: C.black,
-    todayTextColor: C.black,
+    todayBackgroundColor: "transparent",
+    todayTextColor: C.themeRed,
     dayTextColor: C.black,
     textDisabledColor: C.gray40,
     textInactiveColor: C.gray40,
@@ -298,6 +300,7 @@ function createCalendarScreenStyles(C: AppColors) {
     calendarWrap: {
       backgroundColor: C.pureWhite,
       paddingHorizontal: 8,
+      borderRadius: 0,
     },
     addDateSection: {
       marginHorizontal: 20,
@@ -382,6 +385,7 @@ export default function CalendarScreen() {
   const { session } = useAuth();
   const isOnline = useIsOnline();
   const C = useThemePalette();
+  const { isDark } = useAppTheme();
   const styles = useMemo(() => createCalendarScreenStyles(C), [C]);
   const calendarTheme = useMemo(() => buildCalendarTheme(C), [C]);
   const calendarDayStyles = useMemo(() => createCalendarDayStyles(C), [C]);
@@ -517,6 +521,7 @@ export default function CalendarScreen() {
       >
         <View style={styles.calendarWrap}>
           <Calendar
+            key={isDark ? "dark" : "light"}
             current={currentMonth + "-01"}
             onDayPress={(day) => setSelectedDate(day.dateString)}
             onMonthChange={onMonthChange}
