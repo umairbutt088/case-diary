@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
@@ -259,6 +260,7 @@ export default function JudgesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [editingJudge, setEditingJudge] = useState<JudgeRow | null>(null);
   const [form, setForm] = useState<JudgeFormState>(initialForm);
 
@@ -350,10 +352,7 @@ export default function JudgesScreen() {
   }, [judges, search]);
 
   const openAddModal = () => {
-    setEditingJudge(null);
-    setForm(initialForm);
-    setFormError(null);
-    setIsModalVisible(true);
+    setIsAddModalVisible(true);
   };
 
   const openEditModal = (judge: JudgeRow) => {
@@ -443,7 +442,7 @@ export default function JudgesScreen() {
     setSaving(false);
     if (e) {
       if (e.code === "23505") {
-        setFormError("This judge already exists.");
+        setFormError("This judge already exists for the selected court tier.");
       } else {
         setFormError(e.message || "Failed to add judge.");
       }
@@ -636,6 +635,15 @@ export default function JudgesScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <AddJudgeBottomSheet
+        visible={isAddModalVisible}
+        defaultCourtTier=""
+        onClose={() => setIsAddModalVisible(false)}
+        onSaved={() => {
+          void fetchJudges();
+          setIsAddModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }

@@ -1,12 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
-import { AddJudgeModal } from "@/components/add-judge-modal";
 import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
@@ -89,8 +87,6 @@ export default function SettingsScreen() {
   const router = useRouter();
   const C = useThemePalette();
   const styles = useMemo(() => createSettingsStyles(C), [C]);
-  const [showAddClientModal, setShowAddClientModal] = useState(false);
-  const [showAddJudgeModal, setShowAddJudgeModal] = useState(false);
 
   const startWalkthrough = async () => {
     await AsyncStorage.multiRemove([
@@ -174,15 +170,6 @@ export default function SettingsScreen() {
 
 
       </ScrollView>
-      <AddNewClientModal
-        visible={showAddClientModal}
-        onClose={() => setShowAddClientModal(false)}
-        onSaved={() => {}}
-      />
-      <AddJudgeModal
-        visible={showAddJudgeModal}
-        onClose={() => setShowAddJudgeModal(false)}
-      />
     </SafeAreaView>
   );
 }
