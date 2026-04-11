@@ -40,6 +40,8 @@ type Props = {
   onChange: (value: string) => void;
   onSelectJudge?: (judge: JudgeRecord) => void;
   onPressAddJudge?: () => void;
+  /** When true, "Add Judge" opens the add-judge flow even if court tier is empty (tier is chosen in the sheet). */
+  allowAddJudgeWithoutCourtTier?: boolean;
   placeholder?: string;
   hint?: string;
   error?: string | null;
@@ -215,6 +217,7 @@ export function JudgeNameSelector({
   onChange,
   onSelectJudge,
   onPressAddJudge,
+  allowAddJudgeWithoutCourtTier = false,
   placeholder = "Select a judge",
   hint,
   error,
@@ -396,7 +399,7 @@ export function JudgeNameSelector({
   );
 
   const handlePressAddJudge = useCallback(() => {
-    if (!courtTier) {
+    if (!courtTier && !allowAddJudgeWithoutCourtTier) {
       Alert.alert(
         "Select court tier first",
         "Please select a court tier before adding a judge. The judge will be saved under that tier.",
@@ -404,7 +407,7 @@ export function JudgeNameSelector({
       return;
     }
     onPressAddJudge?.();
-  }, [courtTier, onPressAddJudge]);
+  }, [courtTier, allowAddJudgeWithoutCourtTier, onPressAddJudge]);
 
   return (
     <FormField label={label} required={required} hint={hint}>

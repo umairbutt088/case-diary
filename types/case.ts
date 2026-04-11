@@ -43,6 +43,20 @@ export function formatCaseDate(isoDate: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
+/**
+ * Compare two YYYY-MM-DD (or ISO date prefix) strings.
+ * Returns true if `a` is strictly before `b`. Invalid or short strings return false.
+ */
+export function isIsoDateBefore(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  const as = a?.slice(0, 10) ?? "";
+  const bs = b?.slice(0, 10) ?? "";
+  if (as.length < 10 || bs.length < 10) return false;
+  return as < bs;
+}
+
 /** Today's date in YYYY-MM-DD (local time) for DB comparisons */
 export function getTodayISO(): string {
   const d = new Date();

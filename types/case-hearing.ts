@@ -4,6 +4,7 @@ export type CaseHearingRow = {
   user_id: string;
   hearing_date: string;
   proceeding: string | null;
+  judge_name: string | null;
   current_status: string | null;
   next_status: string | null;
   next_hearing_date: string | null;

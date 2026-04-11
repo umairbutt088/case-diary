@@ -23,7 +23,9 @@ import {
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { DateField } from "@/components/add-case/date-field";
+import { JudgeNameSelector } from "@/components/add-case/judge-name-selector";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { DocumentIconPreview } from "@/components/ui/document-icon-preview";
@@ -56,7 +58,12 @@ import {
 import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
-import { formatCaseDate, getCaseDisplayTitle, getTodayISO } from "@/types/case";
+import {
+  formatCaseDate,
+  getCaseDisplayTitle,
+  getTodayISO,
+  isIsoDateBefore,
+} from "@/types/case";
 import type { CaseDocumentRow } from "@/types/case-document";
 import type { CaseHearingRow } from "@/types/case-hearing";
 import type { ClientRow } from "@/types/client";
@@ -142,6 +149,11 @@ function createCaseDetailStyles(
       color: C.black,
       marginBottom: 4,
     },
+    historyJudge: {
+      fontSize: 13,
+      color: C.gray50,
+      marginBottom: 4,
+    },
     historyProceeding: {
       fontSize: 15,
       color: C.black,
@@ -174,6 +186,11 @@ function createCaseDetailStyles(
     currentHearingDetail: {
       fontSize: 15,
       color: C.black,
+    },
+    currentHearingJudge: {
+      marginTop: 6,
+      fontSize: 14,
+      color: C.gray50,
     },
     previousHeading: {
       fontSize: 12,
@@ -319,6 +336,25 @@ function createCaseDetailStyles(
       color: onPrimary,
       fontSize: 14,
       fontWeight: "600",
+    },
+    proceedingAddJudgeFallback: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 8,
+      marginBottom: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      backgroundColor: C.pureWhite,
+      alignSelf: "flex-start",
+    },
+    proceedingAddJudgeFallbackText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: C.black,
     },
     detailValueRow: {
       flexDirection: "row",
@@ -562,6 +598,8 @@ export default function CaseDetailScreen() {
   const [showProceedingForm, setShowProceedingForm] = useState(false);
   const [nextStatusDraft, setNextStatusDraft] = useState("");
   const [nextDateDraft, setNextDateDraft] = useState("");
+  const [judgeNameDraft, setJudgeNameDraft] = useState("");
+  const [showProceedingAddJudgeSheet, setShowProceedingAddJudgeSheet] = useState(false);
   const [savingProceeding, setSavingProceeding] = useState(false);
   const [proceedingError, setProceedingError] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
@@ -581,6 +619,22 @@ export default function CaseDetailScreen() {
   } | null>(null);
 
   const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** After Add Judge closes, reopen Add proceeding when user opened judge from that flow. */
+  const resumeProceedingAfterJudgeRef = useRef(false);
+
+  const openAddJudgeFromProceeding = () => {
+    resumeProceedingAfterJudgeRef.current = true;
+    setShowProceedingForm(false);
+    setShowProceedingAddJudgeSheet(true);
+  };
+
+  const handleProceedingAddJudgeSheetClose = () => {
+    setShowProceedingAddJudgeSheet(false);
+    if (resumeProceedingAfterJudgeRef.current) {
+      resumeProceedingAfterJudgeRef.current = false;
+      setShowProceedingForm(true);
+    }
+  };
 
   const showCopyNotice = (message: string) => {
     setCopyNotice(message);
@@ -692,6 +746,12 @@ export default function CaseDetailScreen() {
   useEffect(() => {
     setNextDateDraft(caseData?.next_hearing_date || "");
   }, [caseData?.next_hearing_date]);
+
+  useEffect(() => {
+    if (showProceedingForm && caseData) {
+      setJudgeNameDraft(caseData.judge_name?.trim() ?? "");
+    }
+  }, [showProceedingForm, caseData?.judge_name]);
 
   useEffect(() => {
     return () => {
@@ -816,14 +876,21 @@ export default function CaseDetailScreen() {
       return;
     }
 
-    setSavingProceeding(true);
-    setProceedingError(null);
-
     const resolvedCurrentStatus = previousProceeding;
     const resolvedNextStatus = nextStatusDraft.trim();
     const resolvedNextDate = nextDateDraft.trim();
 
-    const historySaved = await addCaseHearingEntry({
+    if (isIsoDateBefore(resolvedNextDate, previousHearingDate)) {
+      setProceedingError(
+        `Next hearing date must be on or after ${formatCaseDate(previousHearingDate)}`,
+      );
+      return;
+    }
+
+    setSavingProceeding(true);
+    setProceedingError(null);
+
+    const hearingResult = await addCaseHearingEntry({
       caseId: caseData.id,
       userId: session.user.id,
       hearingDate: previousHearingDate,
@@ -831,11 +898,12 @@ export default function CaseDetailScreen() {
       currentStatus: resolvedCurrentStatus,
       nextStatus: resolvedNextStatus,
       nextHearingDate: resolvedNextDate,
+      judgeName: judgeNameDraft.trim() || null,
     });
 
-    if (!historySaved) {
+    if (!hearingResult.ok) {
       setSavingProceeding(false);
-      setProceedingError("Failed to save proceeding history.");
+      setProceedingError(hearingResult.message);
       return;
     }
 
@@ -869,6 +937,7 @@ export default function CaseDetailScreen() {
 
     setNextStatusDraft("");
     setNextDateDraft(resolvedNextDate);
+    setJudgeNameDraft(caseData.judge_name?.trim() ?? "");
     setShowProceedingForm(false);
     setSavingProceeding(false);
   };
@@ -1190,6 +1259,11 @@ export default function CaseDetailScreen() {
               <ThemedText style={styles.currentHearingDetail}>
                 {(caseData.next_status || caseData.current_status || "No proceeding detail").trim()}
               </ThemedText>
+              {caseData.judge_name?.trim() ? (
+                <ThemedText style={styles.currentHearingJudge}>
+                  Judge: {caseData.judge_name.trim()}
+                </ThemedText>
+              ) : null}
             </View>
 
             <ThemedText style={styles.previousHeading}>Previous hearings</ThemedText>
@@ -1202,6 +1276,11 @@ export default function CaseDetailScreen() {
                   <ThemedText style={styles.historyDate}>
                     {formatCaseDate(entry.hearing_date)}
                   </ThemedText>
+                  {entry.judge_name?.trim() ? (
+                    <ThemedText style={styles.historyJudge}>
+                      Judge: {entry.judge_name.trim()}
+                    </ThemedText>
+                  ) : null}
                   <ThemedText style={styles.historyProceeding}>
                     {(entry.proceeding || entry.current_status || "Proceeding updated").trim()}
                   </ThemedText>
@@ -1337,32 +1416,38 @@ export default function CaseDetailScreen() {
         visible={showProceedingForm}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowProceedingForm(false)}
+        onRequestClose={() => {
+          setShowProceedingForm(false);
+        }}
       >
         <KeyboardAvoidingView
           style={styles.modalRoot}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => {
-              if (!savingProceeding) setShowProceedingForm(false);
-            }}
-          />
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
+            <Pressable
+              style={styles.modalOverlay}
+              onPress={() => {
+                if (!savingProceeding) {
+                  setShowProceedingForm(false);
+                }
+              }}
+            />
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Add proceeding</ThemedText>
               <Bounceable
                 style={styles.modalClose}
                 onPress={() => {
-                  if (!savingProceeding) setShowProceedingForm(false);
+                  if (!savingProceeding) {
+                    setShowProceedingForm(false);
+                  }
                 }}
               >
                 <MaterialIcons name="close" size={20} color={C.black} />
               </Bounceable>
-            </View>
+              </View>
 
-            <ScrollView
+              <ScrollView
               style={styles.proceedingForm}
               contentContainerStyle={styles.proceedingFormContent}
               showsVerticalScrollIndicator={false}
@@ -1377,6 +1462,32 @@ export default function CaseDetailScreen() {
                   {previousProceeding}
                 </ThemedText>
               </View>
+
+              <JudgeNameSelector
+                label="Judge at this hearing"
+                value={judgeNameDraft}
+                courtTier={caseData.court_tier ?? ""}
+                onChange={setJudgeNameDraft}
+                onPressAddJudge={openAddJudgeFromProceeding}
+                allowAddJudgeWithoutCourtTier
+                placeholder="Select judge"
+                hint={
+                  caseData.court_tier?.trim()
+                    ? "Judges are filtered by this case's court tier."
+                    : "Add a court tier on the case (Edit case) to filter the list, or use Add judge to create one and pick a tier."
+                }
+              />
+              {!caseData.court_tier?.trim() ? (
+                <Bounceable
+                  style={styles.proceedingAddJudgeFallback}
+                  onPress={openAddJudgeFromProceeding}
+                >
+                  <MaterialIcons name="person-add" size={18} color={C.black} />
+                  <ThemedText style={styles.proceedingAddJudgeFallbackText}>
+                    Add judge
+                  </ThemedText>
+                </Bounceable>
+              ) : null}
 
               <ThemedText style={styles.inputLabel}>Next proceeding detail</ThemedText>
               <TextInput
@@ -1409,10 +1520,19 @@ export default function CaseDetailScreen() {
                   {savingProceeding ? "Saving..." : "Save proceeding"}
                 </ThemedText>
               </Bounceable>
-            </ScrollView>
-          </View>
+              </ScrollView>
+            </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <AddJudgeBottomSheet
+        visible={showProceedingAddJudgeSheet}
+        defaultCourtTier={caseData.court_tier ?? ""}
+        onClose={handleProceedingAddJudgeSheetClose}
+        onSaved={(judge) => {
+          setJudgeNameDraft(judge.name);
+        }}
+      />
 
       {copyNotice ? (
         <View pointerEvents="none" style={styles.copyToastWrap}>

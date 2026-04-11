@@ -36,6 +36,11 @@ type Props = {
   defaultCourtTier?: string;
   onClose: () => void;
   onSaved: (judge: SavedJudge) => void;
+  /**
+   * When true, renders without an inner Modal (full-screen overlay). Use inside another Modal
+   * so the sheet appears above the parent — nested Modals are unreliable on RN.
+   */
+  inline?: boolean;
 };
 
 type AddJudgeForm = {
@@ -130,6 +135,11 @@ function createAddJudgeBottomSheetStyles(
       fontWeight: "600",
       color: onPrimary,
     },
+    inlineRoot: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 1000,
+      elevation: 1000,
+    },
   });
 }
 
@@ -138,6 +148,7 @@ export function AddJudgeBottomSheet({
   defaultCourtTier,
   onClose,
   onSaved,
+  inline = false,
 }: Props) {
   const { session } = useAuth();
   const isOnline = useIsOnline();
@@ -237,72 +248,86 @@ export function AddJudgeBottomSheet({
 
   if (!visible) return null;
 
-  return (
-    <Modal visible={visible} transparent animationType="slide">
-      <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
-        <Pressable style={styles.backdrop} onPress={handleClose} />
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <ThemedText style={styles.title}>Add Judge</ThemedText>
-            <Pressable onPress={handleClose} hitSlop={12}>
-              <ThemedText style={styles.cancel}>Cancel</ThemedText>
+  const sheetBody = (
+    <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
+      <Pressable style={styles.backdrop} onPress={handleClose} />
+      <View style={styles.sheet}>
+        <View style={styles.header}>
+          <ThemedText style={styles.title}>Add Judge</ThemedText>
+          <Pressable onPress={handleClose} hitSlop={12}>
+            <ThemedText style={styles.cancel}>Cancel</ThemedText>
+          </Pressable>
+        </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <FormFieldWithHint
+            label="Judge Name"
+            required
+            value={form.name}
+            onChangeText={(v) => update({ name: v })}
+            placeholder="Enter judge name"
+          />
+          <FormFieldWithHint
+            label="Court room address"
+            value={form.courtRoomAddress}
+            onChangeText={(v) => update({ courtRoomAddress: v })}
+            placeholder="e.g. Building A, 2nd Floor"
+            hint="Optional. Auto-fills case court room when this judge is selected."
+          />
+          <FormField label="Court Tier">
+            <CourtTierPicker
+              label="Court tier"
+              value={selectedCourtTier}
+              onChange={(v) => {
+                setSelectedCourtTier(v);
+                setError(null);
+              }}
+              required
+              hint="Use the same tier list as case creation."
+            />
+          </FormField>
+          {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+          <View style={styles.buttons}>
+            <Pressable
+              style={[styles.btn, styles.btnSecondary]}
+              onPress={handleClose}
+              disabled={saving}
+            >
+              <ThemedText style={styles.btnSecondaryText}>Cancel</ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.btn, styles.btnPrimary]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={onPrimary} />
+              ) : (
+                <ThemedText style={styles.btnPrimaryText}>Save Judge</ThemedText>
+              )}
             </Pressable>
           </View>
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <FormFieldWithHint
-              label="Judge Name"
-              required
-              value={form.name}
-              onChangeText={(v) => update({ name: v })}
-              placeholder="Enter judge name"
-            />
-            <FormFieldWithHint
-              label="Court room address"
-              value={form.courtRoomAddress}
-              onChangeText={(v) => update({ courtRoomAddress: v })}
-              placeholder="e.g. Building A, 2nd Floor"
-              hint="Optional. Auto-fills case court room when this judge is selected."
-            />
-            <FormField label="Court Tier">
-              <CourtTierPicker
-                value={selectedCourtTier}
-                onChange={(v) => {
-                  setSelectedCourtTier(v);
-                  setError(null);
-                }}
-                required
-                hint="Use the same tier list as case creation."
-              />
-            </FormField>
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
-            <View style={styles.buttons}>
-              <Pressable
-                style={[styles.btn, styles.btnSecondary]}
-                onPress={handleClose}
-                disabled={saving}
-              >
-                <ThemedText style={styles.btnSecondaryText}>Cancel</ThemedText>
-              </Pressable>
-              <Pressable
-                style={[styles.btn, styles.btnPrimary]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color={onPrimary} />
-                ) : (
-                  <ThemedText style={styles.btnPrimaryText}>Save Judge</ThemedText>
-                )}
-              </Pressable>
-            </View>
-          </ScrollView>
-        </View>
-      </SafeAreaView>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+
+  if (inline) {
+    return <View style={styles.inlineRoot}>{sheetBody}</View>;
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={handleClose}
+    >
+      {sheetBody}
     </Modal>
   );
 }

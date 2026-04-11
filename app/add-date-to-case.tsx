@@ -244,13 +244,18 @@ export default function AddDateToCaseScreen() {
         next_hearing_date: selectedDate,
         updated_at: new Date().toISOString(),
       });
-      await addCaseHearingEntry({
+      const hearingResult = await addCaseHearingEntry({
         caseId: caseItem.id,
         userId: session.user.id,
         hearingDate: caseItem.next_hearing_date ?? selectedDate,
         nextHearingDate: selectedDate,
         proceeding: "Next hearing date updated",
+        judgeName: caseItem.judge_name,
       });
+      if (!hearingResult.ok) {
+        setError(hearingResult.message);
+        return;
+      }
       setError(null);
       router.back();
     },

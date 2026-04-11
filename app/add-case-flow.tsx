@@ -322,7 +322,7 @@ export default function AddCaseFlowScreen() {
 
       const savedCase = data as { id: string } | null;
       if (savedCase?.id) {
-        await addCaseHearingEntry({
+        const hearingResult = await addCaseHearingEntry({
           caseId: savedCase.id,
           userId,
           hearingDate: row.next_hearing_date,
@@ -330,7 +330,12 @@ export default function AddCaseFlowScreen() {
           nextStatus: row.next_status,
           nextHearingDate: row.next_hearing_date,
           proceeding: row.current_status,
+          judgeName: row.judge_name,
         });
+        if (!hearingResult.ok) {
+          setSaveError(hearingResult.message);
+          return;
+        }
       }
       router.back();
     } else {

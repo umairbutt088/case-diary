@@ -346,7 +346,7 @@ export default function EditCaseScreen() {
       setSaveError(error.message || "Failed to update case.");
       return;
     }
-    await addCaseHearingEntry({
+    const hearingResult = await addCaseHearingEntry({
       caseId: id,
       userId: session.user.id,
       hearingDate: previousHearingDate ?? row.next_hearing_date,
@@ -354,7 +354,12 @@ export default function EditCaseScreen() {
       nextStatus: row.next_status,
       nextHearingDate: row.next_hearing_date,
       proceeding: row.current_status,
+      judgeName: row.judge_name,
     });
+    if (!hearingResult.ok) {
+      setSaveError(hearingResult.message);
+      return;
+    }
     await patchCachedCase(session.user.id, id, {
       ...row,
       updated_at: new Date().toISOString(),

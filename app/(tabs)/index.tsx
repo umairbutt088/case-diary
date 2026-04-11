@@ -590,6 +590,17 @@ export default function HomeScreen() {
             <MaterialIcons name="share" size={19} color={C.black} />
             <ThemedText style={styles.sidebarItemText}>Share case list</ThemedText>
           </Bounceable>
+
+          <Bounceable
+            style={styles.sidebarItem}
+            onPress={() => {
+              setIsSidebarOpen(false);
+              router.push("/trash");
+            }}
+          >
+            <MaterialIcons name="delete-outline" size={19} color={C.black} />
+            <ThemedText style={styles.sidebarItemText}>Trash</ThemedText>
+          </Bounceable>
         </RNPressable>
       </RNPressable>
     </Modal>
