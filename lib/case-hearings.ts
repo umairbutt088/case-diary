@@ -1,7 +1,7 @@
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseHearingRow } from "@/types/case-hearing";
 
-type AddCaseHearingInput = {
+export type AddCaseHearingInput = {
   caseId: string;
   userId: string;
   hearingDate: string | null;
@@ -9,25 +9,51 @@ type AddCaseHearingInput = {
   nextStatus?: string | null;
   nextHearingDate?: string | null;
   proceeding?: string | null;
+  judgeName?: string | null;
 };
 
-export async function addCaseHearingEntry(input: AddCaseHearingInput) {
-  if (!isSupabaseConfigured) return false;
-  if (!input.caseId || !input.userId || !input.hearingDate) return false;
+export type AddCaseHearingResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function addCaseHearingEntry(
+  input: AddCaseHearingInput,
+): Promise<AddCaseHearingResult> {
+  if (!isSupabaseConfigured) {
+    return {
+      ok: false,
+      message: "Database is not configured. Check your Supabase settings.",
+    };
+  }
+  if (!input.caseId?.trim() || !input.userId?.trim()) {
+    return { ok: false, message: "Missing case or user." };
+  }
+  if (!input.hearingDate?.trim()) {
+    return { ok: false, message: "Hearing date is required to save history." };
+  }
 
   const proceeding = input.proceeding?.trim() || input.currentStatus?.trim() || null;
+  const judgeName = input.judgeName?.trim() || null;
 
   const { error } = await supabase.from("case_hearings").insert({
     case_id: input.caseId,
     user_id: input.userId,
-    hearing_date: input.hearingDate,
+    hearing_date: input.hearingDate.trim(),
     proceeding,
+    judge_name: judgeName,
     current_status: input.currentStatus?.trim() || null,
     next_status: input.nextStatus?.trim() || null,
-    next_hearing_date: input.nextHearingDate || null,
+    next_hearing_date: input.nextHearingDate?.trim() || null,
   });
 
-  return !error;
+  if (error) {
+    const msg = error.message?.trim();
+    return {
+      ok: false,
+      message: msg || "Could not save hearing record.",
+    };
+  }
+  return { ok: true };
 }
 
 export async function getCaseHearingHistory(

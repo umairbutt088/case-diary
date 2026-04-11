@@ -50,6 +50,11 @@ function createHearingsStyles(C: AppColors) {
       color: C.black,
       marginBottom: 6,
     },
+    judgeText: {
+      fontSize: 14,
+      color: C.gray50,
+      marginBottom: 6,
+    },
     proceedingText: {
       fontSize: 16,
       color: C.black,
@@ -203,6 +208,11 @@ export default function CaseHearingsScreen() {
             <ThemedText style={styles.dateText}>
               {formatCaseDate(entry.hearing_date)}
             </ThemedText>
+            {entry.judge_name?.trim() ? (
+              <ThemedText style={styles.judgeText}>
+                Judge: {entry.judge_name.trim()}
+              </ThemedText>
+            ) : null}
             <ThemedText style={styles.proceedingText}>
               {(entry.proceeding || entry.current_status || "Proceeding updated").trim()}
             </ThemedText>

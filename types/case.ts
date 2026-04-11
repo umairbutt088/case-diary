@@ -24,6 +24,8 @@ export type CaseRow = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  /** Soft-delete timestamp. NULL = active case. Non-null = moved to Trash. */
+  deleted_at: string | null;
 };
 
 /** Display title: "Petitioner vs. Respondent" (or case_title if set) */
@@ -39,6 +41,20 @@ export function formatCaseDate(isoDate: string | null): string {
   if (!isoDate || isoDate.length < 10) return "—";
   const [y, m, d] = isoDate.slice(0, 10).split("-");
   return `${d}/${m}/${y}`;
+}
+
+/**
+ * Compare two YYYY-MM-DD (or ISO date prefix) strings.
+ * Returns true if `a` is strictly before `b`. Invalid or short strings return false.
+ */
+export function isIsoDateBefore(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  const as = a?.slice(0, 10) ?? "";
+  const bs = b?.slice(0, 10) ?? "";
+  if (as.length < 10 || bs.length < 10) return false;
+  return as < bs;
 }
 
 /** Today's date in YYYY-MM-DD (local time) for DB comparisons */
