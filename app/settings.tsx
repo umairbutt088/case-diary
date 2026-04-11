@@ -166,6 +166,22 @@ export default function SettingsScreen() {
             </View>
             <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
           </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={({ pressed }) => [
+              styles.rowButton,
+              pressed && styles.rowButtonPressed,
+            ]}
+            onPress={() => router.push("/trash")}
+            accessibilityRole="button"
+            accessibilityLabel="Trash"
+          >
+            <View style={styles.rowLeading}>
+              <MaterialIcons name="delete-outline" size={20} color={C.gray50} style={{ marginRight: 8 }} />
+              <ThemedText style={styles.rowLabel}>Trash</ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+          </Pressable>
         </View>
 
 

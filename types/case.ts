@@ -24,6 +24,8 @@ export type CaseRow = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  /** Soft-delete timestamp. NULL = active case. Non-null = moved to Trash. */
+  deleted_at: string | null;
 };
 
 /** Display title: "Petitioner vs. Respondent" (or case_title if set) */

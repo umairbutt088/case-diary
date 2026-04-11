@@ -231,6 +231,7 @@ export default function HomeScreen() {
         .from("cases")
         .select("*")
         .eq("user_id", session.user.id)
+        .is("deleted_at", null)
         .order("next_hearing_date", { ascending: true, nullsFirst: false });
 
       setLoading(false);
@@ -324,36 +325,40 @@ export default function HomeScreen() {
 
   const handleDeleteCase = useCallback(
     (caseId: string) => {
-      Alert.alert("Delete case?", "This cannot be undone.", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (!session?.user?.id) return;
-            if (!isOnline) {
-              await addPendingCaseDelete(session.user.id, caseId);
-              await removeCachedCase(session.user.id, caseId);
-              setCases((prev) => prev.filter((c) => c.id !== caseId));
-              Alert.alert(
-                "Delete queued",
-                "Case will be deleted in cloud when internet is available.",
-              );
-              return;
-            }
-            const { error: e } = await supabase
-              .from("cases")
-              .delete()
-              .eq("id", caseId)
-              .eq("user_id", session.user.id);
-            if (e) Alert.alert("Error", e.message);
-            else {
-              await removeCachedCase(session.user.id, caseId);
-              fetchCases();
-            }
+      Alert.alert(
+        "Move to Trash?",
+        "The case will be moved to Trash. You can restore it anytime from Settings → Trash.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Move to Trash",
+            style: "destructive",
+            onPress: async () => {
+              if (!session?.user?.id) return;
+              if (!isOnline) {
+                await addPendingCaseDelete(session.user.id, caseId);
+                await removeCachedCase(session.user.id, caseId);
+                setCases((prev) => prev.filter((c) => c.id !== caseId));
+                Alert.alert(
+                  "Queued",
+                  "Case will be moved to Trash when internet is available.",
+                );
+                return;
+              }
+              const { error: e } = await supabase
+                .from("cases")
+                .update({ deleted_at: new Date().toISOString() })
+                .eq("id", caseId)
+                .eq("user_id", session.user.id);
+              if (e) Alert.alert("Error", e.message);
+              else {
+                await removeCachedCase(session.user.id, caseId);
+                fetchCases();
+              }
+            },
           },
-        },
-      ]);
+        ],
+      );
     },
     [session?.user?.id, fetchCases, isOnline],
   );

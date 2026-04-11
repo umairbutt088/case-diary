@@ -62,7 +62,8 @@ type PendingUpdateCase = {
 type PendingDeleteCase = {
   id: string;
   createdAt: number;
-  kind: "delete";
+  /** "delete" = soft-delete (sets deleted_at). "hard_delete" = permanent removal. */
+  kind: "delete" | "hard_delete";
   user_id: string;
   case_id: string;
 };
@@ -121,14 +122,14 @@ function toOperation(item: unknown): PendingCaseOperation | null {
   }
 
   if (
-    maybe.kind === "delete" &&
+    (maybe.kind === "delete" || maybe.kind === "hard_delete") &&
     typeof maybe.user_id === "string" &&
     typeof maybe.case_id === "string"
   ) {
     return {
       id,
       createdAt,
-      kind: "delete",
+      kind: maybe.kind,
       user_id: maybe.user_id,
       case_id: maybe.case_id,
     };
@@ -181,6 +182,7 @@ function buildLocalCaseRow(
     notes: row.notes ?? null,
     created_at: nowIso,
     updated_at: nowIso,
+    deleted_at: null,
   };
 }
 
@@ -250,6 +252,7 @@ export async function addPendingCaseUpdate(
   await setStored(items);
 }
 
+/** Queue a soft-delete (moves case to Trash by setting deleted_at). */
 export async function addPendingCaseDelete(
   userId: string,
   caseId: string,
@@ -275,6 +278,23 @@ export async function addPendingCaseDelete(
     case_id: caseId,
   });
   await setStored(remaining);
+}
+
+/** Queue a hard (permanent) delete. Only called from the Trash screen. */
+export async function addPendingCaseHardDelete(
+  userId: string,
+  caseId: string,
+): Promise<void> {
+  const items = await getStored();
+  const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  items.push({
+    id,
+    createdAt: Date.now(),
+    kind: "hard_delete",
+    user_id: userId,
+    case_id: caseId,
+  });
+  await setStored(items);
 }
 
 /** Remove a pending case by id */
@@ -342,18 +362,28 @@ export async function syncPendingCases(userId: string): Promise<SyncResult> {
       continue;
     }
 
-    const { error } = await supabase
-      .from("cases")
-      .delete()
-      .eq("id", item.case_id)
-      .eq("user_id", userId);
+    if (item.kind === "hard_delete") {
+      // Permanent deletion from the Trash screen
+      const { error } = await supabase
+        .from("cases")
+        .delete()
+        .eq("id", item.case_id)
+        .eq("user_id", userId);
 
-    if (error) {
-      failed += 1;
-      continue;
+      if (error) { failed += 1; continue; }
+      await removeCachedCase(userId, item.case_id);
+    } else {
+      // Soft delete — set deleted_at so the case moves to Trash
+      const { error } = await supabase
+        .from("cases")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", item.case_id)
+        .eq("user_id", userId);
+
+      if (error) { failed += 1; continue; }
+      await removeCachedCase(userId, item.case_id);
     }
 
-    await removeCachedCase(userId, item.case_id);
     await removePendingCase(item.id);
     synced += 1;
   }

@@ -1289,12 +1289,12 @@ export default function CaseDetailScreen() {
             style={styles.deleteButton}
             onPress={() => {
               Alert.alert(
-                "Delete case?",
-                "This cannot be undone. The case and its details will be permanently removed.",
+                "Move to Trash?",
+                "The case will be moved to Trash. You can restore it anytime from Settings → Trash.",
                 [
                   { text: "Cancel", style: "cancel" },
                   {
-                    text: "Delete",
+                    text: "Move to Trash",
                     style: "destructive",
                     onPress: async () => {
                       if (!id || !session?.user?.id) return;
@@ -1307,7 +1307,7 @@ export default function CaseDetailScreen() {
                       setDeleting(true);
                       const { error: e } = await supabase
                         .from("cases")
-                        .delete()
+                        .update({ deleted_at: new Date().toISOString() })
                         .eq("id", id)
                         .eq("user_id", session.user.id);
                       setDeleting(false);
@@ -1325,9 +1325,9 @@ export default function CaseDetailScreen() {
             disabled={deleting}
           >
             {deleting ? (
-              <ThemedText style={styles.deleteButtonText}>Deleting…</ThemedText>
+              <ThemedText style={styles.deleteButtonText}>Moving to Trash…</ThemedText>
             ) : (
-              <ThemedText style={styles.deleteButtonText}>Delete case</ThemedText>
+              <ThemedText style={styles.deleteButtonText}>Move to Trash</ThemedText>
             )}
           </Bounceable>
         </Animated.View>

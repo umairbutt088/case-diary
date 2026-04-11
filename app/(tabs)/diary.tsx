@@ -348,6 +348,7 @@ export default function DiaryScreen() {
       .from("cases")
       .select("*")
       .eq("user_id", session.user.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     setLoading(false);
     if (e) {
@@ -395,12 +396,12 @@ export default function DiaryScreen() {
   const handleDeleteCase = useCallback(
     (caseId: string) => {
       Alert.alert(
-        "Delete case?",
-        "This cannot be undone.",
+        "Move to Trash?",
+        "The case will be moved to Trash. You can restore it anytime from Settings → Trash.",
         [
           { text: "Cancel", style: "cancel" },
           {
-            text: "Delete",
+            text: "Move to Trash",
             style: "destructive",
             onPress: async () => {
               if (!session?.user?.id) return;
@@ -409,14 +410,14 @@ export default function DiaryScreen() {
                 await removeCachedCase(session.user.id, caseId);
                 setCases((prev) => prev.filter((c) => c.id !== caseId));
                 Alert.alert(
-                  "Delete queued",
-                  "Case will be deleted in cloud when internet is available.",
+                  "Queued",
+                  "Case will be moved to Trash when internet is available.",
                 );
                 return;
               }
               const { error: e } = await supabase
                 .from("cases")
-                .delete()
+                .update({ deleted_at: new Date().toISOString() })
                 .eq("id", caseId)
                 .eq("user_id", session.user.id);
               if (e) {
@@ -458,12 +459,12 @@ export default function DiaryScreen() {
   const bulkDeleteSelected = useCallback(() => {
     if (!session?.user?.id || selectedCount === 0 || bulkDeleting) return;
     Alert.alert(
-      "Delete selected cases?",
-      `You are about to delete ${selectedCount} case${selectedCount === 1 ? "" : "s"}.`,
+      "Move to Trash?",
+      `Move ${selectedCount} case${selectedCount === 1 ? "" : "s"} to Trash? You can restore them anytime.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete",
+          text: "Move to Trash",
           style: "destructive",
           onPress: async () => {
             if (!session?.user?.id) return;
@@ -478,20 +479,20 @@ export default function DiaryScreen() {
               setSelectedCaseIds(new Set());
               setBulkDeleting(false);
               Alert.alert(
-                "Delete queued",
-                "Selected cases will be deleted in cloud when internet is available.",
+                "Queued",
+                "Cases will be moved to Trash when internet is available.",
               );
               return;
             }
 
             const { error: e } = await supabase
               .from("cases")
-              .delete()
+              .update({ deleted_at: new Date().toISOString() })
               .eq("user_id", session.user.id)
               .in("id", ids);
             if (e) {
               setBulkDeleting(false);
-              Alert.alert("Delete failed", e.message || "Could not delete selected cases.");
+              Alert.alert("Error", e.message || "Could not move cases to Trash.");
               return;
             }
 

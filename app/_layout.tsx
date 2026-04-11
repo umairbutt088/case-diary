@@ -121,6 +121,12 @@ function RootLayoutInner() {
                       headerShown: false,
                     }}
                   />
+                  <Stack.Screen
+                    name="trash"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
                 </Stack>
               </AuthNavigator>
             </CopilotProvider>
