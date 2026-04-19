@@ -6,11 +6,12 @@ import * as Print from "expo-print";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -18,6 +19,7 @@ import {
   Share,
   StyleSheet,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -37,6 +39,11 @@ import {
   type AppColors,
   modalSheetBackground,
 } from "@/constants/color-palette";
+import {
+  type PakistanCourtPortal,
+  COURT_PORTAL_SECTIONS,
+  getPakistanCourtPortalById,
+} from "@/constants/court-cms";
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
@@ -48,6 +55,10 @@ import {
   getDocumentDownloadUrl,
   uploadCaseDocument
 } from "@/lib/case-documents";
+import {
+  getLastCourtPortalId,
+  setLastCourtPortalId,
+} from "@/lib/court-portal-preference";
 import { addCaseHearingEntry, getCaseHearingHistory } from "@/lib/case-hearings";
 import {
   getCachedCaseById,
@@ -231,6 +242,93 @@ function createCaseDetailStyles(
       fontWeight: "600",
       color: C.black,
     },
+    courtPortalHint: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: C.gray50,
+      marginBottom: 10,
+    },
+    courtPortalModalIntro: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: C.black80,
+      marginBottom: 10,
+    },
+    courtPortalSectionTitle: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: C.gray50,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    courtPortalSectionTitleFirst: {
+      marginTop: 0,
+    },
+    /** Extra inset so cards aren’t flush to the sheet; avoids ScrollView clipping shadows. */
+    courtPortalListContent: {
+      paddingTop: 6,
+      paddingBottom: 10,
+      paddingHorizontal: 4,
+    },
+    courtPortalOption: {
+      marginBottom: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      backgroundColor: C.pureWhite,
+    },
+    courtPortalOptionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    courtPortalOptionTexts: {
+      flex: 1,
+    },
+    courtPortalOptionLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.black90,
+      letterSpacing: -0.2,
+    },
+    courtPortalOptionDesc: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: C.gray70,
+      marginTop: 4,
+    },
+    courtPortalOptionSelected: {
+      borderColor: C.themeBlack,
+      backgroundColor: C.cream50,
+      borderWidth: 1,
+    },
+    courtPortalOptionIconCol: {
+      width: 26,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    courtPortalScroll: {
+      maxHeight: 400,
+    },
+    courtPortalOpenBtn: {
+      marginTop: 14,
+      borderRadius: 10,
+      paddingVertical: 14,
+      alignItems: "center",
+      backgroundColor: C.themeBlack,
+    },
+    courtPortalOpenBtnDisabled: {
+      opacity: 0.45,
+    },
+    courtPortalOpenBtnText: {
+      color: onPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
     modalOverlay: {
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.35)",
@@ -240,11 +338,13 @@ function createCaseDetailStyles(
       justifyContent: "flex-end",
     },
     modalCard: {
+      width: "100%",
       backgroundColor: modalSheet,
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
       padding: 16,
-      maxHeight: "80%",
+      paddingBottom: 24,
+      maxHeight: "85%",
     },
     modalHeader: {
       flexDirection: "row",
@@ -618,9 +718,50 @@ export default function CaseDetailScreen() {
     size?: number;
   } | null>(null);
 
+  const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
+  const [courtPortalPickId, setCourtPortalPickId] = useState<string | null>(
+    null,
+  );
+  const [lastPortalId, setLastPortalIdState] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!showCourtPortalModal) return;
+    const pre = getPakistanCourtPortalById(lastPortalId);
+    setCourtPortalPickId(pre?.id ?? null);
+  }, [showCourtPortalModal, lastPortalId]);
+
+  const openCourtPortalUrl = useCallback((entry: PakistanCourtPortal) => {
+    setShowCourtPortalModal(false);
+    void setLastCourtPortalId(entry.id);
+    setLastPortalIdState(entry.id);
+    const url = entry.url;
+
+    const open = async () => {
+      try {
+        await Linking.openURL(url);
+      } catch {
+        try {
+          await WebBrowser.openBrowserAsync(url, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          });
+        } catch {
+          Alert.alert("Error", "Could not open the court website.");
+        }
+      }
+    };
+
+    setTimeout(() => {
+      void open();
+    }, Platform.OS === "ios" ? 350 : 150);
+  }, []);
+
   const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** After Add Judge closes, reopen Add proceeding when user opened judge from that flow. */
   const resumeProceedingAfterJudgeRef = useRef(false);
+
+  useEffect(() => {
+    void getLastCourtPortalId().then((id) => setLastPortalIdState(id));
+  }, []);
 
   const openAddJudgeFromProceeding = () => {
     resumeProceedingAfterJudgeRef.current = true;
@@ -1165,6 +1306,20 @@ export default function CaseDetailScreen() {
             <DetailRow s={styles} C={C} label="Court tier" value={caseData.court_tier} />
             <DetailRow s={styles} C={C} label="Court room location" value={caseData.court_room} />
             <DetailRow s={styles} C={C} label="Judge name" value={caseData.judge_name} />
+            <ThemedText style={styles.courtPortalHint}>
+              Copy your case number from above, pick trial court, High Court, or Supreme Court in
+              the list, then tap Open website.
+            </ThemedText>
+            <Bounceable
+              style={styles.addProceedingBtn}
+              onPress={() => setShowCourtPortalModal(true)}
+              accessibilityLabel="Choose court portal for case search"
+            >
+              <MaterialIcons name="public" size={18} color={C.black} />
+              <ThemedText style={styles.addProceedingText}>
+                Check the case
+              </ThemedText>
+            </Bounceable>
           </SectionCard>
 
           <SectionCard s={styles} title="Client">
@@ -1523,6 +1678,109 @@ export default function CaseDetailScreen() {
               </ScrollView>
             </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={showCourtPortalModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCourtPortalModal(false)}
+      >
+        <View style={styles.modalRoot}>
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowCourtPortalModal(false)}
+          />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Court case search</ThemedText>
+              <Bounceable
+                style={styles.modalClose}
+                onPress={() => setShowCourtPortalModal(false)}
+              >
+                <MaterialIcons name="close" size={20} color={C.black} />
+              </Bounceable>
+            </View>
+            <ThemedText style={styles.courtPortalModalIntro}>
+              Select trial court / registry, a High Court, or the Supreme Court, then open the
+              website and paste your case number on the court site.
+            </ThemedText>
+            <ScrollView
+              style={styles.courtPortalScroll}
+              contentContainerStyle={styles.courtPortalListContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {COURT_PORTAL_SECTIONS.map((section, sectionIdx) => (
+                <View key={section.title}>
+                  <ThemedText
+                    style={[
+                      styles.courtPortalSectionTitle,
+                      sectionIdx === 0 && styles.courtPortalSectionTitleFirst,
+                    ]}
+                  >
+                    {section.title}
+                  </ThemedText>
+                  {section.items.map((portal) => {
+                    const selected = courtPortalPickId === portal.id;
+                    return (
+                      <TouchableOpacity
+                        key={portal.id}
+                        style={[
+                          styles.courtPortalOption,
+                          selected && styles.courtPortalOptionSelected,
+                        ]}
+                        activeOpacity={0.75}
+                        onPress={() => setCourtPortalPickId(portal.id)}
+                      >
+                        <View style={styles.courtPortalOptionRow}>
+                          <View style={styles.courtPortalOptionTexts}>
+                            <ThemedText style={styles.courtPortalOptionLabel}>
+                              {portal.label}
+                            </ThemedText>
+                            <ThemedText style={styles.courtPortalOptionDesc}>
+                              {portal.description}
+                            </ThemedText>
+                          </View>
+                          <View style={styles.courtPortalOptionIconCol}>
+                            {selected ? (
+                              <MaterialIcons
+                                name="check-circle"
+                                size={24}
+                                color={C.themeBlack}
+                              />
+                            ) : (
+                              <MaterialIcons
+                                name="radio-button-unchecked"
+                                size={22}
+                                color={C.borderGray}
+                              />
+                            )}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
+            </ScrollView>
+            <Bounceable
+              style={[
+                styles.courtPortalOpenBtn,
+                !courtPortalPickId && styles.courtPortalOpenBtnDisabled,
+              ]}
+              disabled={!courtPortalPickId}
+              onPress={() => {
+                const entry = getPakistanCourtPortalById(courtPortalPickId);
+                if (entry) openCourtPortalUrl(entry);
+              }}
+            >
+              <ThemedText style={styles.courtPortalOpenBtnText}>
+                Open website
+              </ThemedText>
+            </Bounceable>
+          </View>
+        </View>
       </Modal>
 
       <AddJudgeBottomSheet
