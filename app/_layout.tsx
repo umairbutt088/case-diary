@@ -4,6 +4,8 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
 import { Platform, StatusBar as RNStatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -15,8 +17,9 @@ import { AppThemeProvider, useAppTheme } from "@/context/app-theme-context";
 import { AuthProvider } from "@/context/auth-context";
 import { CopilotProvider } from "react-native-copilot";
 
+// Default to auth so the root stack never paints `(tabs)` before we know the session (avoids home flash → login).
 export const unstable_settings = {
-  anchor: "(tabs)",
+  anchor: "(auth)",
 };
 
 const NavigationDarkTheme = {
@@ -34,6 +37,11 @@ const NavigationDarkTheme = {
 
 function RootLayoutInner() {
   const { isDark, colors } = useAppTheme();
+
+  useEffect(() => {
+    void SplashScreen.hideAsync();
+  }, []);
+
   const isAndroid = Platform.OS === "android";
   const statusBarStyle = isAndroid
     ? isDark

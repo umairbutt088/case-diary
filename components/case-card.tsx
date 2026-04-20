@@ -6,13 +6,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { CopilotStep, walkthroughable } from "react-native-copilot";
 import Animated, {
-  FadeInUp,
-  FadeOut,
-  LinearTransition
+    FadeInUp,
+    FadeOut,
+    LinearTransition
 } from "react-native-reanimated";
 
-import { COURT_TIERS } from "@/constants/case-form";
 import { ThemedText } from "@/components/themed-text";
+import { COURT_TIERS } from "@/constants/case-form";
 import type { AppColors } from "@/constants/color-palette";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import type { CaseRow } from "@/types/case";

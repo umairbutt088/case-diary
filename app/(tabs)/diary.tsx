@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
-import { useFocusEffect, useRouter } from "expo-router";
 import * as Print from "expo-print";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -14,9 +14,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 
 import { CaseCard } from "@/components/case-card";
 import {
@@ -28,8 +28,8 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
-import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
 import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";

@@ -2,29 +2,29 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import type { DateData } from "react-native-calendars";
 import { Calendar } from "react-native-calendars";
+import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  CalendarCaseCard,
-  type CalendarCaseItem,
+    CalendarCaseCard,
+    type CalendarCaseItem,
 } from "@/components/calendar-case-card";
 import { ThemedText } from "@/components/themed-text";
 import { Spacer } from "@/components/ui";
 import type { AppColors } from "@/constants/color-palette";
-import { useAuth } from "@/context/auth-context";
 import { useAppTheme } from "@/context/app-theme-context";
+import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, setCachedCases } from "@/lib/cases-cache";

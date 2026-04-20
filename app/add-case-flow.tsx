@@ -5,14 +5,15 @@ import {
   Alert,
   Keyboard,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import Animated, { FadeInUp, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
+import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
@@ -37,8 +38,8 @@ import {
 import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
-import { useThemePalette } from "@/hooks/use-theme-palette";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
 import { addPendingCase, type PendingCaseRow } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -73,23 +74,18 @@ function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
     },
     addClientBtn: {
       borderWidth: 1,
-      borderColor: C.borderGray,
+      borderColor: C.themeBlack,
       borderRadius: 10,
+      backgroundColor: C.themeBlack,
       paddingVertical: 14,
       paddingHorizontal: 12,
       alignItems: "center",
-    },
-    addClientBtnSelected: {
-      borderColor: C.themeBlack,
-      backgroundColor: C.themeBlack,
+      justifyContent: "center",
     },
     addClientText: {
       fontSize: 16,
-      color: C.gray50,
-    },
-    addClientTextSelected: {
-      color: onPrimary,
       fontWeight: "600",
+      color: onPrimary,
     },
     manageRefBtn: {
       marginTop: 8,
@@ -382,6 +378,7 @@ export default function AddCaseFlowScreen() {
               placeholder="Enter First and Last Name"
               hint="Add First Party's full name"
               error={errors.petitionerName}
+              autoCapitalize="words"
             />
             <FormFieldWithHint
               label="Second Party Name"
@@ -391,6 +388,7 @@ export default function AddCaseFlowScreen() {
               placeholder="Enter First and Last Name"
               hint="Add Second Party's full name"
               error={errors.respondentName}
+              autoCapitalize="words"
             />
             <FormFieldWithHint
               label="Case Number"
@@ -557,23 +555,13 @@ export default function AddCaseFlowScreen() {
             </Bounceable>
             <FormField label="OR Add New Client">
               <Bounceable
-                style={[
-                  styles.addClientBtn,
-                  form.clientOption === "new" && styles.addClientBtnSelected,
-                ]}
+                style={styles.addClientBtn}
                 onPress={() => {
                   update({ clientOption: "new" });
                   setShowAddClientModal(true);
                 }}
               >
-                <ThemedText
-                  style={[
-                    styles.addClientText,
-                    form.clientOption === "new" && styles.addClientTextSelected,
-                  ]}
-                >
-                  + Add New Client
-                </ThemedText>
+                <Text style={styles.addClientText}>+ Add New Client</Text>
               </Bounceable>
             </FormField>
             <AddNewClientModal

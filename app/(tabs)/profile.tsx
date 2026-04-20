@@ -6,27 +6,27 @@ import { Image } from "expo-image";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Keyboard,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Keyboard,
+    Linking,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
-import { SegmentedTwoOption } from "@/components/ui/segmented-two-option";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { SegmentedTwoOption } from "@/components/ui/segmented-two-option";
 import type {
-  AppearancePreference,
-  AppColors,
+    AppColors,
+    AppearancePreference,
 } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
