@@ -27,8 +27,8 @@ import { ThemedText } from "@/components/themed-text";
 import { Bounceable, Spacer } from "@/components/ui";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
-  type AppColors,
-  modalSheetBackground,
+    type AppColors,
+    modalSheetBackground,
 } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
