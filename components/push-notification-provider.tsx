@@ -58,7 +58,7 @@ export function PushNotificationProvider({
             await AsyncStorage.setItem(DENIED_ALERT_KEY, "true");
             Alert.alert(
               "Reminders are off",
-              "You won't receive nightly hearing reminders because notifications are turned off for Legal Diary.\n\nYou can enable them any time from Profile → Cause List Reminder.",
+              "You won't receive nightly hearing reminders because notifications are turned off for Case Diary.\n\nYou can enable them any time from Profile → Cause List Reminder.",
               [
                 {
                   text: "Enable now",

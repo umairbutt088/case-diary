@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "legal-diary",
+    "name": "Case Diary",
     "slug": "legal-diary",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.umairbutt.legaldiary",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Legal Diary uses your photo library to set your profile picture."
+        "NSPhotoLibraryUsageDescription": "Case Diary uses your photo library to set your profile picture."
       }
     },
     "android": {
@@ -55,8 +55,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Legal Diary uses your photos to set your profile picture.",
-          "cameraPermission": "Legal Diary uses the camera to take your profile picture."
+          "photosPermission": "Case Diary uses your photos to set your profile picture.",
+          "cameraPermission": "Case Diary uses the camera to take your profile picture."
         }
       ],
       "expo-notifications"

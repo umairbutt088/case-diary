@@ -40,7 +40,7 @@ export function useProfilePhoto(
         // OS won't show the dialog again — guide user to Settings
         Alert.alert(
           "Photo library access denied",
-          "To set a profile picture, enable photo library access for Legal Diary in your device Settings.",
+          "To set a profile picture, enable photo library access for Case Diary in your device Settings.",
           [
             { text: "Cancel", style: "cancel" },
             { text: "Open Settings", onPress: () => void Linking.openSettings() },

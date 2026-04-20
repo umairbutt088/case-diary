@@ -15,7 +15,7 @@ export default function OnboardingScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Welcome to Legal Diary
+        Welcome to Case Diary
       </ThemedText>
       <ThemedText style={styles.subtitle}>
         Track your legal matters and notes in one place.
