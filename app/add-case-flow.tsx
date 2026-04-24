@@ -9,7 +9,13 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import Animated, { FadeInUp, FadeOut } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
@@ -187,9 +193,12 @@ export default function AddCaseFlowScreen() {
   >({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isStepAnimating, setIsStepAnimating] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [clientListRefreshKey, setClientListRefreshKey] = useState(0);
   const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
+  const stepTranslateX = useSharedValue(0);
+  const stepOpacity = useSharedValue(1);
   const partyTerms = useMemo(
     () => getPartyTerminology(form.courtTier, form.caseSubType),
     [form.courtTier, form.caseSubType],
@@ -247,18 +256,70 @@ export default function AddCaseFlowScreen() {
     return Object.keys(e).length === 0;
   }, [form.nextHearingDate]);
 
+  const stepAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: stepTranslateX.value }],
+    opacity: stepOpacity.value,
+  }));
+
+  const animateToStep = useCallback(
+    (nextStep: number, direction: 1 | -1) => {
+      if (isStepAnimating || nextStep === step) return;
+      setIsStepAnimating(true);
+
+      const outOffset = direction === 1 ? -36 : 36;
+      const inOffset = direction === 1 ? 36 : -36;
+
+      stepTranslateX.value = withTiming(
+        outOffset,
+        {
+          duration: 150,
+          easing: Easing.out(Easing.cubic),
+        },
+        (finished) => {
+          if (!finished) {
+            runOnJS(setIsStepAnimating)(false);
+            return;
+          }
+
+          runOnJS(setStep)(nextStep);
+          stepTranslateX.value = inOffset;
+          stepOpacity.value = 0;
+
+          stepTranslateX.value = withTiming(0, {
+            duration: 280,
+            easing: Easing.out(Easing.exp),
+          });
+          stepOpacity.value = withTiming(1, { duration: 220 }, (done) => {
+            if (done) runOnJS(setIsStepAnimating)(false);
+          });
+        },
+      );
+
+      stepOpacity.value = withTiming(0, {
+        duration: 120,
+        easing: Easing.out(Easing.quad),
+      });
+    },
+    [isStepAnimating, step, stepOpacity, stepTranslateX],
+  );
+
   const onNext = useCallback(() => {
+    if (isStepAnimating) return;
     Keyboard.dismiss();
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
     if (step === 3 && !validateStep3()) return;
-    if (step < STEPS) setStep((s) => s + 1);
-  }, [step, validateStep1, validateStep2, validateStep3]);
+    if (step < STEPS) animateToStep(step + 1, 1);
+  }, [animateToStep, isStepAnimating, step, validateStep1, validateStep2, validateStep3]);
 
   const onBack = useCallback(() => {
-    if (step > 1) setStep((s) => s - 1);
-    else router.back();
-  }, [step, router]);
+    if (isStepAnimating) return;
+    if (step > 1) {
+      animateToStep(step - 1, -1);
+    } else {
+      router.back();
+    }
+  }, [animateToStep, isStepAnimating, step, router]);
 
   const onSave = useCallback(async () => {
     if (!validateStep4()) return;
@@ -346,9 +407,6 @@ export default function AddCaseFlowScreen() {
     }
   }, [form, session?.user?.id, validateStep4, router, isOnline]);
 
-  const stepEntering = FadeInUp.duration(400).springify().damping(20);
-  const stepExiting = FadeOut.duration(200);
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader title="Add New Case" onBack={onBack} />
@@ -363,13 +421,10 @@ export default function AddCaseFlowScreen() {
         enableAutomaticScroll={true}
         keyboardOpeningTime={0}
       >
-        {/* Step 1 of 4 */}
-        {step === 1 && (
-          <Animated.View 
-            key="step1" 
-            entering={stepEntering}
-            exiting={stepExiting}
-          >
+        <Animated.View style={stepAnimatedStyle}>
+          {/* Step 1 of 4 */}
+          {step === 1 && (
+            <View>
             <FormFieldWithHint
               label="First Party Name"
               required
@@ -425,19 +480,15 @@ export default function AddCaseFlowScreen() {
                 ) : null}
               </FormField>
             ) : null}
-            <Bounceable style={styles.nextButton} onPress={onNext}>
+            <Bounceable style={styles.nextButton} onPress={onNext} disabled={isStepAnimating}>
               <ThemedText style={styles.nextButtonText}>Next →</ThemedText>
             </Bounceable>
-          </Animated.View>
-        )}
+            </View>
+          )}
 
-        {/* Step 2 of 4 */}
-        {step === 2 && (
-          <Animated.View 
-            key="step2" 
-            entering={stepEntering}
-            exiting={stepExiting}
-          >
+          {/* Step 2 of 4 */}
+          {step === 2 && (
+            <View>
             <CourtTierPicker
               label="Court Tier"
               required
@@ -497,26 +548,24 @@ export default function AddCaseFlowScreen() {
               <Bounceable
                 style={[styles.btn, styles.btnSecondary]}
                 onPress={onBack}
+                disabled={isStepAnimating}
               >
                 <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
               </Bounceable>
               <Bounceable
                 style={[styles.btn, styles.btnPrimary]}
                 onPress={onNext}
+                disabled={isStepAnimating}
               >
                 <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
               </Bounceable>
             </View>
-          </Animated.View>
-        )}
+            </View>
+          )}
 
-        {/* Step 3 of 4 */}
-        {step === 3 && (
-          <Animated.View 
-            key="step3" 
-            entering={stepEntering}
-            exiting={stepExiting}
-          >
+          {/* Step 3 of 4 */}
+          {step === 3 && (
+            <View>
             <FormField label="My Client is" required>
               {errors.myClientIs ? (
                 <ThemedText style={styles.fieldError}>
@@ -588,26 +637,24 @@ export default function AddCaseFlowScreen() {
               <Bounceable
                 style={[styles.btn, styles.btnSecondary]}
                 onPress={onBack}
+                disabled={isStepAnimating}
               >
                 <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
               </Bounceable>
               <Bounceable
                 style={[styles.btn, styles.btnPrimary]}
                 onPress={onNext}
+                disabled={isStepAnimating}
               >
                 <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
               </Bounceable>
             </View>
-          </Animated.View>
-        )}
+            </View>
+          )}
 
-        {/* Step 4 of 4 */}
-        {step === 4 && (
-          <Animated.View 
-            key="step4" 
-            entering={stepEntering}
-            exiting={stepExiting}
-          >
+          {/* Step 4 of 4 */}
+          {step === 4 && (
+            <View>
             <DateField
               label="Date of Filing"
               value={form.dateOfFiling}
@@ -660,7 +707,7 @@ export default function AddCaseFlowScreen() {
               <Bounceable
                 style={[styles.btn, styles.btnSecondary]}
                 onPress={onBack}
-                disabled={saving}
+                disabled={saving || isStepAnimating}
               >
                 <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
               </Bounceable>
@@ -676,8 +723,9 @@ export default function AddCaseFlowScreen() {
                 )}
               </Bounceable>
             </View>
-          </Animated.View>
-        )}
+            </View>
+          )}
+        </Animated.View>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
