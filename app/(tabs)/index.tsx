@@ -3,17 +3,19 @@ import { useIsFocused } from "@react-navigation/native";
 import * as Print from "expo-print";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
+import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    Pressable,
-    RefreshControl,
-    Pressable as RNPressable,
-    StyleSheet,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Modal,
+  Pressable,
+  RefreshControl,
+  Pressable as RNPressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,13 +25,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
 
 import { CaseCard } from "@/components/case-card";
+import { CourtPortalBottomSheet } from "@/components/court-portal-bottom-sheet";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable, Spacer } from "@/components/ui";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
-    type AppColors,
-    modalSheetBackground,
+  type AppColors,
+  modalSheetBackground,
 } from "@/constants/color-palette";
+import { type PakistanCourtPortal } from "@/constants/court-cms";
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
@@ -180,7 +184,7 @@ export default function HomeScreen() {
   const isOnline = useIsOnline();
   const { start } = useCopilot();
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -190,6 +194,7 @@ export default function HomeScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [notesCount, setNotesCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
   const C = useThemePalette();
@@ -481,6 +486,36 @@ export default function HomeScreen() {
     ]);
   }, [isExporting, shareSections.length, isTodayFilter, shareCasesAsPdf, shareCasesAsImage]);
 
+  const openCourtPortalUrl = useCallback((entry: PakistanCourtPortal) => {
+    const url = entry.url;
+
+    const open = async () => {
+      try {
+        await Linking.openURL(url);
+      } catch {
+        try {
+          await WebBrowser.openBrowserAsync(url, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          });
+        } catch {
+          Alert.alert("Error", "Could not open the court website.");
+        }
+      }
+    };
+
+    setTimeout(() => {
+      void open();
+    }, 150);
+  }, []);
+
+  const openCourtSearchWebsite = useCallback(async () => {
+    try {
+      setShowCourtPortalModal(true);
+    } catch {
+      Alert.alert("Error", "Could not open court search options.");
+    }
+  }, []);
+
   const shareButton = hasShareableHearings ? (
     <Bounceable
       onPress={handleShareCases}
@@ -537,70 +572,99 @@ export default function HomeScreen() {
     >
       <RNPressable style={styles.sidebarOverlay} onPress={() => setIsSidebarOpen(false)}>
         <RNPressable style={styles.sidebarPanel} onPress={() => undefined}>
-          <View style={styles.sidebarHeader}>
-            <ThemedText style={styles.sidebarTitle}>Quick Menu</ThemedText>
+          <View style={styles.sidebarMainItems}>
+            <View style={styles.sidebarHeader}>
+              <ThemedText style={styles.sidebarTitle}>Quick Menu</ThemedText>
+              <Bounceable
+                style={styles.sidebarCloseButton}
+                onPress={() => setIsSidebarOpen(false)}
+              >
+                <MaterialIcons name="close" size={20} color={C.black} />
+              </Bounceable>
+            </View>
+
             <Bounceable
-              style={styles.sidebarCloseButton}
-              onPress={() => setIsSidebarOpen(false)}
+              style={styles.sidebarItem}
+              onPress={() => {
+                setIsSidebarOpen(false);
+                router.push("/notes");
+              }}
             >
-              <MaterialIcons name="close" size={20} color={C.black} />
+              <MaterialIcons name="sticky-note-2" size={19} color={C.black} />
+              <ThemedText style={styles.sidebarItemText}>Notes</ThemedText>
+            </Bounceable>
+
+            <Bounceable
+              style={styles.sidebarItem}
+              onPress={() => {
+                setIsSidebarOpen(false);
+                router.push("/clients");
+              }}
+            >
+              <MaterialIcons name="groups-2" size={19} color={C.black} />
+              <ThemedText style={styles.sidebarItemText}>Manage clients</ThemedText>
+            </Bounceable>
+
+            <Bounceable
+              style={styles.sidebarItem}
+              onPress={() => {
+                setIsSidebarOpen(false);
+                router.push("/judges");
+              }}
+            >
+              <MaterialIcons name="gavel" size={19} color={C.black} />
+              <ThemedText style={styles.sidebarItemText}>Manage judges</ThemedText>
+            </Bounceable>
+
+            <Bounceable
+              style={styles.sidebarItem}
+              onPress={() => {
+                setIsSidebarOpen(false);
+                handleShareCases();
+              }}
+            >
+              <MaterialIcons name="share" size={19} color={C.black} />
+              <ThemedText style={styles.sidebarItemText}>Share case list</ThemedText>
+            </Bounceable>
+
+            <Bounceable
+              style={styles.sidebarItem}
+              onPress={() => {
+                setIsSidebarOpen(false);
+                void openCourtSearchWebsite();
+              }}
+            >
+              <MaterialIcons name="public" size={19} color={C.black} />
+              <ThemedText style={styles.sidebarItemText}>Search case in court website</ThemedText>
+            </Bounceable>
+
+            <Bounceable
+              style={styles.sidebarItem}
+              onPress={() => {
+                setIsSidebarOpen(false);
+                router.push("/trash");
+              }}
+            >
+              <MaterialIcons name="delete-outline" size={19} color={C.black} />
+              <ThemedText style={styles.sidebarItemText}>Trash</ThemedText>
             </Bounceable>
           </View>
 
-          <Bounceable
-            style={styles.sidebarItem}
-            onPress={() => {
-              setIsSidebarOpen(false);
-              router.push("/notes");
-            }}
-          >
-            <MaterialIcons name="sticky-note-2" size={19} color={C.black} />
-            <ThemedText style={styles.sidebarItemText}>Notes</ThemedText>
-          </Bounceable>
-
-          <Bounceable
-            style={styles.sidebarItem}
-            onPress={() => {
-              setIsSidebarOpen(false);
-              router.push("/clients");
-            }}
-          >
-            <MaterialIcons name="groups-2" size={19} color={C.black} />
-            <ThemedText style={styles.sidebarItemText}>Manage clients</ThemedText>
-          </Bounceable>
-
-          <Bounceable
-            style={styles.sidebarItem}
-            onPress={() => {
-              setIsSidebarOpen(false);
-              router.push("/judges");
-            }}
-          >
-            <MaterialIcons name="gavel" size={19} color={C.black} />
-            <ThemedText style={styles.sidebarItemText}>Manage judges</ThemedText>
-          </Bounceable>
-
-          <Bounceable
-            style={styles.sidebarItem}
-            onPress={() => {
-              setIsSidebarOpen(false);
-              handleShareCases();
-            }}
-          >
-            <MaterialIcons name="share" size={19} color={C.black} />
-            <ThemedText style={styles.sidebarItemText}>Share case list</ThemedText>
-          </Bounceable>
-
-          <Bounceable
-            style={styles.sidebarItem}
-            onPress={() => {
-              setIsSidebarOpen(false);
-              router.push("/trash");
-            }}
-          >
-            <MaterialIcons name="delete-outline" size={19} color={C.black} />
-            <ThemedText style={styles.sidebarItemText}>Trash</ThemedText>
-          </Bounceable>
+          <View style={styles.sidebarBottomAction}>
+            <Bounceable
+              style={[styles.sidebarItem, styles.sidebarItemDanger]}
+              onPress={() => {
+                setIsSidebarOpen(false);
+                Alert.alert("Sign out?", "You can sign in again anytime.", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Sign out", style: "destructive", onPress: () => void signOut() },
+                ]);
+              }}
+            >
+              <MaterialIcons name="logout" size={19} color={C.themeRed} />
+              <ThemedText style={styles.sidebarItemDangerText}>Sign out</ThemedText>
+            </Bounceable>
+          </View>
         </RNPressable>
       </RNPressable>
     </Modal>
@@ -619,6 +683,11 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" color={C.black} />
         </View>
         {sidebarMenu}
+        <CourtPortalBottomSheet
+          visible={showCourtPortalModal}
+          onClose={() => setShowCourtPortalModal(false)}
+          onOpenPortal={openCourtPortalUrl}
+        />
       </SafeAreaView>
     );
   }
@@ -636,6 +705,11 @@ export default function HomeScreen() {
           <ThemedText style={styles.errorText}>{error}</ThemedText>
         </View>
         {sidebarMenu}
+        <CourtPortalBottomSheet
+          visible={showCourtPortalModal}
+          onClose={() => setShowCourtPortalModal(false)}
+          onOpenPortal={openCourtPortalUrl}
+        />
       </SafeAreaView>
     );
   }
@@ -785,6 +859,11 @@ export default function HomeScreen() {
           </View>
         </View>
         {sidebarMenu}
+        <CourtPortalBottomSheet
+          visible={showCourtPortalModal}
+          onClose={() => setShowCourtPortalModal(false)}
+          onOpenPortal={openCourtPortalUrl}
+        />
       </SafeAreaView>
     );
   }
@@ -954,6 +1033,11 @@ export default function HomeScreen() {
         </View>
       </View>
       {sidebarMenu}
+      <CourtPortalBottomSheet
+        visible={showCourtPortalModal}
+        onClose={() => setShowCourtPortalModal(false)}
+        onOpenPortal={openCourtPortalUrl}
+      />
     </SafeAreaView>
   );
 }
@@ -1151,15 +1235,25 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
   sidebarOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "flex-start",
+    justifyContent: "center",
   },
   sidebarPanel: {
     width: "78%",
     maxWidth: 320,
     backgroundColor: modalSheet,
-    height: "100%",
-    paddingTop: 52,
+    minHeight: 360,
+    height: "80%",
+    paddingTop: 18,
     paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  sidebarMainItems: {
+    flex: 1,
+  },
+  sidebarBottomAction: {
+    paddingTop: 8,
   },
   sidebarHeader: {
     flexDirection: "row",
@@ -1192,6 +1286,129 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     fontSize: 15,
     fontWeight: "600",
     color: C.black,
+  },
+  sidebarItemDanger: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: C.themeRed + "33",
+    backgroundColor: C.themeRed + "10",
+  },
+  sidebarItemDangerText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: C.themeRed,
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.34)",
+  },
+  modalCard: {
+    backgroundColor: modalSheet,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 18,
+    maxHeight: "74%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: C.black,
+  },
+  modalClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.background,
+  },
+  courtPortalModalIntro: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: C.gray50,
+    marginBottom: 10,
+  },
+  courtPortalScroll: {
+    marginBottom: 12,
+  },
+  courtPortalListContent: {
+    paddingBottom: 8,
+  },
+  courtPortalSectionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: C.gray50,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  courtPortalSectionTitleFirst: {
+    marginTop: 0,
+  },
+  courtPortalOption: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.borderGray,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    backgroundColor: C.background,
+  },
+  courtPortalOptionSelected: {
+    borderColor: C.themeBlack,
+    backgroundColor: C.gray100,
+  },
+  courtPortalOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  courtPortalOptionTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  courtPortalOptionLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.black,
+  },
+  courtPortalOptionDesc: {
+    fontSize: 12,
+    color: C.gray50,
+    lineHeight: 17,
+  },
+  courtPortalOptionIconCol: {
+    width: 26,
+    alignItems: "flex-end",
+  },
+  courtPortalOpenBtn: {
+    height: 46,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.themeBlack,
+  },
+  courtPortalOpenBtnDisabled: {
+    opacity: 0.5,
+  },
+  courtPortalOpenBtnText: {
+    color: C.pureWhite,
+    fontWeight: "700",
+    fontSize: 15,
   },
   card: {
     backgroundColor: C.pureWhite,
