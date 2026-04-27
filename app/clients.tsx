@@ -486,6 +486,8 @@ export default function ClientsScreen() {
             value={search}
             onChangeText={setSearch}
             autoCapitalize="words"
+            autoCorrect={false}
+            spellCheck={false}
           />
         </View>
 
@@ -573,6 +575,8 @@ export default function ClientsScreen() {
                 onChangeText={(v) => setForm((prev) => ({ ...prev, name: v }))}
                 placeholder="Client name"
                 placeholderTextColor={C.gray50}
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               <ThemedText style={styles.inputLabel}>Phone</ThemedText>
@@ -583,6 +587,8 @@ export default function ClientsScreen() {
                 placeholder="Phone number"
                 placeholderTextColor={C.gray50}
                 keyboardType="phone-pad"
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               <ThemedText style={styles.inputLabel}>Email</ThemedText>
@@ -594,6 +600,8 @@ export default function ClientsScreen() {
                 placeholderTextColor={C.gray50}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               <ThemedText style={styles.inputLabel}>Address</ThemedText>
@@ -604,6 +612,8 @@ export default function ClientsScreen() {
                 placeholder="Address"
                 placeholderTextColor={C.gray50}
                 multiline
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               {formError ? <ThemedText style={styles.formErrorText}>{formError}</ThemedText> : null}

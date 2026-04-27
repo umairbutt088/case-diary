@@ -211,6 +211,7 @@ export default function ActsScreen() {
               placeholderTextColor={C.gray50}
               style={styles.searchInput}
               autoCorrect={false}
+              spellCheck={false}
               autoCapitalize="none"
             />
             {openingActId ? (

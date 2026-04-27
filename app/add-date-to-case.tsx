@@ -297,6 +297,7 @@ export default function AddDateToCaseScreen() {
             placeholderTextColor={C.gray50}
             autoCapitalize="none"
             autoCorrect={false}
+            spellCheck={false}
           />
         </View>
 

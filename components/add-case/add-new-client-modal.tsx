@@ -257,6 +257,8 @@ export function AddNewClientModal({
               placeholder="Email (if any)"
               keyboardType="email-address"
               autoCapitalize="none"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
             {error ? (
               <ThemedText style={styles.errorText}>{error}</ThemedText>

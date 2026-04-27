@@ -447,6 +447,8 @@ export function JudgeNameSelector({
               onChangeText={setQuery}
               placeholder="Search judges..."
               placeholderTextColor={C.gray50}
+              autoCorrect={false}
+              spellCheck={false}
             />
 
             {fetchError ? (

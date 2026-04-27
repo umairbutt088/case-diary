@@ -460,6 +460,8 @@ export default function NotesScreen() {
                 onChangeText={setNoteInput}
                 multiline
                 autoFocus
+                autoCorrect={false}
+                spellCheck={false}
               />
               <View style={styles.actionsRow}>
                 <Bounceable style={styles.secondaryButton} onPress={resetEditor}>

@@ -249,6 +249,8 @@ export function LinkExistingClientField({
                 placeholder="Search by name..."
                 placeholderTextColor={C.gray50}
                 autoCapitalize="words"
+                autoCorrect={false}
+                spellCheck={false}
               />
             </View>
             <ThemedText style={styles.listLabel}>

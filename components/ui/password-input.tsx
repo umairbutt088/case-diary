@@ -57,6 +57,8 @@ export function PasswordInput({
           placeholderTextColor={C.gray50}
           secureTextEntry={!show}
           onChangeText={handleChange}
+          autoCorrect={false}
+          spellCheck={false}
           {...rest}
         />
         <Pressable

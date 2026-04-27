@@ -376,6 +376,8 @@ export function CourtTierPicker({
               onChangeText={setSearch}
               placeholder="Search court tiers..."
               placeholderTextColor={C.gray50}
+              autoCorrect={false}
+              spellCheck={false}
             />
 
             <View style={styles.addRow}>
@@ -388,6 +390,8 @@ export function CourtTierPicker({
                 }}
                 placeholder="Add new court tier"
                 placeholderTextColor={C.gray50}
+                autoCorrect={false}
+                spellCheck={false}
               />
               <Pressable
                 style={[styles.addBtn, (!newTier.trim() || addingTier) && styles.addBtnDisabled]}

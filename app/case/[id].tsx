@@ -1627,6 +1627,8 @@ export default function CaseDetailScreen() {
                 placeholder="e.g. Evidence, Final arguments"
                 placeholderTextColor={C.gray50}
                 multiline
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               <DateField
