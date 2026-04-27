@@ -135,6 +135,12 @@ function RootLayoutInner() {
                       headerShown: false,
                     }}
                   />
+                  <Stack.Screen
+                    name="acts"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
                 </Stack>
               </AuthNavigator>
             </CopilotProvider>
