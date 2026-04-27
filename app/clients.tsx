@@ -535,7 +535,6 @@ export default function ClientsScreen() {
                 </View>
                 <ThemedText style={styles.metaText}>Phone: {client.phone?.trim() || "—"}</ThemedText>
                 <ThemedText style={styles.metaText}>Email: {client.email?.trim() || "—"}</ThemedText>
-                <ThemedText style={styles.metaText}>Care of: {client.care_of?.trim() || "—"}</ThemedText>
                 <ThemedText style={styles.metaText}>Address: {client.address?.trim() || "—"}</ThemedText>
                 <ThemedText style={styles.usageText}>
                   Used in {usageByClientId[client.id] ?? 0} case
@@ -595,15 +594,6 @@ export default function ClientsScreen() {
                 placeholderTextColor={C.gray50}
                 autoCapitalize="none"
                 keyboardType="email-address"
-              />
-
-              <ThemedText style={styles.inputLabel}>Care of</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={form.care_of}
-                onChangeText={(v) => setForm((prev) => ({ ...prev, care_of: v }))}
-                placeholder="Care of"
-                placeholderTextColor={C.gray50}
               />
 
               <ThemedText style={styles.inputLabel}>Address</ThemedText>

@@ -68,12 +68,54 @@ function createCaseCardStyles(C: AppColors) {
     card: {
       backgroundColor: C.cream50,
       borderRadius: 12,
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.18,
       shadowRadius: 4,
       elevation: 5,
+    },
+    compactRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    compactCell: {
+      flex: 1,
+      minWidth: 0,
+    },
+    compactCellCenter: {
+      alignItems: "center",
+    },
+    compactCellRight: {
+      alignItems: "flex-end",
+    },
+    compactDateLabel: {
+      fontSize: 11,
+      color: C.gray50,
+      marginBottom: 2,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    },
+    compactDateValue: {
+      fontSize: 13,
+      color: C.black,
+      fontWeight: "600",
+    },
+    compactTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: C.black,
+      textAlign: "center",
+    },
+    compactChevron: {
+      marginTop: 2,
+      opacity: 0.7,
+    },
+    expandedBody: {
+      marginTop: 2,
     },
     cardTop: {
       flexDirection: "row",
@@ -94,6 +136,18 @@ function createCaseCardStyles(C: AppColors) {
     detailsButton: {
       flexDirection: "row",
       alignItems: "center",
+    },
+    collapseButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    collapseButtonCentered: {
+      alignSelf: "center",
+      marginTop: -2,
+      marginBottom: -2,
     },
     detailsButtonText: {
       fontSize: 15,
@@ -189,6 +243,7 @@ export function CaseCard({
   const styles = useMemo(() => createCaseCardStyles(C), [C]);
   const title = getCaseDisplayTitle(caseItem);
   const snippet = getCaseDetailsSnippet(caseItem);
+  const previousDate = formatCaseDate(caseItem.date_of_filing);
   const nextDate = formatCaseDate(caseItem.next_hearing_date);
   const isOverdue = isCaseOverdue({
     nextHearingDate: caseItem.next_hearing_date,
@@ -198,6 +253,7 @@ export function CaseCard({
   const courtName = getCourtDisplay(caseItem);
   const proceeding = caseItem.next_status?.trim() || caseItem.current_status?.trim() || "—";
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openDetails = () => {
@@ -236,115 +292,194 @@ export function CaseCard({
       layout={LinearTransition.springify()}
     >
       <Bounceable
-        onPress={openDetails}
+        onPress={() => setExpanded((prev) => !prev)}
         activeScale={0.98}
         style={styles.card}
       >
-        <View style={styles.cardTop}>
-          <Bounceable
-            style={styles.titleWrap}
-            onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
-            accessibilityLabel={title}
-            accessibilityHint="Long press to show full title"
-          >
-            <ThemedText
-              style={styles.title}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.65}
+        {!expanded ? (
+          <View style={styles.compactRow}>
+            <View style={styles.compactCell}>
+              <ThemedText style={styles.compactDateLabel}>Previous</ThemedText>
+              <ThemedText style={styles.compactDateValue} numberOfLines={1}>
+                {previousDate}
+              </ThemedText>
+            </View>
+            <View style={[styles.compactCell, styles.compactCellCenter]}>
+              <ThemedText style={styles.compactTitle} numberOfLines={1}>
+                {title}
+              </ThemedText>
+              <MaterialIcons
+                name="keyboard-arrow-down"
+                size={20}
+                color={C.gray50}
+                style={styles.compactChevron}
+              />
+            </View>
+            <View style={[styles.compactCell, styles.compactCellRight]}>
+              <ThemedText style={styles.compactDateLabel}>Next</ThemedText>
+              <ThemedText
+                style={[styles.compactDateValue, isOverdue && styles.nextDateTextOverdue]}
+                numberOfLines={1}
+                lightColor={isOverdue ? C.themeRed : C.black}
+                darkColor={isOverdue ? C.themeRed : C.black}
+              >
+                {nextDate}
+              </ThemedText>
+            </View>
+          </View>
+        ) : null}
+
+        {expanded ? (
+          <View style={styles.expandedBody}>
+            <Bounceable
+              style={[styles.collapseButton, styles.collapseButtonCentered]}
+              onPress={(event) => {
+                event.stopPropagation();
+                setExpanded(false);
+              }}
+              accessibilityLabel="Collapse case card"
             >
-              {title}
-            </ThemedText>
-          </Bounceable>
-          {walkthroughEnabled ? (
-            <CopilotStep
-              text="Details opens the full case page so you can review all information."
-              order={5}
-              name={`${walkthroughContext}-details`}
-              active={walkthroughActive}
-            >
-              <WalkthroughableView>
-                <View style={styles.detailsButton}>
+              <MaterialIcons name="keyboard-arrow-up" size={20} color={C.gray50} />
+            </Bounceable>
+            <View style={styles.cardTop}>
+              <Bounceable
+                style={styles.titleWrap}
+                onLongPress={() => Alert.alert("Case title", title, [{ text: "OK" }])}
+                accessibilityLabel={title}
+                accessibilityHint="Long press to show full title"
+                onPress={(event) => event.stopPropagation()}
+              >
+                <ThemedText
+                  style={styles.title}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.65}
+                >
+                  {title}
+                </ThemedText>
+              </Bounceable>
+              {walkthroughEnabled ? (
+                <CopilotStep
+                  text="Details opens the full case page so you can review all information."
+                  order={5}
+                  name={`${walkthroughContext}-details`}
+                  active={walkthroughActive}
+                >
+                  <WalkthroughableView>
+                    <Bounceable
+                      style={styles.detailsButton}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        openDetails();
+                      }}
+                    >
+                      <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
+                      <MaterialIcons
+                        name="chevron-right"
+                        size={20}
+                        color={C.gray50}
+                      />
+                    </Bounceable>
+                  </WalkthroughableView>
+                </CopilotStep>
+              ) : (
+                <Bounceable
+                  style={styles.detailsButton}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    openDetails();
+                  }}
+                >
                   <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
                   <MaterialIcons
                     name="chevron-right"
                     size={20}
                     color={C.gray50}
                   />
-                </View>
-              </WalkthroughableView>
-            </CopilotStep>
-          ) : (
-            <View style={styles.detailsButton}>
-              <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
-              <MaterialIcons
-                name="chevron-right"
-                size={20}
-                color={C.gray50}
-              />
+                </Bounceable>
+              )}
             </View>
-          )}
-        </View>
-        <ThemedText
-          style={styles.snippet}
-          numberOfLines={2}
-          lightColor={C.gray50}
-          darkColor={C.gray50}
-        >
-          {snippet}
-        </ThemedText>
-        <View style={styles.detailsBlock}>
-          <Pressable
-            onLongPress={() => void copyCaseNumber()}
-            onPress={(event) => event.stopPropagation()}
-            delayLongPress={250}
-            accessibilityLabel="Case number. Press and hold to copy"
-            accessibilityHint="Long press to copy the case number to clipboard"
-          >
-            <ThemedText style={styles.detailText} numberOfLines={1}>
-              Case no: {caseNumber}
-            </ThemedText>
-          </Pressable>
-          <ThemedText style={styles.detailText} numberOfLines={1}>
-            Court: {courtName}
-          </ThemedText>
-          <ThemedText style={styles.detailText} numberOfLines={1}>
-            Proceeding: {proceeding}
-          </ThemedText>
-        </View>
-        <View style={styles.footer}>
-          <View style={styles.nextDateRow}>
-            <MaterialIcons
-              name="event"
-              size={18}
-              color={isOverdue ? C.themeRed : C.gray50}
-              style={styles.nextDateIcon}
-            />
             <ThemedText
-              style={[styles.nextDateText, isOverdue && styles.nextDateTextOverdue]}
-              lightColor={isOverdue ? C.themeRed : C.gray50}
-              darkColor={isOverdue ? C.themeRed : C.gray50}
+              style={styles.snippet}
+              numberOfLines={2}
+              lightColor={C.gray50}
+              darkColor={C.gray50}
             >
-              Next: {nextDate}
+              {snippet}
             </ThemedText>
-            {isOverdue ? (
-              <View style={styles.overdueBadge}>
-                <ThemedText style={styles.overdueBadgeText}>OVERDUE</ThemedText>
-              </View>
-            ) : null}
-          </View>
-          <View style={styles.actions}>
-            {onDelete ? (
-              walkthroughEnabled ? (
-                <CopilotStep
-                  text="Delete removes this case permanently."
-                  order={6}
-                  name={`${walkthroughContext}-delete`}
-                  active={walkthroughActive}
+            <View style={styles.detailsBlock}>
+              <Pressable
+                onLongPress={() => void copyCaseNumber()}
+                onPress={(event) => event.stopPropagation()}
+                delayLongPress={250}
+                accessibilityLabel="Case number. Press and hold to copy"
+                accessibilityHint="Long press to copy the case number to clipboard"
+              >
+                <ThemedText style={styles.detailText} numberOfLines={1}>
+                  Case no: {caseNumber}
+                </ThemedText>
+              </Pressable>
+              <ThemedText style={styles.detailText} numberOfLines={1}>
+                Court: {courtName}
+              </ThemedText>
+              <ThemedText style={styles.detailText} numberOfLines={1}>
+                Proceeding: {proceeding}
+              </ThemedText>
+            </View>
+            <View style={styles.footer}>
+              <View style={styles.nextDateRow}>
+                <MaterialIcons
+                  name="event"
+                  size={18}
+                  color={isOverdue ? C.themeRed : C.gray50}
+                  style={styles.nextDateIcon}
+                />
+                <ThemedText
+                  style={[styles.nextDateText, isOverdue && styles.nextDateTextOverdue]}
+                  lightColor={isOverdue ? C.themeRed : C.gray50}
+                  darkColor={isOverdue ? C.themeRed : C.gray50}
                 >
-                  <WalkthroughableView>
+                  Next: {nextDate}
+                </ThemedText>
+                {isOverdue ? (
+                  <View style={styles.overdueBadge}>
+                    <ThemedText style={styles.overdueBadgeText}>OVERDUE</ThemedText>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.actions}>
+                {onDelete ? (
+                  walkthroughEnabled ? (
+                    <CopilotStep
+                      text="Delete removes this case permanently."
+                      order={6}
+                      name={`${walkthroughContext}-delete`}
+                      active={walkthroughActive}
+                    >
+                      <WalkthroughableView>
+                        <Bounceable
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            onDelete(caseItem.id);
+                          }}
+                          style={styles.iconButton}
+                          hitSlop={8}
+                          accessibilityLabel="Delete case"
+                        >
+                          <MaterialIcons
+                            name="delete-outline"
+                            size={22}
+                            color={C.themeRed}
+                          />
+                        </Bounceable>
+                      </WalkthroughableView>
+                    </CopilotStep>
+                  ) : (
                     <Bounceable
-                      onPress={() => onDelete(caseItem.id)}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        onDelete(caseItem.id);
+                      }}
                       style={styles.iconButton}
                       hitSlop={8}
                       accessibilityLabel="Delete case"
@@ -355,42 +490,51 @@ export function CaseCard({
                         color={C.themeRed}
                       />
                     </Bounceable>
-                  </WalkthroughableView>
-                </CopilotStep>
-              ) : (
+                  )
+                ) : null}
                 <Bounceable
-                  onPress={() => onDelete(caseItem.id)}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    router.push(`/calendar`);
+                  }}
                   style={styles.iconButton}
                   hitSlop={8}
-                  accessibilityLabel="Delete case"
+                  accessibilityLabel="View next date / calendar"
                 >
-                  <MaterialIcons
-                    name="delete-outline"
-                    size={22}
-                    color={C.themeRed}
-                  />
+                  <MaterialIcons name="event" size={22} color={C.gray50} />
                 </Bounceable>
-              )
-            ) : null}
-            <Bounceable
-              onPress={() => router.push(`/calendar`)}
-              style={styles.iconButton}
-              hitSlop={8}
-              accessibilityLabel="View next date / calendar"
-            >
-              <MaterialIcons name="event" size={22} color={C.gray50} />
-            </Bounceable>
-            {onEdit ? (
-              walkthroughEnabled ? (
-                <CopilotStep
-                  text="Edit lets you update this case information."
-                  order={7}
-                  name={`${walkthroughContext}-edit`}
-                  active={walkthroughActive}
-                >
-                  <WalkthroughableView>
+                {onEdit ? (
+                  walkthroughEnabled ? (
+                    <CopilotStep
+                      text="Edit lets you update this case information."
+                      order={7}
+                      name={`${walkthroughContext}-edit`}
+                      active={walkthroughActive}
+                    >
+                      <WalkthroughableView>
+                        <Bounceable
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            onEdit(caseItem.id);
+                          }}
+                          style={styles.iconButton}
+                          hitSlop={8}
+                          accessibilityLabel="Edit case"
+                        >
+                          <MaterialIcons
+                            name="edit"
+                            size={22}
+                            color={C.gray50}
+                          />
+                        </Bounceable>
+                      </WalkthroughableView>
+                    </CopilotStep>
+                  ) : (
                     <Bounceable
-                      onPress={() => onEdit(caseItem.id)}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        onEdit(caseItem.id);
+                      }}
                       style={styles.iconButton}
                       hitSlop={8}
                       accessibilityLabel="Edit case"
@@ -401,25 +545,12 @@ export function CaseCard({
                         color={C.gray50}
                       />
                     </Bounceable>
-                  </WalkthroughableView>
-                </CopilotStep>
-              ) : (
-                <Bounceable
-                  onPress={() => onEdit(caseItem.id)}
-                  style={styles.iconButton}
-                  hitSlop={8}
-                  accessibilityLabel="Edit case"
-                >
-                  <MaterialIcons
-                    name="edit"
-                    size={22}
-                    color={C.gray50}
-                  />
-                </Bounceable>
-              )
-            ) : null}
+                  )
+                ) : null}
+              </View>
+            </View>
           </View>
-        </View>
+        ) : null}
         {copyNotice ? (
           <View pointerEvents="none" style={styles.copyToastWrap}>
             <ThemedText style={styles.copyToastText}>{copyNotice}</ThemedText>

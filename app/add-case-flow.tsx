@@ -195,6 +195,7 @@ export default function AddCaseFlowScreen() {
   const [saving, setSaving] = useState(false);
   const [isStepAnimating, setIsStepAnimating] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [pendingSuggestedClientName, setPendingSuggestedClientName] = useState("");
   const [clientListRefreshKey, setClientListRefreshKey] = useState(0);
   const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
   const stepTranslateX = useSharedValue(0);
@@ -214,6 +215,58 @@ export default function AddCaseFlowScreen() {
       return next;
     });
   }, []);
+
+  const getClientNameForRole = useCallback(
+    (role: "petitioner" | "respondent"): string => {
+      return role === "petitioner"
+        ? form.petitionerName.trim()
+        : form.respondentName.trim();
+    },
+    [form.petitionerName, form.respondentName],
+  );
+
+  const handleMyClientSelection = useCallback(
+    async (role: "petitioner" | "respondent") => {
+      update({ myClientIs: role });
+      const selectedName = getClientNameForRole(role);
+      if (!selectedName || !session?.user?.id || !isSupabaseConfigured || !isOnline) return;
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id,name")
+        .eq("user_id", session.user.id)
+        .ilike("name", selectedName)
+        .limit(1);
+      if (error) return;
+
+      const matched = (data?.[0] as { id: string; name: string } | undefined) ?? null;
+      if (matched) {
+        update({
+          linkedClientId: matched.id,
+          linkedClientName: matched.name,
+          clientOption: "link",
+        });
+        return;
+      }
+
+      Alert.alert(
+        "Client not saved",
+        `"${selectedName}" is not in your saved clients. Add now?`,
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Add client",
+            onPress: () => {
+              setPendingSuggestedClientName(selectedName);
+              update({ clientOption: "new" });
+              setShowAddClientModal(true);
+            },
+          },
+        ],
+      );
+    },
+    [update, getClientNameForRole, session?.user?.id, isOnline],
+  );
 
   const validateStep1 = useCallback((): boolean => {
     const e: typeof errors = {};
@@ -339,7 +392,6 @@ export default function AddCaseFlowScreen() {
       form.petitionerName,
       form.respondentName,
     );
-
     const row: PendingCaseRow = {
       user_id: userId,
       case_title: caseTitle || null,
@@ -575,12 +627,12 @@ export default function AddCaseFlowScreen() {
               <RadioOption
                 label={partyTerms.firstParty}
                 selected={form.myClientIs === "petitioner"}
-                onSelect={() => update({ myClientIs: "petitioner" })}
+                onSelect={() => void handleMyClientSelection("petitioner")}
               />
               <RadioOption
                 label={partyTerms.secondParty}
                 selected={form.myClientIs === "respondent"}
-                onSelect={() => update({ myClientIs: "respondent" })}
+                onSelect={() => void handleMyClientSelection("respondent")}
               />
             </FormField>
             <LinkExistingClientField
@@ -593,8 +645,8 @@ export default function AddCaseFlowScreen() {
                   clientOption: name ? "link" : form.clientOption,
                 })
               }
-              placeholder="Select from your existing cases"
-              hint="Parties from your cases — select to link this case to that client"
+              placeholder="Select from your saved clients"
+              hint="Only clients you added in Manage clients are shown here"
             />
             <Bounceable
               style={styles.manageRefBtn}
@@ -606,6 +658,7 @@ export default function AddCaseFlowScreen() {
               <Bounceable
                 style={styles.addClientBtn}
                 onPress={() => {
+                  setPendingSuggestedClientName("");
                   update({ clientOption: "new" });
                   setShowAddClientModal(true);
                 }}
@@ -616,20 +669,25 @@ export default function AddCaseFlowScreen() {
             <AddNewClientModal
               visible={showAddClientModal}
               initialName={
-                form.myClientIs === "petitioner"
+                pendingSuggestedClientName ||
+                (form.myClientIs === "petitioner"
                   ? form.petitionerName
                   : form.myClientIs === "respondent"
                     ? form.respondentName
-                    : ""
+                    : "")
               }
-              onClose={() => setShowAddClientModal(false)}
+              onClose={() => {
+                setPendingSuggestedClientName("");
+                setShowAddClientModal(false);
+              }}
               onSaved={(clientId) => {
                 update({
                   linkedClientId: clientId,
-                  linkedClientName: "",
+                  linkedClientName: pendingSuggestedClientName,
                   clientOption: "new",
                 });
                 setClientListRefreshKey((k) => k + 1);
+                setPendingSuggestedClientName("");
                 setShowAddClientModal(false);
               }}
             />
