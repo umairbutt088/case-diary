@@ -1,0 +1,69 @@
+diff --git a/node_modules/react-native-copilot/dist/index.js b/node_modules/react-native-copilot/dist/index.js
+index 3aff2e2..44647dd 100644
+--- a/node_modules/react-native-copilot/dist/index.js
++++ b/node_modules/react-native-copilot/dist/index.js
+@@ -931,15 +931,32 @@ var CopilotProvider = (_a) => {
+       setCurrentStepState(step);
+       copilotEvents.emit("stepChange", step);
+       if (scrollView != null) {
+-        const nodeHandle = (0, import_react_native7.findNodeHandle)(scrollView);
+-        if (nodeHandle) {
++        const nativeScrollHost =
++          typeof scrollView.getNativeScrollRef === "function"
++            ? scrollView.getNativeScrollRef()
++            : null;
++        const scrollRelativeTarget =
++          nativeScrollHost != null
++            ? nativeScrollHost
++            : typeof scrollView === "object" &&
++                scrollView != null &&
++                (scrollView.__internalInstanceHandle != null ||
++                  scrollView._nativeTag != null)
++              ? scrollView
++              : null;
++        if (
++          scrollRelativeTarget != null &&
++          typeof scrollRelativeTarget === "object"
++        ) {
+           (_a2 = step == null ? void 0 : step.wrapperRef.current) == null ? void 0 : _a2.measureLayout(
+-            nodeHandle,
++            scrollRelativeTarget,
+             (_x, y, _w, h) => {
+               const yOffset = y > 0 ? y - h / 2 : 0;
+               scrollView.scrollTo({ y: yOffset, animated: false });
+             }
+           );
++        } else if (typeof scrollView.scrollToEnd === "function") {
++          scrollView.scrollToEnd({ animated: false });
+         }
+       }
+       setTimeout(
+@@ -955,8 +972,10 @@ var CopilotProvider = (_a) => {
+   );
+   const start = (0, import_react8.useCallback)(
+     (fromStep, suppliedScrollView = null) => __async(void 0, null, function* () {
+-      if (scrollView == null) {
++      if (suppliedScrollView != null) {
+         setScrollView(suppliedScrollView);
++      } else if (scrollView == null) {
++        setScrollView(null);
+       }
+       const currentStep2 = fromStep ? steps[fromStep] : getFirstStep();
+       if (startTries.current > MAX_START_TRIES) {
+@@ -966,7 +985,7 @@ var CopilotProvider = (_a) => {
+       if (currentStep2 == null) {
+         startTries.current += 1;
+         requestAnimationFrame(() => {
+-          void start(fromStep);
++          void start(fromStep, suppliedScrollView);
+         });
+       } else {
+         copilotEvents.emit("start");
+@@ -988,6 +1007,7 @@ var CopilotProvider = (_a) => {
+   );
+   const stop = (0, import_react8.useCallback)(() => __async(void 0, null, function* () {
+     yield setVisibility(false);
++    setScrollView(null);
+     copilotEvents.emit("stop");
+   }), [copilotEvents, setVisibility]);
+   const next = (0, import_react8.useCallback)(() => __async(void 0, null, function* () {

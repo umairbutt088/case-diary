@@ -318,8 +318,13 @@ export default function ProfileScreen() {
   const { edit: editParam } = useLocalSearchParams<{ edit?: string }>();
   const isFocused = useIsFocused();
   const { session, signOut } = useAuth();
-  const { start, copilotEvents } = useCopilot();
+  const { start, visible: copilotVisible, copilotEvents } = useCopilot();
   const scrollRef = useRef<ScrollView | null>(null);
+  const isFocusedRef = useRef(isFocused);
+  isFocusedRef.current = isFocused;
+  /** Prevents scrolling before/during first-run Copilot so the mask, spotlight, and tooltip stay aligned. */
+  const [blockProfileScrollForCopilot, setBlockProfileScrollForCopilot] =
+    useState(false);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -401,12 +406,17 @@ export default function ProfileScreen() {
         const hasSeenTour = await AsyncStorage.getItem(
           "hasSeenProfileTourCopilot",
         );
-        if (!hasSeenTour) {
+        if (cancelled) return;
+        if (hasSeenTour) {
+          setBlockProfileScrollForCopilot(false);
+        } else {
+          setBlockProfileScrollForCopilot(true);
           setTimeout(() => {
             if (cancelled) return;
             requestAnimationFrame(() => {
               if (cancelled) return;
-              start();
+              // Pass ScrollView so Copilot can scroll targets into view before measure (step 2 is below the fold).
+              void start(undefined, scrollRef.current);
             });
             AsyncStorage.setItem("hasSeenProfileTourCopilot", "true");
           }, 600);
@@ -418,20 +428,29 @@ export default function ProfileScreen() {
     }, [fetchProfile, start]),
   );
 
-  // Auto-scroll to logout button when walkthrough reaches that step (fixes large screens)
   useEffect(() => {
-    const onStepChange = (step: { name?: string } | undefined) => {
-      if (step?.name === "profile-signout") {
-        setTimeout(() => {
-          scrollRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+    if (!isFocused) {
+      setBlockProfileScrollForCopilot(false);
+    }
+  }, [isFocused]);
+
+  useEffect(() => {
+    const onStop = () => setBlockProfileScrollForCopilot(false);
+    const onStart = () => {
+      if (isFocusedRef.current) {
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     };
-    copilotEvents.on("stepChange", onStepChange);
+    copilotEvents.on("stop", onStop);
+    copilotEvents.on("start", onStart);
     return () => {
-      copilotEvents.off("stepChange", onStepChange);
+      copilotEvents.off("stop", onStop);
+      copilotEvents.off("start", onStart);
     };
   }, [copilotEvents]);
+
+  const scrollLockedForWalkthrough =
+    isFocused && !editing && (blockProfileScrollForCopilot || copilotVisible);
 
   const { pickImage, uploading } = useProfilePhoto(
     session?.user?.id,
@@ -569,7 +588,7 @@ export default function ProfileScreen() {
             name="profile-avatar"
             active={isFocused}
           >
-            <WalkthroughableView style={styles.avatarSection}>
+            <WalkthroughableView style={styles.avatarSection} collapsable={false}>
               <Pressable
                 style={styles.avatarPressable}
                 onPress={uploading ? undefined : pickImage}
@@ -810,7 +829,7 @@ export default function ProfileScreen() {
             name="profile-signout"
             active={isFocused}
           >
-            <WalkthroughableView>
+            <WalkthroughableView collapsable={false}>
               <Pressable
                 style={styles.signOutButton}
                 onPress={() =>
@@ -863,6 +882,10 @@ export default function ProfileScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           extraScrollHeight={24}
+          scrollEnabled={!scrollLockedForWalkthrough}
+          innerRef={(r) => {
+            scrollRef.current = r;
+          }}
         >
           {content}
         </KeyboardAwareScrollView>
@@ -872,6 +895,7 @@ export default function ProfileScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          scrollEnabled={!scrollLockedForWalkthrough}
         >
           {content}
         </ScrollView>
