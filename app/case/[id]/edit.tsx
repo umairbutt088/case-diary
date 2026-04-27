@@ -533,8 +533,8 @@ export default function EditCaseScreen() {
                 clientOption: name ? "link" : form.clientOption,
               })
             }
-            placeholder="Select from your existing cases"
-            hint="Parties from your cases"
+            placeholder="Select from your saved clients"
+            hint="Only clients you added in Manage clients are shown here"
           />
           <FormField label="OR Add New Client">
             <Bounceable

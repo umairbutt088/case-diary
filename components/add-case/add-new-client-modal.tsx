@@ -26,7 +26,6 @@ export type NewClientForm = {
   address: string;
   phone: string;
   email: string;
-  careOf: string;
 };
 
 type Props = {
@@ -41,7 +40,6 @@ const initialForm: NewClientForm = {
   address: "",
   phone: "",
   email: "",
-  careOf: "",
 };
 
 function createAddNewClientModalStyles(
@@ -190,7 +188,7 @@ export function AddNewClientModal({
         address: form.address.trim() || null,
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
-        care_of: form.careOf.trim() || null,
+        care_of: null,
       })
       .select("id")
       .single();
@@ -259,12 +257,8 @@ export function AddNewClientModal({
               placeholder="Email (if any)"
               keyboardType="email-address"
               autoCapitalize="none"
-            />
-            <FormFieldWithHint
-              label="Care of"
-              value={form.careOf}
-              onChangeText={(v) => update({ careOf: v })}
-              placeholder="Care of (e.g. father's name)"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
             {error ? (
               <ThemedText style={styles.errorText}>{error}</ThemedText>

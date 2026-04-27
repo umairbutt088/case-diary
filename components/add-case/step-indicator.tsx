@@ -37,6 +37,7 @@ function createStepIndicatorStyles(C: AppColors) {
     },
     dotActive: {
       backgroundColor: C.themeBlack,
+      width: 20,
     },
     dotInactive: {
       backgroundColor: C.grey100,

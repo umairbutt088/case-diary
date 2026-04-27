@@ -174,6 +174,8 @@ export function DocumentNameModal({
             returnKeyType="done"
             onSubmitEditing={handleSave}
             editable={!saving}
+            autoCorrect={false}
+            spellCheck={false}
           />
           <ThemedText style={styles.hint}>
             Give this document a meaningful name so you can find it easily.

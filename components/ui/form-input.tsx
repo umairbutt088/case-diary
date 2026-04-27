@@ -53,6 +53,8 @@ export function FormInput({
         ]}
         placeholderTextColor={C.gray50}
         onChangeText={handleChange}
+        autoCorrect={false}
+        spellCheck={false}
         {...rest}
       />
       {error ? <ThemedText style={themed.error}>{error}</ThemedText> : null}

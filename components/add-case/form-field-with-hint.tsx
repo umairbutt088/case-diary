@@ -25,6 +25,10 @@ type Props = {
   | "onFocus"
   | "keyboardType"
   | "autoCapitalize"
+  | "autoCorrect"
+  | "spellCheck"
+  | "textContentType"
+  | "autoComplete"
 >;
 
 function createFormFieldWithHintStyles(C: AppColors) {
@@ -94,6 +98,10 @@ export function FormFieldWithHint({
   onFocus,
   keyboardType,
   autoCapitalize,
+  autoCorrect,
+  spellCheck,
+  textContentType,
+  autoComplete,
   inputStyle,
 }: Props) {
   const C = useThemePalette();
@@ -128,6 +136,10 @@ export function FormFieldWithHint({
           onFocus={onFocus}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect ?? false}
+          spellCheck={spellCheck ?? false}
+          textContentType={textContentType ?? "none"}
+          autoComplete={autoComplete ?? "off"}
         />
       </View>
       {hint ? (

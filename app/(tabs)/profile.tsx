@@ -633,6 +633,8 @@ export default function ProfileScreen() {
                 onChangeText={(v) => updateForm({ first_name: v })}
                 placeholder="First name"
                 placeholderTextColor={C.gray50}
+                autoCorrect={false}
+                spellCheck={false}
               />
               <ThemedText style={styles.inputLabel}>Last name</ThemedText>
               <TextInput
@@ -641,6 +643,8 @@ export default function ProfileScreen() {
                 onChangeText={(v) => updateForm({ last_name: v })}
                 placeholder="Last name"
                 placeholderTextColor={C.gray50}
+                autoCorrect={false}
+                spellCheck={false}
               />
               <ThemedText style={styles.inputLabel}>Full name</ThemedText>
               <TextInput
@@ -649,6 +653,8 @@ export default function ProfileScreen() {
                 onChangeText={(v) => updateForm({ full_name: v })}
                 placeholder="Full name (optional)"
                 placeholderTextColor={C.gray50}
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               <SectionTitle styles={styles} title="Contact" />
@@ -661,6 +667,8 @@ export default function ProfileScreen() {
                 placeholderTextColor={C.gray50}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
               />
               <ThemedText style={styles.inputLabel}>Mobile number</ThemedText>
               <TextInput
@@ -670,6 +678,8 @@ export default function ProfileScreen() {
                 placeholder="Phone number"
                 placeholderTextColor={C.gray50}
                 keyboardType="phone-pad"
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               <SectionTitle styles={styles} title="Address" />
@@ -681,6 +691,8 @@ export default function ProfileScreen() {
                 placeholderTextColor={C.gray50}
                 multiline
                 numberOfLines={3}
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               {saveError ? (

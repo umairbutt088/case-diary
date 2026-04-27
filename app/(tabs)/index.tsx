@@ -13,6 +13,7 @@ import {
   Pressable,
   RefreshControl,
   Pressable as RNPressable,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -49,6 +50,7 @@ import { formatCaseDate, getCaseDisplayTitle, getTodayISO, getWeekBounds } from 
 const WalkthroughableView = walkthroughable(View);
 
 type HomeFilter = "today" | "weekly";
+type FiledRange = "today" | "week" | "month";
 type CaseSection = { title: string; data: CaseRow[] };
 
 function escapeHtml(value: string): string {
@@ -169,6 +171,18 @@ function getWeeklyCases(
   return { hearingsThisWeek, filedThisWeek };
 }
 
+function getMonthCases(cases: CaseRow[], todayIso: string): CaseRow[] {
+  const monthStart = `${todayIso.slice(0, 7)}-01`;
+  const monthEndDate = new Date(todayIso);
+  monthEndDate.setMonth(monthEndDate.getMonth() + 1, 0);
+  const monthEnd = monthEndDate.toISOString().slice(0, 10);
+  return cases.filter((c) => {
+    if (!c.date_of_filing || c.date_of_filing.length < 10) return false;
+    const d = c.date_of_filing.slice(0, 10);
+    return d >= monthStart && d <= monthEnd;
+  });
+}
+
 function isNetworkError(message: string): boolean {
   const msg = (message || "").toLowerCase();
   return (
@@ -195,6 +209,8 @@ export default function HomeScreen() {
   const [notesCount, setNotesCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
+  const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
+  const [filedRange, setFiledRange] = useState<FiledRange>("today");
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
   const C = useThemePalette();
@@ -374,10 +390,11 @@ export default function HomeScreen() {
     weekStart,
     weekEnd,
   );
+  const filedThisMonth = useMemo(() => getMonthCases(cases, today), [cases, today]);
 
   const isTodayFilter = filter === "today";
-  const hasAnyToday = hearingsToday.length > 0 || filedToday.length > 0;
-  const hasAnyWeekly = hearingsThisWeek.length > 0 || filedThisWeek.length > 0;
+  const hasAnyToday = hearingsToday.length > 0;
+  const hasAnyWeekly = hearingsThisWeek.length > 0;
   const hasAny = isTodayFilter ? hasAnyToday : hasAnyWeekly;
   const sections = useMemo<CaseSection[]>(() => {
     const result: CaseSection[] = [];
@@ -385,19 +402,20 @@ export default function HomeScreen() {
       if (hearingsToday.length > 0) {
         result.push({ title: "Hearings today", data: hearingsToday });
       }
-      if (filedToday.length > 0) {
-        result.push({ title: "Filed today", data: filedToday });
-      }
     } else {
       if (hearingsThisWeek.length > 0) {
         result.push({ title: "Hearings this week", data: hearingsThisWeek });
       }
-      if (filedThisWeek.length > 0) {
-        result.push({ title: "Filed this week", data: filedThisWeek });
-      }
     }
     return result;
-  }, [isTodayFilter, hearingsToday, filedToday, hearingsThisWeek, filedThisWeek]);
+  }, [isTodayFilter, hearingsToday, hearingsThisWeek]);
+  const filedCases = useMemo(() => {
+    if (filedRange === "today") return filedToday;
+    if (filedRange === "week") return filedThisWeek;
+    return filedThisMonth;
+  }, [filedRange, filedToday, filedThisWeek, filedThisMonth]);
+  const filedRangeLabel =
+    filedRange === "today" ? "Today" : filedRange === "week" ? "This week" : "This month";
   const shareSections = useMemo<CaseSection[]>(() => {
     if (isTodayFilter) {
       return hearingsToday.length > 0
@@ -642,6 +660,17 @@ export default function HomeScreen() {
               style={styles.sidebarItem}
               onPress={() => {
                 setIsSidebarOpen(false);
+                router.push("/acts");
+              }}
+            >
+              <MaterialIcons name="menu-book" size={19} color={C.black} />
+              <ThemedText style={styles.sidebarItemText}>Acts & laws</ThemedText>
+            </Bounceable>
+
+            <Bounceable
+              style={styles.sidebarItem}
+              onPress={() => {
+                setIsSidebarOpen(false);
                 router.push("/trash");
               }}
             >
@@ -667,6 +696,82 @@ export default function HomeScreen() {
           </View>
         </RNPressable>
       </RNPressable>
+    </Modal>
+  );
+  const filedCasesButton = (
+    <View style={styles.filedCasesRow}>
+      <Bounceable
+        style={styles.filedCasesBtn}
+        onPress={() => setShowFiledCasesModal(true)}
+      >
+        <MaterialIcons name="description" size={15} color={C.black} />
+        <ThemedText style={styles.filedCasesBtnText}>Filed cases</ThemedText>
+        <MaterialIcons name="keyboard-arrow-down" size={16} color={C.black} />
+      </Bounceable>
+    </View>
+  );
+  const filedCasesModal = (
+    <Modal
+      visible={showFiledCasesModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowFiledCasesModal(false)}
+    >
+      <View style={styles.modalRoot}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowFiledCasesModal(false)} />
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <ThemedText style={styles.modalTitle}>Filed cases</ThemedText>
+            <Bounceable style={styles.modalClose} onPress={() => setShowFiledCasesModal(false)}>
+              <MaterialIcons name="close" size={20} color={C.black} />
+            </Bounceable>
+          </View>
+          <View style={styles.filedRangeRow}>
+            {(["today", "week", "month"] as const).map((range) => {
+              const active = filedRange === range;
+              const label = range === "today" ? "Today" : range === "week" ? "This week" : "This month";
+              return (
+                <Bounceable
+                  key={range}
+                  style={[styles.filedRangeBtn, active && styles.filedRangeBtnActive]}
+                  onPress={() => setFiledRange(range)}
+                >
+                  <ThemedText
+                    style={[styles.filedRangeBtnText, active && styles.filedRangeBtnTextActive]}
+                  >
+                    {label}
+                  </ThemedText>
+                </Bounceable>
+              );
+            })}
+          </View>
+          <ScrollView style={styles.filedListScroll} showsVerticalScrollIndicator={false}>
+            {filedCases.length === 0 ? (
+              <ThemedText style={styles.filedEmptyText}>
+                No filed cases in {filedRangeLabel.toLowerCase()}.
+              </ThemedText>
+            ) : (
+              filedCases.map((caseItem) => (
+                <Bounceable
+                  key={`filed-${caseItem.id}`}
+                  style={styles.filedCaseCard}
+                  onPress={() => {
+                    setShowFiledCasesModal(false);
+                    router.push(`/case/${caseItem.id}`);
+                  }}
+                >
+                  <ThemedText style={styles.filedCaseTitle}>
+                    {getCaseDisplayTitle(caseItem)}
+                  </ThemedText>
+                  <ThemedText style={styles.filedCaseMeta}>
+                    Filed: {formatCaseDate(caseItem.date_of_filing)}
+                  </ThemedText>
+                </Bounceable>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </View>
     </Modal>
   );
 
@@ -745,6 +850,7 @@ export default function HomeScreen() {
           </View>
         )}
         <View style={styles.container}>
+          {filedCasesButton}
           <View style={styles.filterRow}>
             <CopilotStep
               text="Tap here to see only today's cases."
@@ -818,8 +924,8 @@ export default function HomeScreen() {
               {isOffline
                 ? "Your cases will appear when you're connected. Cases you add while offline will sync automatically."
                 : isTodayFilter
-                  ? "Cases with a hearing today or filed today will appear here."
-                  : "Cases with a hearing or filing this week will appear here."}
+                  ? "Cases with a hearing today will appear here."
+                  : "Cases with a hearing this week will appear here."}
             </ThemedText>
             <CopilotStep
               text="Tap here to start adding your cases and stay organized."
@@ -859,6 +965,7 @@ export default function HomeScreen() {
           </View>
         </View>
         {sidebarMenu}
+        {filedCasesModal}
         <CourtPortalBottomSheet
           visible={showCourtPortalModal}
           onClose={() => setShowCourtPortalModal(false)}
@@ -903,6 +1010,7 @@ export default function HomeScreen() {
       >
         <View style={styles.container}>
           <Spacer.Column numberOfSpaces={4} />
+          {filedCasesButton}
 
           <View style={styles.filterRow}>
             <CopilotStep
@@ -1033,6 +1141,7 @@ export default function HomeScreen() {
         </View>
       </View>
       {sidebarMenu}
+      {filedCasesModal}
       <CourtPortalBottomSheet
         visible={showCourtPortalModal}
         onClose={() => setShowCourtPortalModal(false)}
@@ -1114,6 +1223,79 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
   },
   filterBtnTextActive: {
     color: C.pureWhite,
+  },
+  filedCasesRow: {
+    width: "100%",
+    alignItems: "flex-end",
+    marginBottom: 8,
+  },
+  filedCasesBtn: {
+    minHeight: 34,
+    paddingHorizontal: 10,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: C.borderGray,
+    backgroundColor: C.pureWhite,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  filedCasesBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: C.black,
+  },
+  filedRangeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  filedRangeBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.borderGray,
+    backgroundColor: C.background,
+  },
+  filedRangeBtnActive: {
+    backgroundColor: C.themeBlack,
+    borderColor: C.themeBlack,
+  },
+  filedRangeBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: C.gray50,
+  },
+  filedRangeBtnTextActive: {
+    color: C.pureWhite,
+  },
+  filedListScroll: {
+    maxHeight: 300,
+  },
+  filedCaseCard: {
+    borderWidth: 1,
+    borderColor: C.borderGray,
+    backgroundColor: C.background,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  filedCaseTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.black,
+    marginBottom: 4,
+  },
+  filedCaseMeta: {
+    fontSize: 12,
+    color: C.gray50,
+  },
+  filedEmptyText: {
+    fontSize: 13,
+    color: C.gray50,
+    paddingVertical: 8,
   },
   section: {
     marginBottom: 20,
@@ -1248,6 +1430,7 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     paddingBottom: 16,
     borderTopRightRadius: 16,
     borderBottomRightRadius: 16,
+
   },
   sidebarMainItems: {
     flex: 1,

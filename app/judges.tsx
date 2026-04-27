@@ -511,6 +511,8 @@ export default function JudgesScreen() {
             value={search}
             onChangeText={setSearch}
             autoCapitalize="words"
+            autoCorrect={false}
+            spellCheck={false}
           />
         </View>
 
@@ -599,6 +601,8 @@ export default function JudgesScreen() {
                 onChangeText={(v) => setForm((prev) => ({ ...prev, name: v }))}
                 placeholder="Judge name"
                 placeholderTextColor={C.gray50}
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               <View style={styles.tierPickerWrap}>
@@ -618,6 +622,8 @@ export default function JudgesScreen() {
                 onChangeText={(v) => setForm((prev) => ({ ...prev, court_room_address: v }))}
                 placeholder="e.g. Building A, 2nd Floor"
                 placeholderTextColor={C.gray50}
+                autoCorrect={false}
+                spellCheck={false}
               />
 
               {formError ? <ThemedText style={styles.formErrorText}>{formError}</ThemedText> : null}

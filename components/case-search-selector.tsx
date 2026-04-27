@@ -174,6 +174,8 @@ export function CaseSearchSelector({
           placeholder={placeholder}
           placeholderTextColor={C.gray50}
           style={styles.searchInput}
+          autoCorrect={false}
+          spellCheck={false}
         />
       </View>
       <SearchModeModal
