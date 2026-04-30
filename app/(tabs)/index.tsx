@@ -4,6 +4,7 @@ import * as Print from "expo-print";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
+import { Image } from "expo-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -46,6 +47,7 @@ import { addPendingCaseDelete, getPendingCasesCount } from "@/lib/offline-queue"
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { formatCaseDate, getCaseDisplayTitle, getTodayISO, getWeekBounds } from "@/types/case";
+import type { ProfileRow } from "@/types/profile";
 
 const WalkthroughableView = walkthroughable(View);
 
@@ -211,6 +213,9 @@ export default function HomeScreen() {
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
+  const [sidebarProfile, setSidebarProfile] = useState<
+    Pick<ProfileRow, "full_name" | "first_name" | "last_name" | "email" | "avatar_url"> | null
+  >(null);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
   const C = useThemePalette();
@@ -534,6 +539,64 @@ export default function HomeScreen() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!session?.user?.id || !isSupabaseConfigured) {
+      setSidebarProfile(null);
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("full_name, first_name, last_name, email, avatar_url")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        if (mounted) setSidebarProfile(data ?? null);
+      } catch {
+        if (mounted) setSidebarProfile(null);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [session?.user?.id]);
+
+  const sidebarDisplayName = useMemo(() => {
+    if (sidebarProfile?.full_name?.trim()) return sidebarProfile.full_name.trim();
+    const first = sidebarProfile?.first_name?.trim() ?? "";
+    const last = sidebarProfile?.last_name?.trim() ?? "";
+    const full = [first, last].filter(Boolean).join(" ").trim();
+    if (full) return full;
+    const metadataName =
+      (session?.user?.user_metadata?.full_name as string | undefined)?.trim() ||
+      (session?.user?.user_metadata?.name as string | undefined)?.trim();
+    return metadataName || "User";
+  }, [sidebarProfile, session?.user?.user_metadata]);
+
+  const sidebarEmail = useMemo(() => {
+    return sidebarProfile?.email?.trim() || session?.user?.email?.trim() || "No email";
+  }, [sidebarProfile?.email, session?.user?.email]);
+
+  const sidebarAvatarUrl = useMemo(() => {
+    const metadataAvatar =
+      (session?.user?.user_metadata?.avatar_url as string | undefined)?.trim() ||
+      (session?.user?.user_metadata?.picture as string | undefined)?.trim();
+    return sidebarProfile?.avatar_url?.trim() || metadataAvatar || "";
+  }, [sidebarProfile?.avatar_url, session?.user?.user_metadata]);
+
+  const sidebarInitials = useMemo(() => {
+    const source =
+      sidebarDisplayName && sidebarDisplayName !== "User" ? sidebarDisplayName : sidebarEmail;
+    const parts = source
+      .replace("@", " ")
+      .split(/\s+/)
+      .filter(Boolean);
+    if (parts.length === 0) return "U";
+    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }, [sidebarDisplayName, sidebarEmail]);
+
   const shareButton = hasShareableHearings ? (
     <Bounceable
       onPress={handleShareCases}
@@ -592,7 +655,29 @@ export default function HomeScreen() {
         <RNPressable style={styles.sidebarPanel} onPress={() => undefined}>
           <View style={styles.sidebarMainItems}>
             <View style={styles.sidebarHeader}>
-              <ThemedText style={styles.sidebarTitle}>Quick Menu</ThemedText>
+              <View style={styles.sidebarProfileInfo}>
+                <View style={styles.sidebarAvatarWrap}>
+                  {sidebarAvatarUrl ? (
+                    <Image
+                      source={{ uri: sidebarAvatarUrl }}
+                      style={styles.sidebarAvatarImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <ThemedText style={styles.sidebarAvatarInitials}>
+                      {sidebarInitials}
+                    </ThemedText>
+                  )}
+                </View>
+                <View style={styles.sidebarProfileTextWrap}>
+                  <ThemedText style={styles.sidebarProfileName} numberOfLines={1}>
+                    {sidebarDisplayName}
+                  </ThemedText>
+                  <ThemedText style={styles.sidebarProfileEmail} numberOfLines={1}>
+                    {sidebarEmail}
+                  </ThemedText>
+                </View>
+              </View>
               <Bounceable
                 style={styles.sidebarCloseButton}
                 onPress={() => setIsSidebarOpen(false)}
@@ -600,6 +685,7 @@ export default function HomeScreen() {
                 <MaterialIcons name="close" size={20} color={C.black} />
               </Bounceable>
             </View>
+            <View style={styles.sidebarDivider} />
 
             <Bounceable
               style={styles.sidebarItem}
@@ -620,7 +706,7 @@ export default function HomeScreen() {
               }}
             >
               <MaterialIcons name="groups-2" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Manage clients</ThemedText>
+              <ThemedText style={styles.sidebarItemText}>Manage clients list</ThemedText>
             </Bounceable>
 
             <Bounceable
@@ -631,7 +717,7 @@ export default function HomeScreen() {
               }}
             >
               <MaterialIcons name="gavel" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Manage judges</ThemedText>
+              <ThemedText style={styles.sidebarItemText}>Manage judges list</ThemedText>
             </Bounceable>
 
             <Bounceable
@@ -653,7 +739,7 @@ export default function HomeScreen() {
               }}
             >
               <MaterialIcons name="public" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Search case in court website</ThemedText>
+              <ThemedText style={styles.sidebarItemText}>Court links</ThemedText>
             </Bounceable>
 
             <Bounceable
@@ -664,7 +750,7 @@ export default function HomeScreen() {
               }}
             >
               <MaterialIcons name="menu-book" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Acts & laws</ThemedText>
+              <ThemedText style={styles.sidebarItemText}>Acts & law books</ThemedText>
             </Bounceable>
 
             <Bounceable
@@ -1440,14 +1526,56 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
   },
   sidebarHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
+    alignItems: "flex-start",
+    marginBottom: 8,
+    gap: 10,
   },
-  sidebarTitle: {
+  sidebarProfileInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    minWidth: 0,
+  },
+  sidebarAvatarWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: C.grey100,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: C.borderGray,
+  },
+  sidebarAvatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  sidebarAvatarInitials: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.gray50,
+  },
+  sidebarProfileTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sidebarProfileName: {
     fontSize: 20,
     fontWeight: "700",
     color: C.black,
+  },
+  sidebarProfileEmail: {
+    fontSize: 14,
+    color: C.gray50,
+    marginTop: 2,
+  },
+  sidebarDivider: {
+    height: 1,
+    backgroundColor: C.borderGray,
+    marginTop: 4,
+    marginBottom: 8,
   },
   sidebarCloseButton: {
     minHeight: 34,

@@ -65,11 +65,9 @@ function RootLayoutInner() {
               overlay="svg"
               backdropColor="rgba(0,0,0,0.75)"
               animated={true}
-              verticalOffset={
-                Platform.OS === "android"
-                  ? RNStatusBar.currentHeight ?? 24
-                  : 0
-              }
+              // Android status bar is non-translucent in this app; adding currentHeight here
+              // offsets spotlight/tooltip positions on some emulators (e.g. Pixel 4).
+              verticalOffset={0}
             >
               <AuthNavigator>
                 <Stack>

@@ -28,7 +28,12 @@
       },
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
-      "package": "com.umairbutt.legaldiary"
+      "package": "com.umairbutt.legaldiary",
+      "splash": {
+        "image": "./assets/images/splash-image.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#fcfcfc"
+      }
     },
     "web": {
       "output": "static",
@@ -40,6 +45,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-image.png",
+          "imageWidth": 400,
           "resizeMode": "contain",
           "enableFullScreenImage_legacy": true,
           "backgroundColor": "#fcfcfc",
@@ -49,6 +55,17 @@
           "android": {
             "backgroundColor": "#fcfcfc"
           }
+        }
+      ],
+      [
+        "./plugins/with-android-fullscreen-splash",
+        {
+          "image": "./assets/images/splash-image.png",
+          "imageWidthPx": 400,
+          "imageHeightPx": 600,
+          "backgroundColor": "#fcfcfc",
+          "imageResizeMode": "cover",
+          "iconSizeDp": 420
         }
       ],
       "@react-native-community/datetimepicker",
