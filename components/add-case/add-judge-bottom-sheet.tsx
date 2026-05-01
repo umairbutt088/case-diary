@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
-import { FormField } from "@/components/add-case/form-field";
 import { FormFieldWithHint } from "@/components/add-case/form-field-with-hint";
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -278,18 +277,16 @@ export function AddJudgeBottomSheet({
             placeholder="e.g. Building A, 2nd Floor"
             hint="Optional. Auto-fills case court room when this judge is selected."
           />
-          <FormField label="Court Tier">
-            <CourtTierPicker
-              label="Court tier"
-              value={selectedCourtTier}
-              onChange={(v) => {
-                setSelectedCourtTier(v);
-                setError(null);
-              }}
-              required
-              hint="Use the same tier list as case creation."
-            />
-          </FormField>
+          <CourtTierPicker
+            label="Court tier"
+            value={selectedCourtTier}
+            onChange={(v) => {
+              setSelectedCourtTier(v);
+              setError(null);
+            }}
+            required
+            hint="Use the same tier list as case creation."
+          />
           {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
           <View style={styles.buttons}>
             <Pressable

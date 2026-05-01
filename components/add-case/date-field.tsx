@@ -1,10 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import {
-  DateTimePickerAndroid,
-  type AndroidNativeProps,
-} from "@react-native-community/datetimepicker";
 import { useMemo, useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 
 import { ThemedText } from "@/components/themed-text";
@@ -186,21 +182,6 @@ export function DateField({
   const pickerDate = parseToDate(value);
 
   const openPicker = () => {
-    if (Platform.OS === "android") {
-      DateTimePickerAndroid.open({
-        value: pickerDate,
-        mode: "date",
-        display: "default",
-        onChange: (_event, selectedDate) => {
-          if (selectedDate) {
-            onChange(formatDateToValue(selectedDate));
-          }
-        },
-        minimumDate: new Date(1900, 0, 1),
-        maximumDate: new Date(2100, 11, 31),
-      } as AndroidNativeProps);
-      return;
-    }
     setTempDate(pickerDate);
     setShowPicker(true);
   };
@@ -244,52 +225,50 @@ export function DateField({
       ) : null}
       {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-      {Platform.OS === "ios" && (
-        <Modal
-          visible={showPicker}
-          transparent
-          animationType="slide"
-          onRequestClose={handleDismiss}
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={handleDismiss}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={handleDismiss}
+          accessibilityLabel="Close date picker"
         >
           <Pressable
-            style={styles.modalBackdrop}
-            onPress={handleDismiss}
-            accessibilityLabel="Close date picker"
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}
           >
-            <Pressable
-              style={styles.modalContent}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={styles.modalHeader}>
-                <Pressable onPress={handleDismiss} hitSlop={12}>
-                  <ThemedText style={styles.modalCancel}>Cancel</ThemedText>
-                </Pressable>
-                <Pressable onPress={handleConfirm} hitSlop={12}>
-                  <ThemedText style={styles.modalDone}>Done</ThemedText>
-                </Pressable>
-              </View>
-              <View style={styles.pickerContainer}>
-                <Calendar
-                  current={formatDateToValue(tempDate)}
-                  onDayPress={({ dateString }) =>
-                    setTempDate(parseToDate(dateString))
-                  }
-                  markedDates={{
-                    [formatDateToValue(tempDate)]: {
-                      selected: true,
-                      selectedColor: C.black,
-                      selectedTextColor: C.pureWhite,
-                    },
-                  }}
-                  theme={calendarTheme}
-                  minDate="1900-01-01"
-                  maxDate="2100-12-31"
-                />
-              </View>
-            </Pressable>
+            <View style={styles.modalHeader}>
+              <Pressable onPress={handleDismiss} hitSlop={12}>
+                <ThemedText style={styles.modalCancel}>Cancel</ThemedText>
+              </Pressable>
+              <Pressable onPress={handleConfirm} hitSlop={12}>
+                <ThemedText style={styles.modalDone}>Done</ThemedText>
+              </Pressable>
+            </View>
+            <View style={styles.pickerContainer}>
+              <Calendar
+                current={formatDateToValue(tempDate)}
+                onDayPress={({ dateString }) =>
+                  setTempDate(parseToDate(dateString))
+                }
+                markedDates={{
+                  [formatDateToValue(tempDate)]: {
+                    selected: true,
+                    selectedColor: C.black,
+                    selectedTextColor: C.pureWhite,
+                  },
+                }}
+                theme={calendarTheme}
+                minDate="1900-01-01"
+                maxDate="2100-12-31"
+              />
+            </View>
           </Pressable>
-        </Modal>
-      )}
+        </Pressable>
+      </Modal>
     </View>
   );
 }

@@ -292,7 +292,7 @@ export function CaseCard({
       layout={LinearTransition.springify()}
     >
       <Bounceable
-        onPress={() => setExpanded((prev) => !prev)}
+        onPress={expanded ? undefined : () => setExpanded(true)}
         activeScale={0.98}
         style={styles.card}
       >
@@ -442,9 +442,18 @@ export function CaseCard({
                   Next: {nextDate}
                 </ThemedText>
                 {isOverdue ? (
-                  <View style={styles.overdueBadge}>
+                  <Bounceable
+                    style={styles.overdueBadge}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      router.push(`/case/${caseItem.id}?addProceeding=1`);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add proceeding to update next hearing"
+                  >
                     <ThemedText style={styles.overdueBadgeText}>OVERDUE</ThemedText>
-                  </View>
+                  </Bounceable>
                 ) : null}
               </View>
               <View style={styles.actions}>

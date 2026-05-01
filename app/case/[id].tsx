@@ -58,7 +58,7 @@ import {
   removeCachedCase,
   upsertCachedCase,
 } from "@/lib/cases-cache";
-import { addPendingCaseDelete } from "@/lib/offline-queue";
+import { addPendingCaseDelete, addPendingProceedingSave } from "@/lib/offline-queue";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import {
@@ -669,7 +669,11 @@ function SectionCard({
 }
 
 export default function CaseDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: idParam, addProceeding } = useLocalSearchParams<{
+    id: string;
+    addProceeding?: string;
+  }>();
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
   const router = useRouter();
   const { session } = useAuth();
   const isOnline = useIsOnline();
@@ -839,8 +843,11 @@ export default function CaseDetailScreen() {
   useEffect(() => {
     const caseId = caseData?.id;
     const userId = session?.user?.id;
-    if (!caseId || !userId || !isOnline) {
+    if (!caseId || !userId) {
       setHearingHistory([]);
+      return;
+    }
+    if (!isOnline) {
       return;
     }
 
@@ -851,7 +858,28 @@ export default function CaseDetailScreen() {
         offset: 0,
       });
       if (cancelled) return;
-      setHearingHistory(history);
+      setHearingHistory((prev) => {
+        const pendingLocals = prev.filter((e) => e.id.startsWith("local_"));
+        const stillPending = pendingLocals.filter(
+          (local) =>
+            !history.some(
+              (row) =>
+                row.hearing_date === local.hearing_date &&
+                row.next_hearing_date === local.next_hearing_date &&
+                (row.proceeding ?? "") === (local.proceeding ?? "") &&
+                (row.current_status ?? "") === (local.current_status ?? "") &&
+                (row.next_status ?? "") === (local.next_status ?? "") &&
+                (row.judge_name ?? "") === (local.judge_name ?? ""),
+            ),
+        );
+        const merged = [...stillPending, ...history];
+        merged.sort((a, b) => {
+          const byHearing = (b.hearing_date || "").localeCompare(a.hearing_date || "");
+          if (byHearing !== 0) return byHearing;
+          return (b.created_at || "").localeCompare(a.created_at || "");
+        });
+        return merged;
+      });
     })();
 
     return () => {
@@ -862,6 +890,19 @@ export default function CaseDetailScreen() {
   useEffect(() => {
     setNextDateDraft(caseData?.next_hearing_date || "");
   }, [caseData?.next_hearing_date]);
+
+  /** Open Add proceeding from home / list when navigating with `?addProceeding=1`. */
+  useEffect(() => {
+    if (!caseData || addProceeding !== "1") return;
+    setProceedingError(null);
+    setNextStatusDraft("");
+    setNextDateDraft(caseData.next_hearing_date || "");
+    setJudgeNameDraft(caseData.judge_name?.trim() ?? "");
+    setShowProceedingForm(true);
+    requestAnimationFrame(() => {
+      router.setParams({ addProceeding: undefined });
+    });
+  }, [caseData, addProceeding, router]);
 
   useEffect(() => {
     if (showProceedingForm && caseData) {
@@ -979,10 +1020,6 @@ export default function CaseDetailScreen() {
   const partyTerms = getPartyTerminology(caseData.court_tier ?? "", caseData.case_sub_type ?? "");
   const saveProceeding = async () => {
     if (!session?.user?.id) return;
-    if (!isOnline) {
-      setProceedingError("Proceeding history requires internet for now.");
-      return;
-    }
     if (!nextDateDraft.trim()) {
       setProceedingError("Next hearing date is required.");
       return;
@@ -1006,6 +1043,67 @@ export default function CaseDetailScreen() {
     setSavingProceeding(true);
     setProceedingError(null);
 
+    const patch = {
+      current_status: resolvedCurrentStatus,
+      next_status: resolvedNextStatus,
+      next_hearing_date: resolvedNextDate,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (!isOnline) {
+      const uid = session.user.id;
+      const judgeResolved = judgeNameDraft.trim() || null;
+      try {
+        await addPendingProceedingSave({
+          userId: uid,
+          caseId: caseData.id,
+          hearingDate: previousHearingDate,
+          proceeding: previousProceeding,
+          judgeName: judgeResolved,
+          currentStatus: resolvedCurrentStatus,
+          nextStatus: resolvedNextStatus,
+          nextHearingDate: resolvedNextDate,
+          casePatch: patch,
+        });
+        await patchCachedCase(uid, caseData.id, patch);
+        setCaseData((prev) => (prev ? { ...prev, ...patch } : prev));
+        const nowIso = new Date().toISOString();
+        const localEntry: CaseHearingRow = {
+          id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          case_id: caseData.id,
+          user_id: uid,
+          hearing_date: previousHearingDate,
+          proceeding: previousProceeding,
+          judge_name: judgeResolved,
+          current_status: resolvedCurrentStatus,
+          next_status: resolvedNextStatus,
+          next_hearing_date: resolvedNextDate,
+          created_at: nowIso,
+          updated_at: nowIso,
+        };
+        setHearingHistory((prev) => {
+          const merged = [localEntry, ...prev];
+          merged.sort((a, b) => {
+            const byHearing = (b.hearing_date || "").localeCompare(a.hearing_date || "");
+            if (byHearing !== 0) return byHearing;
+            return (b.created_at || "").localeCompare(a.created_at || "");
+          });
+          return merged;
+        });
+        setNextStatusDraft("");
+        setNextDateDraft(resolvedNextDate);
+        setJudgeNameDraft(caseData.judge_name?.trim() ?? "");
+        setShowProceedingForm(false);
+        showCopyNotice("Saved offline. Will sync when you are online.");
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Could not save offline.";
+        setProceedingError(message);
+      } finally {
+        setSavingProceeding(false);
+      }
+      return;
+    }
+
     const hearingResult = await addCaseHearingEntry({
       caseId: caseData.id,
       userId: session.user.id,
@@ -1022,13 +1120,6 @@ export default function CaseDetailScreen() {
       setProceedingError(hearingResult.message);
       return;
     }
-
-    const patch = {
-      current_status: resolvedCurrentStatus,
-      next_status: resolvedNextStatus,
-      next_hearing_date: resolvedNextDate,
-      updated_at: new Date().toISOString(),
-    };
 
     const { error: updateError } = await supabase
       .from("cases")

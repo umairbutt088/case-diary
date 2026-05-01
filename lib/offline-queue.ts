@@ -3,7 +3,9 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { addCaseHearingEntry } from "@/lib/case-hearings";
 import {
+  patchCachedCase,
   removeCachedCase,
   upsertCachedCase,
 } from "@/lib/cases-cache";
@@ -68,10 +70,27 @@ type PendingDeleteCase = {
   case_id: string;
 };
 
+/** Queued from case detail "Add proceeding" while offline; sync replays hearing + case patch. */
+type PendingHearingInsert = {
+  id: string;
+  createdAt: number;
+  kind: "hearing_insert";
+  user_id: string;
+  case_id: string;
+  hearing_date: string;
+  proceeding: string | null;
+  judge_name: string | null;
+  current_status: string | null;
+  next_status: string | null;
+  next_hearing_date: string | null;
+  casePatch: Partial<CaseRow>;
+};
+
 type PendingCaseOperation =
   | PendingInsertCase
   | PendingUpdateCase
-  | PendingDeleteCase;
+  | PendingDeleteCase
+  | PendingHearingInsert;
 
 function toOperation(item: unknown): PendingCaseOperation | null {
   if (!item || typeof item !== "object") return null;
@@ -132,6 +151,32 @@ function toOperation(item: unknown): PendingCaseOperation | null {
       kind: maybe.kind,
       user_id: maybe.user_id,
       case_id: maybe.case_id,
+    };
+  }
+
+  if (
+    maybe.kind === "hearing_insert" &&
+    typeof maybe.user_id === "string" &&
+    typeof maybe.case_id === "string" &&
+    typeof maybe.hearing_date === "string" &&
+    maybe.casePatch &&
+    typeof maybe.casePatch === "object"
+  ) {
+    return {
+      id,
+      createdAt,
+      kind: "hearing_insert",
+      user_id: maybe.user_id,
+      case_id: maybe.case_id,
+      hearing_date: maybe.hearing_date,
+      proceeding: typeof maybe.proceeding === "string" ? maybe.proceeding : null,
+      judge_name: typeof maybe.judge_name === "string" ? maybe.judge_name : null,
+      current_status:
+        typeof maybe.current_status === "string" ? maybe.current_status : null,
+      next_status: typeof maybe.next_status === "string" ? maybe.next_status : null,
+      next_hearing_date:
+        typeof maybe.next_hearing_date === "string" ? maybe.next_hearing_date : null,
+      casePatch: maybe.casePatch as Partial<CaseRow>,
     };
   }
 
@@ -221,6 +266,37 @@ export async function addPendingCase(row: PendingCaseRow): Promise<void> {
   await upsertCachedCase(row.user_id, buildLocalCaseRow(localCaseId, row, nowIso));
 }
 
+/** Queue a proceeding save (case_hearings insert + cases row patch) for sync when online. */
+export async function addPendingProceedingSave(params: {
+  userId: string;
+  caseId: string;
+  hearingDate: string;
+  proceeding: string | null;
+  judgeName: string | null;
+  currentStatus: string | null;
+  nextStatus: string | null;
+  nextHearingDate: string | null;
+  casePatch: Partial<CaseRow>;
+}): Promise<void> {
+  const items = await getStored();
+  const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  items.push({
+    id,
+    createdAt: Date.now(),
+    kind: "hearing_insert",
+    user_id: params.userId,
+    case_id: params.caseId,
+    hearing_date: params.hearingDate,
+    proceeding: params.proceeding,
+    judge_name: params.judgeName,
+    current_status: params.currentStatus,
+    next_status: params.nextStatus,
+    next_hearing_date: params.nextHearingDate,
+    casePatch: params.casePatch,
+  });
+  await setStored(items);
+}
+
 export async function addPendingCaseUpdate(
   userId: string,
   caseId: string,
@@ -262,6 +338,8 @@ export async function addPendingCaseDelete(
     if (i.user_id !== userId) return true;
     // Deleting an unsynced local case should just remove its pending insert.
     if (i.kind === "insert" && i.local_case_id === caseId) return false;
+    // Drop queued proceedings for this case so sync does not update a trashed row.
+    if (i.kind === "hearing_insert" && i.case_id === caseId) return false;
     return true;
   });
   if (remaining.length !== items.length) {
@@ -286,15 +364,24 @@ export async function addPendingCaseHardDelete(
   caseId: string,
 ): Promise<void> {
   const items = await getStored();
+  const pruned = items.filter((i) => {
+    if (i.user_id !== userId) return true;
+    if (i.kind === "insert" && i.local_case_id === caseId) return false;
+    if (i.kind === "hearing_insert" && i.case_id === caseId) return false;
+    if (i.kind === "update" && i.case_id === caseId) return false;
+    if (i.kind === "delete" && i.case_id === caseId) return false;
+    if (i.kind === "hard_delete" && i.case_id === caseId) return false;
+    return true;
+  });
   const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  items.push({
+  pruned.push({
     id,
     createdAt: Date.now(),
     kind: "hard_delete",
     user_id: userId,
     case_id: caseId,
   });
-  await setStored(items);
+  await setStored(pruned);
 }
 
 /** Remove a pending case by id */
@@ -357,6 +444,39 @@ export async function syncPendingCases(userId: string): Promise<SyncResult> {
         continue;
       }
 
+      await removePendingCase(item.id);
+      synced += 1;
+      continue;
+    }
+
+    if (item.kind === "hearing_insert") {
+      const hearingResult = await addCaseHearingEntry({
+        caseId: item.case_id,
+        userId: item.user_id,
+        hearingDate: item.hearing_date,
+        proceeding: item.proceeding,
+        currentStatus: item.current_status,
+        nextStatus: item.next_status,
+        nextHearingDate: item.next_hearing_date,
+        judgeName: item.judge_name,
+      });
+      if (!hearingResult.ok) {
+        failed += 1;
+        continue;
+      }
+
+      const { error: updateError } = await supabase
+        .from("cases")
+        .update(item.casePatch)
+        .eq("id", item.case_id)
+        .eq("user_id", userId);
+
+      if (updateError) {
+        failed += 1;
+        continue;
+      }
+
+      await patchCachedCase(userId, item.case_id, item.casePatch);
       await removePendingCase(item.id);
       synced += 1;
       continue;

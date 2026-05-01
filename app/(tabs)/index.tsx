@@ -1,10 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useIsFocused } from "@react-navigation/native";
+import { Image } from "expo-image";
 import * as Print from "expo-print";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
-import { Image } from "expo-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -1352,6 +1352,7 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     fontSize: 12,
     fontWeight: "600",
     color: C.gray50,
+    paddingHorizontal: 10,
   },
   filedRangeBtnTextActive: {
     color: C.pureWhite,
