@@ -15,6 +15,10 @@ import { supabase } from "@/lib/supabase";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
 
+/** Public legal pages (GitHub Pages) — same URLs can be used in App Store Connect / Play Console. */
+const LEGAL_TERMS_URL = "https://umairbutt088.github.io/case-diary/terms.html";
+const LEGAL_PRIVACY_URL = "https://umairbutt088.github.io/case-diary/privacy.html";
+
 export default function SignUpScreen() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -209,8 +213,8 @@ export default function SignUpScreen() {
         }}
         termsLabel="Terms of Service"
         privacyLabel="Privacy Policy"
-        onTermsPress={() => Linking.openURL("https://example.com/terms")}
-        onPrivacyPress={() => Linking.openURL("https://example.com/privacy")}
+        onTermsPress={() => Linking.openURL(LEGAL_TERMS_URL)}
+        onPrivacyPress={() => Linking.openURL(LEGAL_PRIVACY_URL)}
         error={termsError}
         disabled={loading}
       />
