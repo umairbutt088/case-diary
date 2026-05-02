@@ -13,8 +13,11 @@
     "ios:install": "cd ios/ && pod install && cd ..",
     "prebuild:clean": "expo prebuild --clean",
     "build:android": "eas build --profile preview --platform android",
+    "build:android:play": "eas build --profile production --platform android",
+    "build:android:play-verify-apk": "eas build --profile production-verify --platform android",
     "apk:debug": "cd android && ./gradlew assembleDebug",
-    "apk:release": "cd android && ./gradlew assembleRelease"
+    "apk:release": "cd android && ./gradlew assembleRelease",
+    "aab:release": "cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

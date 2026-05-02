@@ -13,6 +13,13 @@
     },
     "production": {
       "node": "20.20.0",
+      "distribution": "store",
+      "android": { "buildType": "app-bundle" },
+      "environment": "production"
+    },
+    "production-verify": {
+      "node": "20.20.0",
+      "distribution": "store",
       "android": { "buildType": "apk" },
       "environment": "production"
     }

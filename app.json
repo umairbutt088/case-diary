@@ -68,6 +68,10 @@
           "iconSizeDp": 420
         }
       ],
+      [
+        "./plugins/with-adi-registration-properties",
+        { "token": "CVLMDVCSIEIHWAAAAAAAAAAAAA" }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-image-picker",
