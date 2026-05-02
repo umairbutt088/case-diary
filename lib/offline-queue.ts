@@ -248,6 +248,13 @@ export async function getPendingCasesCount(userId: string): Promise<number> {
   return items.length;
 }
 
+/** Drop queued offline case operations for this user (e.g. after account deletion). */
+export async function clearPendingCasesForUser(userId: string): Promise<void> {
+  const items = await getStored();
+  const remaining = items.filter((i) => i.user_id !== userId);
+  await setStored(remaining);
+}
+
 /** Add a case to the offline queue */
 export async function addPendingCase(row: PendingCaseRow): Promise<void> {
   const items = await getStored();

@@ -70,3 +70,12 @@ export async function removeCachedCase(
   const filtered = cases.filter((c) => c.id !== caseId);
   await setCachedCases(userId, filtered);
 }
+
+/** Clears the offline cases list for this user (e.g. after account deletion). */
+export async function clearCasesCache(userId: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(getCasesCacheKey(userId));
+  } catch {
+    // ignore
+  }
+}

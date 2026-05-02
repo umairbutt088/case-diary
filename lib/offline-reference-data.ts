@@ -361,3 +361,20 @@ export async function syncPendingReferenceData(userId: string): Promise<{
 
   return { synced, failed };
 }
+
+/** Clears cached judges/tiers and pending reference ops for this user. */
+export async function clearReferenceDataForUser(userId: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(getJudgesCacheKey(userId));
+  } catch {
+    // ignore
+  }
+  try {
+    await AsyncStorage.removeItem(getCourtTiersCacheKey(userId));
+  } catch {
+    // ignore
+  }
+  const ops = await getPendingOps();
+  const remaining = ops.filter((op) => op.user_id !== userId);
+  await setPendingOps(remaining);
+}
