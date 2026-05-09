@@ -660,21 +660,30 @@ export default function HomeScreen() {
   ) : null;
 
   const notesHeaderButton = (
-    <Bounceable
-      style={styles.notesHeaderButton}
-      onPress={() => router.push("/notes")}
-      accessibilityLabel="Open notes"
+    <CopilotStep
+      text="Tap Notes to add and manage your daily notes."
+      order={2}
+      name="home-notes"
+      active={isFocused}
     >
-      <MaterialIcons name="sticky-note-2" size={16} color={C.pureWhite} />
-      <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
-      {notesCount > 0 ? (
-        <View style={styles.notesCountBadge}>
-          <ThemedText style={styles.notesCountText}>
-            {notesCount > 99 ? "99+" : String(notesCount)}
-          </ThemedText>
-        </View>
-      ) : null}
-    </Bounceable>
+      <WalkthroughableView collapsable={false}>
+        <Bounceable
+          style={styles.notesHeaderButton}
+          onPress={() => router.push("/notes")}
+          accessibilityLabel="Open notes"
+        >
+          <MaterialIcons name="sticky-note-2" size={16} color={C.pureWhite} />
+          <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
+          {notesCount > 0 ? (
+            <View style={styles.notesCountBadge}>
+              <ThemedText style={styles.notesCountText}>
+                {notesCount > 99 ? "99+" : String(notesCount)}
+              </ThemedText>
+            </View>
+          ) : null}
+        </Bounceable>
+      </WalkthroughableView>
+    </CopilotStep>
   );
   const menuHeaderButton = (
     <Bounceable
@@ -832,16 +841,25 @@ export default function HomeScreen() {
     </Modal>
   );
   const filedCasesButton = (
-    <View style={styles.filedCasesRow}>
-      <Bounceable
-        style={styles.filedCasesBtn}
-        onPress={() => setShowFiledCasesModal(true)}
-      >
-        <MaterialIcons name="description" size={15} color={C.black} />
-        <ThemedText style={styles.filedCasesBtnText}>Filed cases</ThemedText>
-        <MaterialIcons name="keyboard-arrow-down" size={16} color={C.black} />
-      </Bounceable>
-    </View>
+    <CopilotStep
+      text="Tap Filed cases to quickly view cases filed today, this week, or this month."
+      order={3}
+      name="home-filed-cases"
+      active={isFocused}
+    >
+      <WalkthroughableView collapsable={false}>
+        <View style={styles.filedCasesRow}>
+          <Bounceable
+            style={styles.filedCasesBtn}
+            onPress={() => setShowFiledCasesModal(true)}
+          >
+            <MaterialIcons name="description" size={15} color={C.black} />
+            <ThemedText style={styles.filedCasesBtnText}>Filed cases</ThemedText>
+            <MaterialIcons name="keyboard-arrow-down" size={16} color={C.black} />
+          </Bounceable>
+        </View>
+      </WalkthroughableView>
+    </CopilotStep>
   );
   const filedCasesModal = (
     <Modal
@@ -991,7 +1009,7 @@ export default function HomeScreen() {
           <View style={styles.filterRow}>
             <CopilotStep
               text="Tap here to see only today's cases."
-              order={2}
+              order={4}
               name="filter-today"
               active={isFocused}
             >
@@ -1017,7 +1035,7 @@ export default function HomeScreen() {
 
             <CopilotStep
               text="Tap here to see this week's hearings and filings."
-              order={3}
+              order={5}
               name="filter-weekly"
               active={isFocused}
             >
@@ -1066,7 +1084,7 @@ export default function HomeScreen() {
             </ThemedText>
             <CopilotStep
               text="Tap here to start adding your cases and stay organized."
-              order={4}
+              order={6}
               name="add-case"
               active={isFocused}
             >
@@ -1152,7 +1170,7 @@ export default function HomeScreen() {
           <View style={styles.filterRow}>
             <CopilotStep
               text="Tap here to see only today's cases."
-              order={2}
+              order={4}
               name="filter-today"
               active={isFocused}
             >
@@ -1178,7 +1196,7 @@ export default function HomeScreen() {
 
             <CopilotStep
               text="Tap here to see this week's hearings and filings."
-              order={3}
+              order={5}
               name="filter-weekly"
               active={isFocused}
             >
