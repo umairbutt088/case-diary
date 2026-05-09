@@ -3,6 +3,7 @@ import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
+    InteractionManager,
     Pressable,
     RefreshControl,
     ScrollView,
@@ -247,12 +248,20 @@ function CalendarDayWithBadge(props: {
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      <Text style={textStyle} allowFontScaling={false}>
+      <Text
+        allowFontScaling={false}
+        maxFontSizeMultiplier={1}
+        style={textStyle}
+      >
         {children}
       </Text>
       {caseCount > 0 && (
         <View style={ds.badge}>
-          <Text style={ds.badgeText} allowFontScaling={false}>
+          <Text
+            allowFontScaling={false}
+            maxFontSizeMultiplier={1}
+            style={ds.badgeText}
+          >
             {caseCount > 99 ? "99+" : caseCount}
           </Text>
         </View>
@@ -456,6 +465,10 @@ export default function CalendarScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      let copilotStartTimeout: ReturnType<typeof setTimeout> | null = null;
+      let raf1 = 0;
+      let raf2 = 0;
+      let interactionTask: { cancel?: () => void } | null = null;
       (async () => {
         await fetchCases(true);
         if (cancelled) return;
@@ -463,15 +476,28 @@ export default function CalendarScreen() {
           "hasSeenCalendarTourCopilot",
         );
         if (!hasSeenTour) {
-          setTimeout(() => {
+          copilotStartTimeout = setTimeout(() => {
             if (cancelled) return;
-            start(undefined, scrollViewRef.current);
-            AsyncStorage.setItem("hasSeenCalendarTourCopilot", "true");
+            interactionTask = InteractionManager.runAfterInteractions(() => {
+              if (cancelled) return;
+              raf1 = requestAnimationFrame(() => {
+                if (cancelled) return;
+                raf2 = requestAnimationFrame(() => {
+                  if (cancelled) return;
+                  start(undefined, scrollViewRef.current);
+                  AsyncStorage.setItem("hasSeenCalendarTourCopilot", "true");
+                });
+              });
+            });
           }, 800);
         }
       })();
       return () => {
         cancelled = true;
+        if (copilotStartTimeout) clearTimeout(copilotStartTimeout);
+        interactionTask?.cancel?.();
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
       };
     }, [fetchCases, start]),
   );
@@ -551,7 +577,7 @@ export default function CalendarScreen() {
             name="calendar-add-next-hearing-date"
             active={isFocused}
           >
-            <WalkthroughableView>
+            <WalkthroughableView collapsable={false}>
               <Pressable
                 style={styles.addDateButton}
                 onPress={() =>

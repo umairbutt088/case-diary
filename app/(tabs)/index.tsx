@@ -7,10 +7,12 @@ import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BackHandler,
   ActivityIndicator,
   Alert,
   Linking,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   Pressable as RNPressable,
@@ -339,6 +341,33 @@ export default function HomeScreen() {
         cancelled = true;
       };
     }, [fetchCases, loadNotesCount, start, session?.user?.id, isOnline]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== "android") return undefined;
+
+      const onBackPress = () => {
+        // Close transient overlays first; otherwise leave app instead of navigating to auth stack.
+        if (isSidebarOpen) {
+          setIsSidebarOpen(false);
+          return true;
+        }
+        if (showFiledCasesModal) {
+          setShowFiledCasesModal(false);
+          return true;
+        }
+        if (showCourtPortalModal) {
+          setShowCourtPortalModal(false);
+          return true;
+        }
+        BackHandler.exitApp();
+        return true;
+      };
+
+      const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => sub.remove();
+    }, [isSidebarOpen, showFiledCasesModal, showCourtPortalModal]),
   );
 
   // Refetch when coming back online (smooth transition, no flicker)
@@ -812,7 +841,11 @@ export default function HomeScreen() {
               <MaterialIcons name="close" size={20} color={C.black} />
             </Bounceable>
           </View>
-          <View style={styles.filedRangeRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filedRangeRow}
+          >
             {(["today", "week", "month"] as const).map((range) => {
               const active = filedRange === range;
               const label = range === "today" ? "Today" : range === "week" ? "This week" : "This month";
@@ -830,7 +863,7 @@ export default function HomeScreen() {
                 </Bounceable>
               );
             })}
-          </View>
+          </ScrollView>
           <ScrollView style={styles.filedListScroll} showsVerticalScrollIndicator={false}>
             {filedCases.length === 0 ? (
               <ThemedText style={styles.filedEmptyText}>
@@ -1335,6 +1368,7 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     flexDirection: "row",
     gap: 8,
     marginBottom: 12,
+    paddingRight: 4,
   },
   filedRangeBtn: {
     paddingVertical: 8,
@@ -1480,16 +1514,19 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     position: "absolute",
     top: -4,
     right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: C.themeRed,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 2,
+    paddingHorizontal: 3,
   },
   notesCountText: {
-    fontSize: 8,
+    fontSize: 9,
+    lineHeight: 10,
+    textAlign: "center",
+    includeFontPadding: false,
     color: C.pureWhite,
     fontWeight: "700",
   },
