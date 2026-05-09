@@ -171,16 +171,21 @@ function createCaseCardStyles(C: AppColors) {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      gap: 8,
     },
     nextDateRow: {
       flexDirection: "row",
       alignItems: "center",
+      flex: 1,
+      minWidth: 0,
+      flexWrap: "wrap",
     },
     nextDateIcon: {
       marginRight: 4,
     },
     nextDateText: {
       fontSize: 13,
+      flexShrink: 1,
     },
     nextDateTextOverdue: {
       fontWeight: "700",
@@ -193,6 +198,7 @@ function createCaseCardStyles(C: AppColors) {
       backgroundColor: C.themeRed + "22",
       borderWidth: 1,
       borderColor: C.themeRed,
+      maxWidth: "100%",
     },
     overdueBadgeText: {
       fontSize: 10,
@@ -204,6 +210,7 @@ function createCaseCardStyles(C: AppColors) {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
+      flexShrink: 0,
     },
     iconButton: {
       padding: 4,

@@ -57,18 +57,24 @@ function createCalendarCaseCardStyles(C: AppColors) {
       fontWeight: "700",
     },
     overdueBadge: {
+      marginLeft: 8,
       paddingHorizontal: 7,
       paddingVertical: 2,
       borderRadius: 999,
       backgroundColor: C.themeRed + "22",
       borderWidth: 1,
       borderColor: C.themeRed,
+      maxWidth: "100%",
     },
     overdueBadgeText: {
       fontSize: 10,
       fontWeight: "700",
       letterSpacing: 0.3,
       color: C.themeRed,
+    },
+    titleTextWrap: {
+      flex: 1,
+      minWidth: 0,
     },
   });
 }
@@ -89,7 +95,11 @@ export function CalendarCaseCard({ caseItem }: Props) {
   return (
     <Pressable style={styles.card} onPress={openCase}>
       <View style={styles.titleRow}>
-        <ThemedText style={styles.title}>{caseItem.title}</ThemedText>
+        <View style={styles.titleTextWrap}>
+          <ThemedText style={styles.title} numberOfLines={1}>
+            {caseItem.title}
+          </ThemedText>
+        </View>
         {isOverdue ? (
           <View style={styles.overdueBadge}>
             <ThemedText style={styles.overdueBadgeText}>OVERDUE</ThemedText>

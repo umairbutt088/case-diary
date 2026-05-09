@@ -16,13 +16,18 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  Pressable as RNPressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 
@@ -213,6 +218,7 @@ export default function HomeScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [notesCount, setNotesCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarMounted, setIsSidebarMounted] = useState(false);
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
@@ -221,6 +227,9 @@ export default function HomeScreen() {
   >(null);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
+  const sidebarWidth = Math.min(screenWidth * 0.78, 320);
+  const sidebarTranslateX = useSharedValue(-(sidebarWidth + 24));
+  const sidebarBackdropOpacity = useSharedValue(0);
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const modalSheet = modalSheetBackground(C, isDark);
@@ -231,6 +240,40 @@ export default function HomeScreen() {
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
+
+  const sidebarPanelAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: sidebarTranslateX.value }],
+  }));
+  const sidebarBackdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: sidebarBackdropOpacity.value,
+  }));
+
+  const openSidebar = useCallback(() => {
+    if (isSidebarOpen) return;
+    sidebarTranslateX.value = -(sidebarWidth + 24);
+    sidebarBackdropOpacity.value = 0;
+    setIsSidebarMounted(true);
+    setIsSidebarOpen(true);
+  }, [isSidebarOpen, sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
+
+  const closeSidebar = useCallback(() => {
+    if (!isSidebarMounted) return;
+    setIsSidebarOpen(false);
+    sidebarBackdropOpacity.value = withTiming(0, { duration: 180 });
+    sidebarTranslateX.value = withTiming(
+      -(sidebarWidth + 24),
+      { duration: 220 },
+      (finished) => {
+        if (finished) runOnJS(setIsSidebarMounted)(false);
+      },
+    );
+  }, [isSidebarMounted, sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
+
+  useEffect(() => {
+    if (!isSidebarMounted || !isSidebarOpen) return;
+    sidebarBackdropOpacity.value = withTiming(1, { duration: 180 });
+    sidebarTranslateX.value = withTiming(0, { duration: 220 });
+  }, [isSidebarMounted, isSidebarOpen, sidebarBackdropOpacity, sidebarTranslateX]);
 
   const fetchCases = useCallback(
     async (isSilent = false) => {
@@ -367,8 +410,8 @@ export default function HomeScreen() {
 
       const onBackPress = () => {
         // Close transient overlays first; otherwise leave app instead of navigating to auth stack.
-        if (isSidebarOpen) {
-          setIsSidebarOpen(false);
+        if (isSidebarOpen || isSidebarMounted) {
+          closeSidebar();
           return true;
         }
         if (showFiledCasesModal) {
@@ -385,7 +428,7 @@ export default function HomeScreen() {
 
       const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => sub.remove();
-    }, [isSidebarOpen, showFiledCasesModal, showCourtPortalModal]),
+    }, [isSidebarOpen, isSidebarMounted, closeSidebar, showFiledCasesModal, showCourtPortalModal]),
   );
 
   // Refetch when coming back online (smooth transition, no flicker)
@@ -687,7 +730,7 @@ export default function HomeScreen() {
   );
   const menuHeaderButton = (
     <Bounceable
-      onPress={() => setIsSidebarOpen(true)}
+      onPress={openSidebar}
       style={styles.menuHeaderButton}
       accessibilityLabel="Open menu"
     >
@@ -702,13 +745,25 @@ export default function HomeScreen() {
   );
   const sidebarMenu = (
     <Modal
-      visible={isSidebarOpen}
+      visible={isSidebarMounted}
       transparent
-      animationType="fade"
-      onRequestClose={() => setIsSidebarOpen(false)}
+      animationType="none"
+      onRequestClose={closeSidebar}
     >
-      <RNPressable style={styles.sidebarOverlay} onPress={() => setIsSidebarOpen(false)}>
-        <RNPressable style={styles.sidebarPanel} onPress={() => undefined}>
+      <View style={styles.sidebarOverlay}>
+        <Animated.View
+          style={[styles.sidebarBackdrop, sidebarBackdropAnimatedStyle]}
+          pointerEvents="box-none"
+        >
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeSidebar} />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.sidebarPanel,
+            { width: sidebarWidth },
+            sidebarPanelAnimatedStyle,
+          ]}
+        >
           <View style={styles.sidebarMainItems}>
             <View style={styles.sidebarHeader}>
               <View style={styles.sidebarProfileInfo}>
@@ -736,7 +791,7 @@ export default function HomeScreen() {
               </View>
               <Bounceable
                 style={styles.sidebarCloseButton}
-                onPress={() => setIsSidebarOpen(false)}
+                onPress={closeSidebar}
               >
                 <MaterialIcons name="close" size={20} color={C.black} />
               </Bounceable>
@@ -746,7 +801,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/notes");
               }}
             >
@@ -757,7 +812,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/clients");
               }}
             >
@@ -768,7 +823,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/judges");
               }}
             >
@@ -779,7 +834,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 handleShareCases();
               }}
             >
@@ -790,7 +845,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 void openCourtSearchWebsite();
               }}
             >
@@ -801,7 +856,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/acts");
               }}
             >
@@ -812,7 +867,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/trash");
               }}
             >
@@ -825,7 +880,7 @@ export default function HomeScreen() {
             <Bounceable
               style={[styles.sidebarItem, styles.sidebarItemDanger]}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 Alert.alert("Sign out?", "You can sign in again anytime.", [
                   { text: "Cancel", style: "cancel" },
                   { text: "Sign out", style: "destructive", onPress: () => void signOut() },
@@ -836,8 +891,8 @@ export default function HomeScreen() {
               <ThemedText style={styles.sidebarItemDangerText}>Sign out</ThemedText>
             </Bounceable>
           </View>
-        </RNPressable>
-      </RNPressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
   const filedCasesButton = (
@@ -1576,12 +1631,13 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
   },
   sidebarOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
   },
+  sidebarBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
   sidebarPanel: {
-    width: "78%",
-    maxWidth: 320,
     backgroundColor: modalSheet,
     minHeight: 360,
     height: "80%",
