@@ -3,11 +3,12 @@ import { useIsFocused } from "@react-navigation/native";
 import * as Print from "expo-print";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  InteractionManager,
   RefreshControl,
   Share,
   StyleSheet,
@@ -284,7 +285,7 @@ export default function DiaryScreen() {
   const isFocused = useIsFocused();
   const isOnline = useIsOnline();
   const { session } = useAuth();
-  const { start } = useCopilot();
+  const { start, visible: copilotVisible, copilotEvents } = useCopilot();
   const C = useThemePalette();
   const styles = useMemo(() => createDiaryStyles(C), [C]);
   const [cases, setCases] = useState<CaseRow[]>([]);
@@ -296,6 +297,8 @@ export default function DiaryScreen() {
   const [bulkExporting, setBulkExporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blockDiaryScrollForCopilot, setBlockDiaryScrollForCopilot] =
+    useState(false);
   const filteredCases = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query || !searchMode) return cases;
@@ -370,18 +373,35 @@ export default function DiaryScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      let copilotStartTimeout: ReturnType<typeof setTimeout> | null = null;
+      let raf1 = 0;
+      let raf2 = 0;
+      let interactionTask: { cancel?: () => void } | null = null;
+
+      // Lock immediately on focus so user can't scroll before walkthrough bootstrap decides.
+      setBlockDiaryScrollForCopilot(true);
+
       (async () => {
-        await fetchCases(true);
-        if (cancelled) return;
         const hasSeenTour = await AsyncStorage.getItem(
           "hasSeenDiaryTourCopilot",
         );
-        if (!hasSeenTour) {
-          setTimeout(() => {
+        if (cancelled) return;
+        await fetchCases(true);
+        if (cancelled) return;
+        if (hasSeenTour) {
+          setBlockDiaryScrollForCopilot(false);
+        } else {
+          copilotStartTimeout = setTimeout(() => {
             if (cancelled) return;
-            requestAnimationFrame(() => {
+            interactionTask = InteractionManager.runAfterInteractions(() => {
               if (cancelled) return;
-              start();
+              raf1 = requestAnimationFrame(() => {
+                if (cancelled) return;
+                raf2 = requestAnimationFrame(() => {
+                  if (cancelled) return;
+                  start();
+                });
+              });
             });
             AsyncStorage.setItem("hasSeenDiaryTourCopilot", "true");
           }, 600);
@@ -389,9 +409,33 @@ export default function DiaryScreen() {
       })();
       return () => {
         cancelled = true;
+        if (copilotStartTimeout) clearTimeout(copilotStartTimeout);
+        interactionTask?.cancel?.();
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
       };
     }, [fetchCases, start]),
   );
+
+  useEffect(() => {
+    if (!isFocused) {
+      setBlockDiaryScrollForCopilot(false);
+    }
+  }, [isFocused]);
+
+  useEffect(() => {
+    const onStart = () => setBlockDiaryScrollForCopilot(false);
+    const onStop = () => setBlockDiaryScrollForCopilot(false);
+    copilotEvents.on("start", onStart);
+    copilotEvents.on("stop", onStop);
+    return () => {
+      copilotEvents.off("start", onStart);
+      copilotEvents.off("stop", onStop);
+    };
+  }, [copilotEvents]);
+
+  const scrollLockedForWalkthrough =
+    isFocused && (blockDiaryScrollForCopilot || copilotVisible);
 
   const handleDeleteCase = useCallback(
     (caseId: string) => {
@@ -674,6 +718,7 @@ export default function DiaryScreen() {
           <FlatList
             data={filteredCases}
             keyExtractor={(item) => item.id}
+            scrollEnabled={!scrollLockedForWalkthrough}
             refreshControl={
               <RefreshControl
                 refreshing={loading}

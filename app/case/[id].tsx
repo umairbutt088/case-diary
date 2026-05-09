@@ -140,6 +140,28 @@ function createCaseDetailStyles(
       fontSize: 16,
       color: C.black,
     },
+    overduePill: {
+      alignSelf: "flex-start",
+      marginTop: 6,
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      backgroundColor: C.themeRed + "1A",
+      borderWidth: 1,
+      borderColor: C.themeRed + "40",
+      maxWidth: "100%",
+    },
+    overduePillButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    overduePillText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: C.themeRed,
+      letterSpacing: 0.2,
+    },
     historyItem: {
       marginBottom: 14,
       paddingBottom: 12,
@@ -942,6 +964,10 @@ export default function CaseDetailScreen() {
   }
 
   const title = getCaseDisplayTitle(caseData);
+  const todayIso = getTodayISO();
+  const isCaseOverdue =
+    Boolean(caseData.next_hearing_date) &&
+    isIsoDateBefore(caseData.next_hearing_date?.slice(0, 10) || "", todayIso);
   const recentHearings = hearingHistory.slice(0, 1);
   const hasMoreHearings = hearingHistory.length > 1;
   const previousHearingDate = caseData.next_hearing_date || getTodayISO();
@@ -1018,6 +1044,13 @@ export default function CaseDetailScreen() {
   };
 
   const partyTerms = getPartyTerminology(caseData.court_tier ?? "", caseData.case_sub_type ?? "");
+  const openAddProceedingForm = () => {
+    setProceedingError(null);
+    setNextStatusDraft("");
+    setNextDateDraft(caseData.next_hearing_date || "");
+    setJudgeNameDraft(caseData.judge_name?.trim() ?? "");
+    setShowProceedingForm(true);
+  };
   const saveProceeding = async () => {
     if (!session?.user?.id) return;
     if (!nextDateDraft.trim()) {
@@ -1448,6 +1481,17 @@ export default function CaseDetailScreen() {
                   : null
               }
             />
+            {isCaseOverdue ? (
+              <Bounceable
+                style={[styles.overduePill, styles.overduePillButton]}
+                onPress={openAddProceedingForm}
+                accessibilityRole="button"
+                accessibilityLabel="Overdue. Add proceeding"
+              >
+                <MaterialIcons name="warning-amber" size={14} color={C.themeRed} />
+                <ThemedText style={styles.overduePillText}>OVERDUE</ThemedText>
+              </Bounceable>
+            ) : null}
             <DetailRow s={styles} C={C} label="Current status" value={caseData.current_status} />
             <DetailRow s={styles} C={C} label="Next status" value={caseData.next_status} />
           </SectionCard>
@@ -1456,8 +1500,12 @@ export default function CaseDetailScreen() {
             <Bounceable
               style={styles.addProceedingBtn}
               onPress={() => {
-                setShowProceedingForm((prev) => !prev);
-                setProceedingError(null);
+                if (showProceedingForm) {
+                  setShowProceedingForm(false);
+                  setProceedingError(null);
+                  return;
+                }
+                openAddProceedingForm();
               }}
             >
               <MaterialIcons

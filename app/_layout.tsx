@@ -1,12 +1,15 @@
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { Platform, StatusBar as RNStatusBar } from "react-native";
+import {
+    Platform,
+    StatusBar as RNStatusBar,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
@@ -55,6 +58,10 @@ function RootLayoutInner() {
     : colors.background;
 
   const navigationTheme = isDark ? NavigationDarkTheme : DefaultTheme;
+  const copilotOverlay = "svg";
+  const copilotVerticalOffset = Platform.OS === "android"
+    ? RNStatusBar.currentHeight ?? 0
+    : 0;
 
   return (
     <ThemeProvider value={navigationTheme}>
@@ -62,12 +69,11 @@ function RootLayoutInner() {
         <OfflineSyncProvider>
           <PushNotificationProvider>
             <CopilotProvider
-              overlay="svg"
+              overlay={copilotOverlay}
               backdropColor="rgba(0,0,0,0.75)"
               animated={true}
-              // Android status bar is non-translucent in this app; adding currentHeight here
-              // offsets spotlight/tooltip positions on some emulators (e.g. Pixel 4).
-              verticalOffset={0}
+              // Android walkthrough measurements are more stable with status bar offset.
+              verticalOffset={copilotVerticalOffset}
             >
               <AuthNavigator>
                 <Stack>

@@ -7,19 +7,27 @@ import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BackHandler,
   ActivityIndicator,
   Alert,
+  InteractionManager,
   Linking,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
-  Pressable as RNPressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 
@@ -210,6 +218,7 @@ export default function HomeScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [notesCount, setNotesCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarMounted, setIsSidebarMounted] = useState(false);
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
@@ -218,6 +227,9 @@ export default function HomeScreen() {
   >(null);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
+  const sidebarWidth = Math.min(screenWidth * 0.78, 320);
+  const sidebarTranslateX = useSharedValue(-(sidebarWidth + 24));
+  const sidebarBackdropOpacity = useSharedValue(0);
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const modalSheet = modalSheetBackground(C, isDark);
@@ -228,6 +240,40 @@ export default function HomeScreen() {
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
+
+  const sidebarPanelAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: sidebarTranslateX.value }],
+  }));
+  const sidebarBackdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: sidebarBackdropOpacity.value,
+  }));
+
+  const openSidebar = useCallback(() => {
+    if (isSidebarOpen) return;
+    sidebarTranslateX.value = -(sidebarWidth + 24);
+    sidebarBackdropOpacity.value = 0;
+    setIsSidebarMounted(true);
+    setIsSidebarOpen(true);
+  }, [isSidebarOpen, sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
+
+  const closeSidebar = useCallback(() => {
+    if (!isSidebarMounted) return;
+    setIsSidebarOpen(false);
+    sidebarBackdropOpacity.value = withTiming(0, { duration: 180 });
+    sidebarTranslateX.value = withTiming(
+      -(sidebarWidth + 24),
+      { duration: 220 },
+      (finished) => {
+        if (finished) runOnJS(setIsSidebarMounted)(false);
+      },
+    );
+  }, [isSidebarMounted, sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
+
+  useEffect(() => {
+    if (!isSidebarMounted || !isSidebarOpen) return;
+    sidebarBackdropOpacity.value = withTiming(1, { duration: 180 });
+    sidebarTranslateX.value = withTiming(0, { duration: 220 });
+  }, [isSidebarMounted, isSidebarOpen, sidebarBackdropOpacity, sidebarTranslateX]);
 
   const fetchCases = useCallback(
     async (isSilent = false) => {
@@ -308,6 +354,10 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      let copilotStartTimeout: ReturnType<typeof setTimeout> | null = null;
+      let raf1 = 0;
+      let raf2 = 0;
+      let interactionTask: { cancel?: () => void } | null = null;
       (async () => {
         await loadNotesCount();
         if (!isOnline && session?.user?.id && isSupabaseConfigured) {
@@ -328,17 +378,57 @@ export default function HomeScreen() {
           "hasSeenHomeTourCopilot",
         );
         if (!hasSeenTour) {
-          setTimeout(() => {
+          copilotStartTimeout = setTimeout(() => {
             if (cancelled) return;
-            start();
-            AsyncStorage.setItem("hasSeenHomeTourCopilot", "true");
+            interactionTask = InteractionManager.runAfterInteractions(() => {
+              if (cancelled) return;
+              raf1 = requestAnimationFrame(() => {
+                if (cancelled) return;
+                raf2 = requestAnimationFrame(() => {
+                  if (cancelled) return;
+                  start();
+                  AsyncStorage.setItem("hasSeenHomeTourCopilot", "true");
+                });
+              });
+            });
           }, 600);
         }
       })();
       return () => {
         cancelled = true;
+        if (copilotStartTimeout) clearTimeout(copilotStartTimeout);
+        interactionTask?.cancel?.();
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
       };
     }, [fetchCases, loadNotesCount, start, session?.user?.id, isOnline]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== "android") return undefined;
+
+      const onBackPress = () => {
+        // Close transient overlays first; otherwise leave app instead of navigating to auth stack.
+        if (isSidebarOpen || isSidebarMounted) {
+          closeSidebar();
+          return true;
+        }
+        if (showFiledCasesModal) {
+          setShowFiledCasesModal(false);
+          return true;
+        }
+        if (showCourtPortalModal) {
+          setShowCourtPortalModal(false);
+          return true;
+        }
+        BackHandler.exitApp();
+        return true;
+      };
+
+      const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => sub.remove();
+    }, [isSidebarOpen, isSidebarMounted, closeSidebar, showFiledCasesModal, showCourtPortalModal]),
   );
 
   // Refetch when coming back online (smooth transition, no flicker)
@@ -613,25 +703,34 @@ export default function HomeScreen() {
   ) : null;
 
   const notesHeaderButton = (
-    <Bounceable
-      style={styles.notesHeaderButton}
-      onPress={() => router.push("/notes")}
-      accessibilityLabel="Open notes"
+    <CopilotStep
+      text="Tap Notes to add and manage your daily notes."
+      order={2}
+      name="home-notes"
+      active={isFocused}
     >
-      <MaterialIcons name="sticky-note-2" size={16} color={C.pureWhite} />
-      <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
-      {notesCount > 0 ? (
-        <View style={styles.notesCountBadge}>
-          <ThemedText style={styles.notesCountText}>
-            {notesCount > 99 ? "99+" : String(notesCount)}
-          </ThemedText>
-        </View>
-      ) : null}
-    </Bounceable>
+      <WalkthroughableView collapsable={false}>
+        <Bounceable
+          style={styles.notesHeaderButton}
+          onPress={() => router.push("/notes")}
+          accessibilityLabel="Open notes"
+        >
+          <MaterialIcons name="sticky-note-2" size={16} color={C.pureWhite} />
+          <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
+          {notesCount > 0 ? (
+            <View style={styles.notesCountBadge}>
+              <ThemedText style={styles.notesCountText}>
+                {notesCount > 99 ? "99+" : String(notesCount)}
+              </ThemedText>
+            </View>
+          ) : null}
+        </Bounceable>
+      </WalkthroughableView>
+    </CopilotStep>
   );
   const menuHeaderButton = (
     <Bounceable
-      onPress={() => setIsSidebarOpen(true)}
+      onPress={openSidebar}
       style={styles.menuHeaderButton}
       accessibilityLabel="Open menu"
     >
@@ -646,13 +745,25 @@ export default function HomeScreen() {
   );
   const sidebarMenu = (
     <Modal
-      visible={isSidebarOpen}
+      visible={isSidebarMounted}
       transparent
-      animationType="fade"
-      onRequestClose={() => setIsSidebarOpen(false)}
+      animationType="none"
+      onRequestClose={closeSidebar}
     >
-      <RNPressable style={styles.sidebarOverlay} onPress={() => setIsSidebarOpen(false)}>
-        <RNPressable style={styles.sidebarPanel} onPress={() => undefined}>
+      <View style={styles.sidebarOverlay}>
+        <Animated.View
+          style={[styles.sidebarBackdrop, sidebarBackdropAnimatedStyle]}
+          pointerEvents="box-none"
+        >
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeSidebar} />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.sidebarPanel,
+            { width: sidebarWidth },
+            sidebarPanelAnimatedStyle,
+          ]}
+        >
           <View style={styles.sidebarMainItems}>
             <View style={styles.sidebarHeader}>
               <View style={styles.sidebarProfileInfo}>
@@ -680,7 +791,7 @@ export default function HomeScreen() {
               </View>
               <Bounceable
                 style={styles.sidebarCloseButton}
-                onPress={() => setIsSidebarOpen(false)}
+                onPress={closeSidebar}
               >
                 <MaterialIcons name="close" size={20} color={C.black} />
               </Bounceable>
@@ -690,7 +801,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/notes");
               }}
             >
@@ -701,7 +812,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/clients");
               }}
             >
@@ -712,7 +823,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/judges");
               }}
             >
@@ -723,7 +834,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 handleShareCases();
               }}
             >
@@ -734,7 +845,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 void openCourtSearchWebsite();
               }}
             >
@@ -745,7 +856,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/acts");
               }}
             >
@@ -756,7 +867,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 router.push("/trash");
               }}
             >
@@ -769,7 +880,7 @@ export default function HomeScreen() {
             <Bounceable
               style={[styles.sidebarItem, styles.sidebarItemDanger]}
               onPress={() => {
-                setIsSidebarOpen(false);
+                closeSidebar();
                 Alert.alert("Sign out?", "You can sign in again anytime.", [
                   { text: "Cancel", style: "cancel" },
                   { text: "Sign out", style: "destructive", onPress: () => void signOut() },
@@ -780,21 +891,30 @@ export default function HomeScreen() {
               <ThemedText style={styles.sidebarItemDangerText}>Sign out</ThemedText>
             </Bounceable>
           </View>
-        </RNPressable>
-      </RNPressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
   const filedCasesButton = (
-    <View style={styles.filedCasesRow}>
-      <Bounceable
-        style={styles.filedCasesBtn}
-        onPress={() => setShowFiledCasesModal(true)}
-      >
-        <MaterialIcons name="description" size={15} color={C.black} />
-        <ThemedText style={styles.filedCasesBtnText}>Filed cases</ThemedText>
-        <MaterialIcons name="keyboard-arrow-down" size={16} color={C.black} />
-      </Bounceable>
-    </View>
+    <CopilotStep
+      text="Tap Filed cases to quickly view cases filed today, this week, or this month."
+      order={3}
+      name="home-filed-cases"
+      active={isFocused}
+    >
+      <WalkthroughableView collapsable={false}>
+        <View style={styles.filedCasesRow}>
+          <Bounceable
+            style={styles.filedCasesBtn}
+            onPress={() => setShowFiledCasesModal(true)}
+          >
+            <MaterialIcons name="description" size={15} color={C.black} />
+            <ThemedText style={styles.filedCasesBtnText}>Filed cases</ThemedText>
+            <MaterialIcons name="keyboard-arrow-down" size={16} color={C.black} />
+          </Bounceable>
+        </View>
+      </WalkthroughableView>
+    </CopilotStep>
   );
   const filedCasesModal = (
     <Modal
@@ -812,7 +932,11 @@ export default function HomeScreen() {
               <MaterialIcons name="close" size={20} color={C.black} />
             </Bounceable>
           </View>
-          <View style={styles.filedRangeRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filedRangeRow}
+          >
             {(["today", "week", "month"] as const).map((range) => {
               const active = filedRange === range;
               const label = range === "today" ? "Today" : range === "week" ? "This week" : "This month";
@@ -830,7 +954,7 @@ export default function HomeScreen() {
                 </Bounceable>
               );
             })}
-          </View>
+          </ScrollView>
           <ScrollView style={styles.filedListScroll} showsVerticalScrollIndicator={false}>
             {filedCases.length === 0 ? (
               <ThemedText style={styles.filedEmptyText}>
@@ -914,7 +1038,7 @@ export default function HomeScreen() {
           name="welcome"
           active={isFocused}
         >
-          <WalkthroughableView>
+          <WalkthroughableView collapsable={false}>
             <ScreenHeader
               title={isTodayFilter ? "Today" : "This week"}
               showBack={false}
@@ -940,11 +1064,11 @@ export default function HomeScreen() {
           <View style={styles.filterRow}>
             <CopilotStep
               text="Tap here to see only today's cases."
-              order={2}
+              order={4}
               name="filter-today"
               active={isFocused}
             >
-              <WalkthroughableView style={{ width: "45%" }}>
+              <WalkthroughableView style={{ width: "45%" }} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,
@@ -966,11 +1090,11 @@ export default function HomeScreen() {
 
             <CopilotStep
               text="Tap here to see this week's hearings and filings."
-              order={3}
+              order={5}
               name="filter-weekly"
               active={isFocused}
             >
-              <WalkthroughableView style={{ width: "45%" }}>
+              <WalkthroughableView style={{ width: "45%" }} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,
@@ -1015,11 +1139,11 @@ export default function HomeScreen() {
             </ThemedText>
             <CopilotStep
               text="Tap here to start adding your cases and stay organized."
-              order={4}
+              order={6}
               name="add-case"
               active={isFocused}
             >
-              <WalkthroughableView>
+              <WalkthroughableView collapsable={false}>
                 <Bounceable
                   style={styles.addButton}
                   onPress={() => router.push("/add-case-flow")}
@@ -1069,7 +1193,7 @@ export default function HomeScreen() {
         name="welcome"
         active={isFocused}
       >
-        <WalkthroughableView>
+        <WalkthroughableView collapsable={false}>
           <ScreenHeader
             title={isTodayFilter ? "Today Cases" : "This week Cases"}
             showBack={false}
@@ -1101,11 +1225,11 @@ export default function HomeScreen() {
           <View style={styles.filterRow}>
             <CopilotStep
               text="Tap here to see only today's cases."
-              order={2}
+              order={4}
               name="filter-today"
               active={isFocused}
             >
-              <WalkthroughableView style={styles.filterBtnWrapper}>
+              <WalkthroughableView style={styles.filterBtnWrapper} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,
@@ -1127,11 +1251,11 @@ export default function HomeScreen() {
 
             <CopilotStep
               text="Tap here to see this week's hearings and filings."
-              order={3}
+              order={5}
               name="filter-weekly"
               active={isFocused}
             >
-              <WalkthroughableView style={styles.filterBtnWrapper}>
+              <WalkthroughableView style={styles.filterBtnWrapper} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,
@@ -1335,6 +1459,7 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     flexDirection: "row",
     gap: 8,
     marginBottom: 12,
+    paddingRight: 4,
   },
   filedRangeBtn: {
     paddingVertical: 8,
@@ -1480,16 +1605,19 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     position: "absolute",
     top: -4,
     right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: C.themeRed,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 2,
+    paddingHorizontal: 3,
   },
   notesCountText: {
-    fontSize: 8,
+    fontSize: 9,
+    lineHeight: 10,
+    textAlign: "center",
+    includeFontPadding: false,
     color: C.pureWhite,
     fontWeight: "700",
   },
@@ -1503,12 +1631,13 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
   },
   sidebarOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
   },
+  sidebarBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
   sidebarPanel: {
-    width: "78%",
-    maxWidth: 320,
     backgroundColor: modalSheet,
     minHeight: 360,
     height: "80%",

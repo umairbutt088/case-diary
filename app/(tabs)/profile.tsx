@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    InteractionManager,
     Keyboard,
     Linking,
     Platform,
@@ -394,6 +395,10 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      let copilotStartTimeout: ReturnType<typeof setTimeout> | null = null;
+      let raf1 = 0;
+      let raf2 = 0;
+      let interactionTask: { cancel?: () => void } | null = null;
       (async () => {
         await fetchProfile();
         if (cancelled) return;
@@ -411,12 +416,18 @@ export default function ProfileScreen() {
           setBlockProfileScrollForCopilot(false);
         } else {
           setBlockProfileScrollForCopilot(true);
-          setTimeout(() => {
+          copilotStartTimeout = setTimeout(() => {
             if (cancelled) return;
-            requestAnimationFrame(() => {
+            interactionTask = InteractionManager.runAfterInteractions(() => {
               if (cancelled) return;
-              // Pass ScrollView so Copilot can scroll targets into view before measure (step 2 is below the fold).
-              void start(undefined, scrollRef.current);
+              raf1 = requestAnimationFrame(() => {
+                if (cancelled) return;
+                raf2 = requestAnimationFrame(() => {
+                  if (cancelled) return;
+                  // Pass ScrollView so Copilot can scroll targets into view before measure (step 2 is below the fold).
+                  void start(undefined, scrollRef.current);
+                });
+              });
             });
             AsyncStorage.setItem("hasSeenProfileTourCopilot", "true");
           }, 600);
@@ -424,6 +435,10 @@ export default function ProfileScreen() {
       })();
       return () => {
         cancelled = true;
+        if (copilotStartTimeout) clearTimeout(copilotStartTimeout);
+        interactionTask?.cancel?.();
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
       };
     }, [fetchProfile, start]),
   );
@@ -438,6 +453,8 @@ export default function ProfileScreen() {
     const onStop = () => setBlockProfileScrollForCopilot(false);
     const onStart = () => {
       if (isFocusedRef.current) {
+        // Lock only until walkthrough starts; Android needs scroll enabled for later steps.
+        setBlockProfileScrollForCopilot(false);
         scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     };

@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import React, { useMemo } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { TabBarAddButton } from "@/components/tab-bar-add-button";
@@ -11,8 +12,13 @@ import { useThemePalette } from "@/hooks/use-theme-palette";
 export default function TabLayout() {
   const { isDark } = useAppTheme();
   const C = useThemePalette();
+  const insets = useSafeAreaInsets();
 
   const screenOptions = useMemo(() => {
+    const bottomInset = Math.max(insets.bottom, 0);
+    const tabBarPaddingBottom = Math.max(bottomInset, 8);
+    const tabBarHeight = 56 + tabBarPaddingBottom;
+
     if (isDark) {
       return {
         tabBarActiveTintColor: C.zodiacColour,
@@ -20,8 +26,11 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: C.pureWhite,
           borderTopColor: C.borderGray,
+          paddingBottom: tabBarPaddingBottom,
+          height: tabBarHeight,
         },
         headerShown: false as const,
+        tabBarAllowFontScaling: false,
         tabBarLabelStyle: { fontSize: 12 },
         tabBarShowLabel: true as const,
       };
@@ -32,12 +41,15 @@ export default function TabLayout() {
       tabBarStyle: {
         backgroundColor: TabBarColors.background,
         borderTopColor: TabBarColors.background,
+        paddingBottom: tabBarPaddingBottom,
+        height: tabBarHeight,
       },
       headerShown: false as const,
+      tabBarAllowFontScaling: false,
       tabBarLabelStyle: { fontSize: 12 },
       tabBarShowLabel: true as const,
     };
-  }, [isDark, C]);
+  }, [isDark, C, insets.bottom]);
 
   return (
     <Tabs screenOptions={screenOptions}>

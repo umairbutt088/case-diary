@@ -1,26 +1,23 @@
-import { Link } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import {
-  AuthButton,
-  AuthScreenLayout,
-  FormInput,
-  FormMessage,
-  PasswordInput,
-  Spacer,
+    AuthButton,
+    AuthScreenLayout,
+    FormInput,
+    FormMessage,
+    Spacer,
 } from "@/components/ui";
-import { supabase } from "@/lib/supabase";
+import { getPasswordRecoveryRedirectTo } from "@/lib/auth-deeplink";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const validate = useCallback(() => {
@@ -35,35 +32,33 @@ export default function LoginScreen() {
     } else {
       setEmailError(null);
     }
-    if (!password) {
-      setPasswordError("Password is required");
-      valid = false;
-    } else {
-      setPasswordError(null);
-    }
     setSubmitError(null);
     return valid;
-  }, [email, password]);
+  }, [email]);
 
-  const handleSignIn = async () => {
+  const handleSubmit = async () => {
+    if (!isSupabaseConfigured) {
+      setSubmitError("Supabase is not configured.");
+      return;
+    }
     if (!validate() || loading) return;
     setLoading(true);
     setSubmitError(null);
+    setSuccessMessage(null);
     const trimmedEmail = email.trim();
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        trimmedEmail,
+        { redirectTo: getPasswordRecoveryRedirectTo() }
+      );
       if (error) {
-        const message =
-          error.message === "Email not confirmed"
-            ? "Please check your email and click the confirmation link, then try again."
-            : error.message;
-        setSubmitError(message);
+        setSubmitError(error.message);
         setLoading(false);
         return;
       }
+      setSuccessMessage(
+        "If an account exists for that email, you will receive a link to reset your password."
+      );
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong"
@@ -75,13 +70,16 @@ export default function LoginScreen() {
 
   return (
     <AuthScreenLayout
-      title="Sign In"
+      title="Forgot password"
       footerLink={{
-        linkHeader: "Don't have an account?",
-        linkLabel: "Sign Up",
-        href: "/(auth)/signup",
+        linkHeader: "Remember your password?",
+        linkLabel: "Sign In",
+        href: "/(auth)/login",
       }}
     >
+      <ThemedText style={{ textAlign: "center", marginBottom: 16 }}>
+        Enter your email and we will send you a reset link.
+      </ThemedText>
       <FormInput
         placeholder="Email"
         value={email}
@@ -90,6 +88,7 @@ export default function LoginScreen() {
         onClearError={() => {
           setEmailError(null);
           setSubmitError(null);
+          setSuccessMessage(null);
         }}
         autoCapitalize="none"
         autoCorrect={false}
@@ -97,34 +96,14 @@ export default function LoginScreen() {
         editable={!loading}
         lightBackground
       />
-      <Spacer.Column numberOfSpaces={3} />
-      <PasswordInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        error={passwordError}
-        onClearError={() => {
-          setPasswordError(null);
-          setSubmitError(null);
-        }}
-        editable={!loading}
-        lightBackground
-      />
-      <Spacer.Column numberOfSpaces={2} />
-      <View style={{ alignSelf: "flex-end" }}>
-        <Link href="/(auth)/forgot-password" asChild>
-          <Pressable accessibilityRole="link">
-            <ThemedText type="link">Forgot password?</ThemedText>
-          </Pressable>
-        </Link>
-      </View>
-
       {submitError ? <FormMessage message={submitError} /> : null}
-
+      {successMessage ? (
+        <FormMessage message={successMessage} type="success" />
+      ) : null}
       <Spacer.Column numberOfSpaces={10} />
       <AuthButton
-        label="Sign In"
-        onPress={handleSignIn}
+        label="Send reset link"
+        onPress={handleSubmit}
         loading={loading}
         disabled={loading}
       />

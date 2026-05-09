@@ -198,6 +198,10 @@ export default function SettingsScreen() {
       "hasSeenCalendarTourCopilot",
       "hasSeenProfileTourCopilot",
       "hasSeenDiaryTourCopilot",
+      "hasSeenAddCaseStep1TourCopilot",
+      "hasSeenAddCaseStep2TourCopilot",
+      "hasSeenAddCaseStep3TourCopilot",
+      "hasSeenAddCaseStep4TourCopilot",
     ]);
     router.push("/(tabs)");
   };
