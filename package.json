@@ -17,7 +17,9 @@
     "build:android:play-verify-apk": "eas build --profile production-verify --platform android",
     "apk:debug": "cd android && ./gradlew assembleDebug",
     "apk:release": "cd android && ./gradlew assembleRelease",
-    "aab:release": "cd android && ./gradlew bundleRelease"
+    "aab:release": "cd android && ./gradlew bundleRelease",
+    "prebuild:android": "npx expo prebuild --platform android",
+    "prebuild:ios": "npx expo prebuild --platform ios"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

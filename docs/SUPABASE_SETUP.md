@@ -59,6 +59,20 @@ For full details (what each migration does, RLS, and how to add new migrations),
 
 See **[AUTH_TABLES_AND_FLOW.md](AUTH_TABLES_AND_FLOW.md)** for a description of auth tables (login/signup flow and the `profiles` table).
 
+## 7. Configure password reset deep links (required for mobile)
+
+If reset emails are sent but tapping the link does not open the app, this setup is usually missing.
+
+1. In Supabase Dashboard, go to **Authentication** -> **URL Configuration**.
+2. In **Additional Redirect URLs**, add your app callback URLs:
+   - `legaldiary://reset-password`
+   - `com.umairbutt.legaldiary://reset-password` (for iOS development build / simulator)
+   - If testing in Expo Go, also add your current Expo URL pattern (from `Linking.createURL("reset-password")`, for example `exp://<LAN-IP>:8081/--/reset-password`).
+3. Save changes.
+4. Go to **Authentication** -> **Email Templates** -> **Reset Password**.
+5. Ensure the template uses Supabase confirmation link variables (for example `{{ .ConfirmationURL }}`) and does not hardcode a web-only URL.
+6. Send a fresh reset email and test again on the same device where the app is installed/running.
+
 ---
 
 **Troubleshooting**
@@ -86,3 +100,9 @@ See **[AUTH_TABLES_AND_FLOW.md](AUTH_TABLES_AND_FLOW.md)** for a description of 
       where email = 'umairbutt111@gmail.com';
       ```
   - Then try signing in again.
+
+- **Reset email arrives, but link does not open app**
+  - Check **Authentication** -> **URL Configuration** -> **Additional Redirect URLs** includes `legaldiary://reset-password`.
+  - If using Expo Go, also allow the `exp://.../--/reset-password` URL currently used by your dev session.
+  - Make sure you are clicking the link on the same phone/device where the app is installed.
+  - Send a brand-new reset email after changing URL configuration (old emails can carry old redirect settings).

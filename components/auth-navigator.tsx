@@ -35,13 +35,19 @@ function createAuthOverlayStyles(C: AppColors) {
 }
 
 export function AuthNavigator({ children }: { children: React.ReactNode }) {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, expectsPasswordChange } = useAuth();
   const router = useRouter();
   const C = useThemePalette();
   const overlayStyles = useMemo(() => createAuthOverlayStyles(C), [C]);
 
   const isAuthenticated = !!session?.user;
   const ready = !isLoading;
+  const targetRoute =
+    isAuthenticated && expectsPasswordChange
+      ? "/(auth)/reset-password"
+      : isAuthenticated
+        ? "/(tabs)"
+        : "/(auth)/login";
 
   /** After `ready`, cover the stack until `router.replace` has visibly applied (prevents one frame of tabs/home). */
   const [routeSettled, setRouteSettled] = useState(false);
@@ -54,8 +60,7 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
     }
 
     setRouteSettled(false);
-    const target = isAuthenticated ? "/(tabs)" : "/(auth)/login";
-    router.replace(target as any);
+    router.replace(targetRoute as any);
 
     const gen = ++routeGateGeneration.current;
     let raf1 = 0;
@@ -77,7 +82,7 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
     };
-  }, [ready, isAuthenticated, router]);
+  }, [ready, isAuthenticated, expectsPasswordChange, targetRoute, router]);
 
   const showAuthLoading = !ready;
   const showRouteGate = ready && !routeSettled;
