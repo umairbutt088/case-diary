@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     InteractionManager,
     Pressable,
@@ -381,7 +381,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date?: string }>();
   const isFocused = useIsFocused();
-  const { start } = useCopilot();
+  const { start, visible: copilotVisible, copilotEvents } = useCopilot();
   const scrollViewRef = useRef<ScrollView>(null);
   const today = getTodayISO();
   const [selectedDate, setSelectedDate] = useState(today);
@@ -390,6 +390,8 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blockCalendarScrollForCopilot, setBlockCalendarScrollForCopilot] =
+    useState(false);
 
   const { session } = useAuth();
   const isOnline = useIsOnline();
@@ -469,13 +471,20 @@ export default function CalendarScreen() {
       let raf1 = 0;
       let raf2 = 0;
       let interactionTask: { cancel?: () => void } | null = null;
+
+      // Lock immediately on focus so user can't scroll before walkthrough bootstrap decides.
+      setBlockCalendarScrollForCopilot(true);
+
       (async () => {
-        await fetchCases(true);
-        if (cancelled) return;
         const hasSeenTour = await AsyncStorage.getItem(
           "hasSeenCalendarTourCopilot",
         );
-        if (!hasSeenTour) {
+        if (cancelled) return;
+        await fetchCases(true);
+        if (cancelled) return;
+        if (hasSeenTour) {
+          setBlockCalendarScrollForCopilot(false);
+        } else {
           copilotStartTimeout = setTimeout(() => {
             if (cancelled) return;
             interactionTask = InteractionManager.runAfterInteractions(() => {
@@ -501,6 +510,26 @@ export default function CalendarScreen() {
       };
     }, [fetchCases, start]),
   );
+
+  useEffect(() => {
+    if (!isFocused) {
+      setBlockCalendarScrollForCopilot(false);
+    }
+  }, [isFocused]);
+
+  useEffect(() => {
+    const onStart = () => setBlockCalendarScrollForCopilot(false);
+    const onStop = () => setBlockCalendarScrollForCopilot(false);
+    copilotEvents.on("start", onStart);
+    copilotEvents.on("stop", onStop);
+    return () => {
+      copilotEvents.off("start", onStart);
+      copilotEvents.off("stop", onStop);
+    };
+  }, [copilotEvents]);
+
+  const scrollLockedForWalkthrough =
+    isFocused && (blockCalendarScrollForCopilot || copilotVisible);
 
   const dateToCount = useMemo(() => buildDateToCount(cases), [cases]);
 
@@ -535,6 +564,7 @@ export default function CalendarScreen() {
         ref={scrollViewRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        scrollEnabled={!scrollLockedForWalkthrough}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

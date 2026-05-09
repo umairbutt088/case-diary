@@ -10,6 +10,7 @@ import {
   BackHandler,
   ActivityIndicator,
   Alert,
+  InteractionManager,
   Linking,
   Modal,
   Platform,
@@ -310,6 +311,10 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      let copilotStartTimeout: ReturnType<typeof setTimeout> | null = null;
+      let raf1 = 0;
+      let raf2 = 0;
+      let interactionTask: { cancel?: () => void } | null = null;
       (async () => {
         await loadNotesCount();
         if (!isOnline && session?.user?.id && isSupabaseConfigured) {
@@ -330,15 +335,28 @@ export default function HomeScreen() {
           "hasSeenHomeTourCopilot",
         );
         if (!hasSeenTour) {
-          setTimeout(() => {
+          copilotStartTimeout = setTimeout(() => {
             if (cancelled) return;
-            start();
-            AsyncStorage.setItem("hasSeenHomeTourCopilot", "true");
+            interactionTask = InteractionManager.runAfterInteractions(() => {
+              if (cancelled) return;
+              raf1 = requestAnimationFrame(() => {
+                if (cancelled) return;
+                raf2 = requestAnimationFrame(() => {
+                  if (cancelled) return;
+                  start();
+                  AsyncStorage.setItem("hasSeenHomeTourCopilot", "true");
+                });
+              });
+            });
           }, 600);
         }
       })();
       return () => {
         cancelled = true;
+        if (copilotStartTimeout) clearTimeout(copilotStartTimeout);
+        interactionTask?.cancel?.();
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
       };
     }, [fetchCases, loadNotesCount, start, session?.user?.id, isOnline]),
   );
@@ -947,7 +965,7 @@ export default function HomeScreen() {
           name="welcome"
           active={isFocused}
         >
-          <WalkthroughableView>
+          <WalkthroughableView collapsable={false}>
             <ScreenHeader
               title={isTodayFilter ? "Today" : "This week"}
               showBack={false}
@@ -977,7 +995,7 @@ export default function HomeScreen() {
               name="filter-today"
               active={isFocused}
             >
-              <WalkthroughableView style={{ width: "45%" }}>
+              <WalkthroughableView style={{ width: "45%" }} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,
@@ -1003,7 +1021,7 @@ export default function HomeScreen() {
               name="filter-weekly"
               active={isFocused}
             >
-              <WalkthroughableView style={{ width: "45%" }}>
+              <WalkthroughableView style={{ width: "45%" }} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,
@@ -1052,7 +1070,7 @@ export default function HomeScreen() {
               name="add-case"
               active={isFocused}
             >
-              <WalkthroughableView>
+              <WalkthroughableView collapsable={false}>
                 <Bounceable
                   style={styles.addButton}
                   onPress={() => router.push("/add-case-flow")}
@@ -1102,7 +1120,7 @@ export default function HomeScreen() {
         name="welcome"
         active={isFocused}
       >
-        <WalkthroughableView>
+        <WalkthroughableView collapsable={false}>
           <ScreenHeader
             title={isTodayFilter ? "Today Cases" : "This week Cases"}
             showBack={false}
@@ -1138,7 +1156,7 @@ export default function HomeScreen() {
               name="filter-today"
               active={isFocused}
             >
-              <WalkthroughableView style={styles.filterBtnWrapper}>
+              <WalkthroughableView style={styles.filterBtnWrapper} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,
@@ -1164,7 +1182,7 @@ export default function HomeScreen() {
               name="filter-weekly"
               active={isFocused}
             >
-              <WalkthroughableView style={styles.filterBtnWrapper}>
+              <WalkthroughableView style={styles.filterBtnWrapper} collapsable={false}>
                 <Pressable
                   style={[
                     styles.filterBtn,

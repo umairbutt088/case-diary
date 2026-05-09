@@ -365,7 +365,7 @@ export function CaseCard({
                   name={`${walkthroughContext}-details`}
                   active={walkthroughActive}
                 >
-                  <WalkthroughableView>
+                  <WalkthroughableView collapsable={false}>
                     <Bounceable
                       style={styles.detailsButton}
                       onPress={(event) => {
@@ -465,7 +465,7 @@ export function CaseCard({
                       name={`${walkthroughContext}-delete`}
                       active={walkthroughActive}
                     >
-                      <WalkthroughableView>
+                      <WalkthroughableView collapsable={false}>
                         <Bounceable
                           onPress={(event) => {
                             event.stopPropagation();
@@ -520,7 +520,7 @@ export function CaseCard({
                       name={`${walkthroughContext}-edit`}
                       active={walkthroughActive}
                     >
-                      <WalkthroughableView>
+                      <WalkthroughableView collapsable={false}>
                         <Bounceable
                           onPress={(event) => {
                             event.stopPropagation();
