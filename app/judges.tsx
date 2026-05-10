@@ -26,6 +26,7 @@ import {
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { setCachedJudges } from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -243,7 +244,8 @@ function createJudgesStyles(
 }
 
 export default function JudgesScreen() {
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
+  const accessGuard = useAccessGuard("add_cases", "edit_cases");
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const onPrimary = isDark ? C.black : C.pureWhite;
@@ -265,7 +267,7 @@ export default function JudgesScreen() {
   const [form, setForm] = useState<JudgeFormState>(initialForm);
 
   const fetchJudges = useCallback(async () => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setJudges([]);
       setLoading(false);
       return;
@@ -277,12 +279,12 @@ export default function JudgesScreen() {
       supabase
         .from("judges")
         .select("id, user_id, name, court_tier, court_room_address, created_at")
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .order("name", { ascending: true }),
       supabase
         .from("cases")
         .select("judge_name, court_tier")
-        .eq("user_id", session.user.id),
+        .eq("user_id", effectiveOwnerId),
     ]);
     setLoading(false);
 
@@ -330,7 +332,7 @@ export default function JudgesScreen() {
     });
 
     setUsageByJudgeId(usage);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, effectiveOwnerId]);
 
   useEffect(() => {
     void fetchJudges();
@@ -385,7 +387,7 @@ export default function JudgesScreen() {
   };
 
   const saveJudge = async () => {
-    if (!session?.user?.id || !isSupabaseConfigured) return;
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) return;
     const name = form.name.trim();
     const courtTier = form.court_tier.trim();
     if (!name) {
@@ -411,7 +413,7 @@ export default function JudgesScreen() {
         .from("judges")
         .update(payload)
         .eq("id", editingJudge.id)
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .select("id, user_id, name, court_tier, court_room_address, created_at")
         .single();
 
@@ -434,7 +436,7 @@ export default function JudgesScreen() {
       .from("judges")
       .insert({
         ...payload,
-        user_id: session.user.id,
+        user_id: effectiveOwnerId,
       })
       .select("id, user_id, name, court_tier, court_room_address, created_at")
       .single();
@@ -470,12 +472,12 @@ export default function JudgesScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (!session?.user?.id || !isSupabaseConfigured) return;
+            if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) return;
             const { error: e } = await supabase
               .from("judges")
               .delete()
               .eq("id", judge.id)
-              .eq("user_id", session.user.id);
+              .eq("user_id", effectiveOwnerId);
             if (e) {
               Alert.alert("Delete failed", e.message || "Could not delete judge.");
               return;
@@ -489,6 +491,8 @@ export default function JudgesScreen() {
       ],
     );
   };
+
+  if (accessGuard.blocked) return null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>

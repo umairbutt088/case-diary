@@ -25,6 +25,7 @@ import {
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ClientRow } from "@/types/client";
@@ -238,7 +239,11 @@ function createClientsStyles(
 }
 
 export default function ClientsScreen() {
-  const { session } = useAuth();
+  const { session, effectiveOwnerId, can } = useAuth();
+  const accessGuard = useAccessGuard("view_clients");
+  const canAddCases = can("add_cases");
+  const canEditCases = can("edit_cases");
+  const canInsertClient = canAddCases || canEditCases;
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const onPrimary = isDark ? C.black : C.pureWhite;
@@ -260,7 +265,7 @@ export default function ClientsScreen() {
   const [form, setForm] = useState<ClientFormState>(initialForm);
 
   const fetchClients = useCallback(async () => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setClients([]);
       setLoading(false);
       return;
@@ -272,12 +277,12 @@ export default function ClientsScreen() {
       supabase
         .from("clients")
         .select("*")
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .order("name", { ascending: true }),
       supabase
         .from("cases")
         .select("linked_client_id, linked_client_name")
-        .eq("user_id", session.user.id),
+        .eq("user_id", effectiveOwnerId),
     ]);
     setLoading(false);
 
@@ -322,7 +327,7 @@ export default function ClientsScreen() {
     });
 
     setUsageByClientId(usage);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, effectiveOwnerId]);
 
   useEffect(() => {
     void fetchClients();
@@ -369,7 +374,9 @@ export default function ClientsScreen() {
   };
 
   const saveClient = async () => {
-    if (!session?.user?.id || !isSupabaseConfigured) return;
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) return;
+    if (editingClient && !canEditCases) return;
+    if (!editingClient && !canInsertClient) return;
     const name = form.name.trim();
     if (!name) {
       setFormError("Client name is required.");
@@ -392,7 +399,7 @@ export default function ClientsScreen() {
         .from("clients")
         .update(payload)
         .eq("id", editingClient.id)
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .select("*")
         .single();
 
@@ -413,7 +420,7 @@ export default function ClientsScreen() {
       .from("clients")
       .insert({
         ...payload,
-        user_id: session.user.id,
+        user_id: effectiveOwnerId,
       })
       .select("*")
       .single();
@@ -447,12 +454,12 @@ export default function ClientsScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (!session?.user?.id || !isSupabaseConfigured) return;
+            if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) return;
             const { error: e } = await supabase
               .from("clients")
               .delete()
               .eq("id", client.id)
-              .eq("user_id", session.user.id);
+              .eq("user_id", effectiveOwnerId);
             if (e) {
               Alert.alert("Delete failed", e.message || "Could not delete client.");
               return;
@@ -465,12 +472,14 @@ export default function ClientsScreen() {
     );
   };
 
+  if (accessGuard.blocked) return null;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader
         title="Clients"
         rightComponent={
-          <Bounceable style={styles.headerAction} onPress={openAddModal}>
+          <Bounceable style={styles.headerAction} onPress={canInsertClient ? openAddModal : undefined} disabled={!canInsertClient}>
             <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />
           </Bounceable>
         }
@@ -522,13 +531,15 @@ export default function ClientsScreen() {
                     <Bounceable
                       style={styles.iconBtn}
                       onPress={() => openEditModal(client)}
+                      disabled={!canEditCases}
                       accessibilityLabel={`Edit ${client.name}`}
                     >
                       <MaterialIcons name="edit" size={18} color={C.black} />
                     </Bounceable>
                     <Bounceable
                       style={styles.iconBtn}
-                      onPress={() => confirmDeleteClient(client)}
+                      onPress={canEditCases ? () => confirmDeleteClient(client) : undefined}
+                      disabled={!canEditCases}
                       accessibilityLabel={`Delete ${client.name}`}
                     >
                       <MaterialIcons name="delete-outline" size={20} color={C.themeRed} />
@@ -618,7 +629,14 @@ export default function ClientsScreen() {
 
               {formError ? <ThemedText style={styles.formErrorText}>{formError}</ThemedText> : null}
 
-              <Bounceable style={styles.saveBtn} onPress={() => void saveClient()} disabled={saving}>
+              <Bounceable
+                style={styles.saveBtn}
+                onPress={() => void saveClient()}
+                disabled={
+                  saving ||
+                  (editingClient ? !canEditCases : !canInsertClient)
+                }
+              >
                 {saving ? (
                   <ActivityIndicator size="small" color={onPrimary} />
                 ) : (

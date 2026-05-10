@@ -25,6 +25,7 @@ import {
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { deleteAuthenticatedAccount } from "@/lib/delete-account";
@@ -185,7 +186,8 @@ export default function SettingsScreen() {
     () => createSettingsStyles(C),
     [C],
   );
-  const { signOut, setOnboardingCompleted } = useAuth();
+  const { signOut, setOnboardingCompleted, role } = useAuth();
+  const accessGuard = useAccessGuard("manage_settings");
   const isOnline = useIsOnline();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
@@ -275,6 +277,7 @@ export default function SettingsScreen() {
   };
 
   return (
+    accessGuard.blocked ? null : (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader title="Settings" />
       <ScrollView
@@ -326,6 +329,25 @@ export default function SettingsScreen() {
             <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
           </Pressable>
           <View style={styles.divider} />
+          {role !== "subordinate" ? (
+            <>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.rowButton,
+                  pressed && styles.rowButtonPressed,
+                ]}
+                onPress={() => router.push("/subordinates")}
+                accessibilityRole="button"
+                accessibilityLabel="Subordinate access"
+              >
+                <View style={styles.rowLeading}>
+                  <ThemedText style={styles.rowLabel}>Subordinate access</ThemedText>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+              </Pressable>
+              <View style={styles.divider} />
+            </>
+          ) : null}
           <Pressable
             style={({ pressed }) => [
               styles.rowButton,
@@ -435,5 +457,6 @@ export default function SettingsScreen() {
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
+    )
   );
 }

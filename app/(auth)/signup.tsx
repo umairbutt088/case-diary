@@ -2,13 +2,13 @@ import * as Linking from "expo-linking";
 import { useCallback, useState } from "react";
 
 import {
-  AuthButton,
-  AuthScreenLayout,
-  FormInput,
-  FormMessage,
-  PasswordInput,
-  Spacer,
-  TermsCheckbox,
+    AuthButton,
+    AuthScreenLayout,
+    FormInput,
+    FormMessage,
+    PasswordInput,
+    Spacer,
+    TermsCheckbox,
 } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 

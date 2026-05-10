@@ -393,7 +393,7 @@ export default function CalendarScreen() {
   const [blockCalendarScrollForCopilot, setBlockCalendarScrollForCopilot] =
     useState(false);
 
-  const { session } = useAuth();
+  const { session, effectiveOwnerId, can } = useAuth();
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
@@ -417,7 +417,7 @@ export default function CalendarScreen() {
 
   const fetchCases = useCallback(
     async (isSilent = false) => {
-      if (!session?.user?.id || !isSupabaseConfigured) {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
         setCases([]);
         setLoading(false);
         setError(null);
@@ -438,7 +438,7 @@ export default function CalendarScreen() {
       const { data, error: e } = await supabase
         .from("cases")
         .select("*")
-        .eq("user_id", session.user.id);
+        .eq("user_id", effectiveOwnerId);
       setLoading(false);
       if (e) {
         const msg = (e.message || "").toLowerCase();
@@ -461,7 +461,7 @@ export default function CalendarScreen() {
       setCases(nextCases);
       await setCachedCases(session.user.id, nextCases);
     },
-    [session?.user?.id, isOnline],
+    [session?.user?.id, effectiveOwnerId, isOnline],
   );
 
   useFocusEffect(
@@ -610,6 +610,7 @@ export default function CalendarScreen() {
             <WalkthroughableView collapsable={false}>
               <Pressable
                 style={styles.addDateButton}
+                disabled={!can("edit_cases")}
                 onPress={() =>
                   router.push({
                     pathname: "/add-date-to-case",
@@ -618,7 +619,7 @@ export default function CalendarScreen() {
                 }
               >
                 <ThemedText style={styles.addDateButtonText}>
-                  + Add next hearing date
+                  {can("edit_cases") ? "+ Add next hearing date" : "View-only access"}
                 </ThemedText>
               </Pressable>
             </WalkthroughableView>

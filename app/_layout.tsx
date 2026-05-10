@@ -134,6 +134,12 @@ function RootLayoutInner() {
                     }}
                   />
                   <Stack.Screen
+                    name="subordinates"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
                     name="trash"
                     options={{
                       headerShown: false,

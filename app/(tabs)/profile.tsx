@@ -318,7 +318,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { edit: editParam } = useLocalSearchParams<{ edit?: string }>();
   const isFocused = useIsFocused();
-  const { session, signOut } = useAuth();
+  const { session, signOut, can } = useAuth();
   const { start, visible: copilotVisible, copilotEvents } = useCopilot();
   const scrollRef = useRef<ScrollView | null>(null);
   const isFocusedRef = useRef(isFocused);
@@ -551,7 +551,7 @@ export default function ProfileScreen() {
     setEditing(false);
   }, [profile]);
 
-  const settingsHeaderButton = (
+  const settingsHeaderButton = can("manage_settings") ? (
     <Pressable
       onPress={() => router.push("/settings")}
       style={({ pressed }) => [styles.headerIconBtn, pressed && styles.headerIconBtnPressed]}
@@ -561,7 +561,7 @@ export default function ProfileScreen() {
     >
       <MaterialIcons name="settings" size={24} color={C.themeBlack} />
     </Pressable>
-  );
+  ) : null;
 
   const displayName = profile ? getDisplayName(profile) : "";
   const initials =

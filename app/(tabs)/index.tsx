@@ -7,9 +7,9 @@ import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BackHandler,
   ActivityIndicator,
   Alert,
+  BackHandler,
   InteractionManager,
   Linking,
   Modal,
@@ -208,7 +208,7 @@ export default function HomeScreen() {
   const isOnline = useIsOnline();
   const { start } = useCopilot();
   const router = useRouter();
-  const { session, signOut } = useAuth();
+  const { session, signOut, effectiveOwnerId, can } = useAuth();
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -237,6 +237,10 @@ export default function HomeScreen() {
     () => createHomeStyles(C, modalSheet),
     [C, modalSheet],
   );
+
+  const canTrashCase = can("edit_cases") && can("delete_cases");
+
+  const canAddCases = can("add_cases");
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
@@ -284,7 +288,7 @@ export default function HomeScreen() {
 
   const fetchCases = useCallback(
     async (isSilent = false) => {
-      if (!session?.user?.id || !isSupabaseConfigured) {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
         setCases([]);
         setLoading(false);
         setIsOffline(false);
@@ -309,7 +313,7 @@ export default function HomeScreen() {
       const { data, error: e } = await supabase
         .from("cases")
         .select("*")
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .is("deleted_at", null)
         .order("next_hearing_date", { ascending: true, nullsFirst: false });
 
@@ -332,7 +336,7 @@ export default function HomeScreen() {
       setCases(nextCases);
       await setCachedCases(session.user.id, nextCases);
     },
-    [session?.user?.id, isOnline],
+    [session?.user?.id, effectiveOwnerId, isOnline],
   );
 
   const notesStorageKey = useMemo(
@@ -457,7 +461,7 @@ export default function HomeScreen() {
             text: "Move to Trash",
             style: "destructive",
             onPress: async () => {
-              if (!session?.user?.id) return;
+              if (!session?.user?.id || !effectiveOwnerId) return;
               if (!isOnline) {
                 await addPendingCaseDelete(session.user.id, caseId);
                 await removeCachedCase(session.user.id, caseId);
@@ -472,7 +476,7 @@ export default function HomeScreen() {
                 .from("cases")
                 .update({ deleted_at: new Date().toISOString() })
                 .eq("id", caseId)
-                .eq("user_id", session.user.id);
+                .eq("user_id", effectiveOwnerId);
               if (e) Alert.alert("Error", e.message);
               else {
                 await removeCachedCase(session.user.id, caseId);
@@ -483,7 +487,7 @@ export default function HomeScreen() {
         ],
       );
     },
-    [session?.user?.id, fetchCases, isOnline],
+    [session?.user?.id, effectiveOwnerId, fetchCases, isOnline],
   );
 
   const { hearingsToday, filedToday } = getTodayCases(cases, today);
@@ -820,27 +824,31 @@ export default function HomeScreen() {
               <ThemedText style={styles.sidebarItemText}>Notes</ThemedText>
             </Bounceable>
 
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/clients");
-              }}
-            >
-              <MaterialIcons name="groups-2" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Manage clients list</ThemedText>
-            </Bounceable>
+            {can("view_clients") ? (
+              <Bounceable
+                style={styles.sidebarItem}
+                onPress={() => {
+                  closeSidebar();
+                  router.push("/clients");
+                }}
+              >
+                <MaterialIcons name="groups-2" size={19} color={C.black} />
+                <ThemedText style={styles.sidebarItemText}>Manage clients list</ThemedText>
+              </Bounceable>
+            ) : null}
 
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/judges");
-              }}
-            >
-              <MaterialIcons name="gavel" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Manage judges list</ThemedText>
-            </Bounceable>
+            {can("add_cases") || can("edit_cases") ? (
+              <Bounceable
+                style={styles.sidebarItem}
+                onPress={() => {
+                  closeSidebar();
+                  router.push("/judges");
+                }}
+              >
+                <MaterialIcons name="gavel" size={19} color={C.black} />
+                <ThemedText style={styles.sidebarItemText}>Manage judges list</ThemedText>
+              </Bounceable>
+            ) : null}
 
             <Bounceable
               style={styles.sidebarItem}
@@ -864,27 +872,31 @@ export default function HomeScreen() {
               <ThemedText style={styles.sidebarItemText}>Court links</ThemedText>
             </Bounceable>
 
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/acts");
-              }}
-            >
-              <MaterialIcons name="menu-book" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Acts & law books</ThemedText>
-            </Bounceable>
+            {can("manage_settings") ? (
+              <>
+                <Bounceable
+                  style={styles.sidebarItem}
+                  onPress={() => {
+                    closeSidebar();
+                    router.push("/acts");
+                  }}
+                >
+                  <MaterialIcons name="menu-book" size={19} color={C.black} />
+                  <ThemedText style={styles.sidebarItemText}>Acts & law books</ThemedText>
+                </Bounceable>
 
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/trash");
-              }}
-            >
-              <MaterialIcons name="delete-outline" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Trash</ThemedText>
-            </Bounceable>
+                <Bounceable
+                  style={styles.sidebarItem}
+                  onPress={() => {
+                    closeSidebar();
+                    router.push("/trash");
+                  }}
+                >
+                  <MaterialIcons name="delete-outline" size={19} color={C.black} />
+                  <ThemedText style={styles.sidebarItemText}>Trash</ThemedText>
+                </Bounceable>
+              </>
+            ) : null}
           </View>
 
           <View style={styles.sidebarBottomAction}>
@@ -1157,16 +1169,15 @@ export default function HomeScreen() {
               <WalkthroughableView collapsable={false}>
                 <Bounceable
                   style={styles.addButton}
-                  onPress={() => router.push("/add-case-flow")}
+                  disabled={!canAddCases}
+                  haptic={canAddCases}
+                  onPress={() => {
+                    if (!canAddCases) return;
+                    router.push("/add-case-flow");
+                  }}
                 >
-                  <MaterialIcons
-                    name="add"
-                    size={22}
-                    color={C.pureWhite}
-                  />
-                  <ThemedText style={styles.addButtonText}>
-                    Add Case
-                  </ThemedText>
+                  <MaterialIcons name="add" size={22} color={C.pureWhite} />
+                  <ThemedText style={styles.addButtonText}>Add Case</ThemedText>
                 </Bounceable>
               </WalkthroughableView>
             </CopilotStep>
@@ -1313,8 +1324,12 @@ export default function HomeScreen() {
                       key={caseItem.id}
                       index={previousItemsCount + itemIndex}
                       caseItem={caseItem}
-                      onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
-                      onDelete={handleDeleteCase}
+                      onEdit={
+                        can("edit_cases")
+                          ? (caseId) => router.push(`/case/${caseId}/edit`)
+                          : undefined
+                      }
+                      onDelete={canTrashCase ? handleDeleteCase : undefined}
                       walkthroughEnabled={previousItemsCount + itemIndex === 0}
                       walkthroughContext="home-case-actions"
                       walkthroughActive={isFocused}

@@ -35,16 +35,18 @@ function createAuthOverlayStyles(C: AppColors) {
 }
 
 export function AuthNavigator({ children }: { children: React.ReactNode }) {
-  const { session, isLoading, expectsPasswordChange } = useAuth();
+  const { session, isLoading, isAccessLoading, expectsPasswordChange, role, can } = useAuth();
   const router = useRouter();
   const C = useThemePalette();
   const overlayStyles = useMemo(() => createAuthOverlayStyles(C), [C]);
 
   const isAuthenticated = !!session?.user;
-  const ready = !isLoading;
+  const ready = !isLoading && (!isAuthenticated || !isAccessLoading);
   const targetRoute =
     isAuthenticated && expectsPasswordChange
       ? "/(auth)/reset-password"
+      : isAuthenticated && role === "subordinate" && !can("view_cases")
+        ? "/(tabs)/profile"
       : isAuthenticated
         ? "/(tabs)"
         : "/(auth)/login";
@@ -82,7 +84,7 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
     };
-  }, [ready, isAuthenticated, expectsPasswordChange, targetRoute, router]);
+  }, [ready, isAuthenticated, expectsPasswordChange, targetRoute, router, role, can]);
 
   const showAuthLoading = !ready;
   const showRouteGate = ready && !routeSettled;

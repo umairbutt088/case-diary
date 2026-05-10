@@ -36,6 +36,7 @@ import {
 import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
@@ -175,7 +176,8 @@ function createEditCaseStyles(C: AppColors, onPrimary: string) {
 export default function EditCaseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
+  const accessGuard = useAccessGuard("edit_cases");
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
@@ -286,7 +288,7 @@ export default function EditCaseScreen() {
   const onSave = useCallback(async () => {
     Keyboard.dismiss();
     if (!validate()) return;
-    if (!id || !session?.user?.id || !isSupabaseConfigured) {
+    if (!id || !session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setSaveError("Cannot save. Sign in or check configuration.");
       return;
     }
@@ -335,7 +337,7 @@ export default function EditCaseScreen() {
       .from("cases")
       .update(row)
       .eq("id", id)
-      .eq("user_id", session.user.id);
+      .eq("user_id", effectiveOwnerId);
     setSaving(false);
 
     if (error) {
@@ -344,7 +346,7 @@ export default function EditCaseScreen() {
     }
     const hearingResult = await addCaseHearingEntry({
       caseId: id,
-      userId: session.user.id,
+      userId: effectiveOwnerId,
       hearingDate: previousHearingDate ?? row.next_hearing_date,
       currentStatus: row.current_status,
       nextStatus: row.next_status,
@@ -361,7 +363,16 @@ export default function EditCaseScreen() {
       updated_at: new Date().toISOString(),
     });
     router.replace(`/case/${id}`);
-  }, [id, session?.user?.id, form, validate, router, isOnline, caseData?.next_hearing_date]);
+  }, [
+    id,
+    session?.user?.id,
+    effectiveOwnerId,
+    form,
+    validate,
+    router,
+    isOnline,
+    caseData?.next_hearing_date,
+  ]);
 
   if (loading || (!caseData && !error)) {
     return (
@@ -385,6 +396,8 @@ export default function EditCaseScreen() {
       </SafeAreaView>
     );
   }
+
+  if (accessGuard.blocked) return null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>

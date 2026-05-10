@@ -6,6 +6,7 @@ import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 import { TabBarColors } from "@/constants/theme";
+import { useAuth } from "@/context/auth-context";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -15,6 +16,8 @@ const ADD_ICON_SIZE = 28;
 
 export function TabBarAddButton(props: BottomTabBarButtonProps) {
   const router = useRouter();
+  const { can } = useAuth();
+  const canAddCases = can("add_cases");
   const { isDark } = useAppTheme();
   const C = useThemePalette();
   const scale = useSharedValue(1);
@@ -23,6 +26,7 @@ export function TabBarAddButton(props: BottomTabBarButtonProps) {
   const addIconColor = isDark ? C.black : "#FFFFFF";
 
   const handlePress = () => {
+    if (!canAddCases) return;
     if (process.env.EXPO_OS === "ios") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -45,8 +49,11 @@ export function TabBarAddButton(props: BottomTabBarButtonProps) {
       <Animated.View style={animatedStyle}>
         <PlatformPressable
           {...props}
+          accessibilityState={{ ...props.accessibilityState, disabled: !canAddCases }}
+          disabled={!canAddCases}
           onPress={handlePress}
           onPressIn={(ev) => {
+            if (!canAddCases) return;
             scale.value = 0.9;
             props.onPressIn?.(ev);
             if (process.env.EXPO_OS === "ios") {

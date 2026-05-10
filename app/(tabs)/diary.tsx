@@ -284,7 +284,7 @@ export default function DiaryScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const isOnline = useIsOnline();
-  const { session } = useAuth();
+  const { session, effectiveOwnerId, can } = useAuth();
   const { start, visible: copilotVisible, copilotEvents } = useCopilot();
   const C = useThemePalette();
   const styles = useMemo(() => createDiaryStyles(C), [C]);
@@ -328,7 +328,7 @@ export default function DiaryScreen() {
   }, []);
 
   const fetchCases = useCallback(async (isSilent = false) => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
       return;
@@ -350,7 +350,7 @@ export default function DiaryScreen() {
     const { data, error: e } = await supabase
       .from("cases")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", effectiveOwnerId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
     setLoading(false);
@@ -368,7 +368,7 @@ export default function DiaryScreen() {
     const nextCases = (data as CaseRow[]) ?? [];
     setCases(nextCases);
     await setCachedCases(session.user.id, nextCases);
-  }, [session?.user?.id, isOnline, isNetworkError]);
+  }, [session?.user?.id, effectiveOwnerId, isOnline, isNetworkError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -437,6 +437,8 @@ export default function DiaryScreen() {
   const scrollLockedForWalkthrough =
     isFocused && (blockDiaryScrollForCopilot || copilotVisible);
 
+  const canTrashCase = can("edit_cases") && can("delete_cases");
+
   const handleDeleteCase = useCallback(
     (caseId: string) => {
       Alert.alert(
@@ -448,7 +450,7 @@ export default function DiaryScreen() {
             text: "Move to Trash",
             style: "destructive",
             onPress: async () => {
-              if (!session?.user?.id) return;
+              if (!session?.user?.id || !effectiveOwnerId) return;
               if (!isOnline) {
                 await addPendingCaseDelete(session.user.id, caseId);
                 await removeCachedCase(session.user.id, caseId);
@@ -463,7 +465,7 @@ export default function DiaryScreen() {
                 .from("cases")
                 .update({ deleted_at: new Date().toISOString() })
                 .eq("id", caseId)
-                .eq("user_id", session.user.id);
+                .eq("user_id", effectiveOwnerId);
               if (e) {
                 Alert.alert("Error", e.message);
               } else {
@@ -475,7 +477,7 @@ export default function DiaryScreen() {
         ]
       );
     },
-    [session?.user?.id, fetchCases, isOnline]
+    [session?.user?.id, effectiveOwnerId, fetchCases, isOnline]
   );
 
   const toggleBulkMode = useCallback(() => {
@@ -511,7 +513,7 @@ export default function DiaryScreen() {
           text: "Move to Trash",
           style: "destructive",
           onPress: async () => {
-            if (!session?.user?.id) return;
+            if (!session?.user?.id || !effectiveOwnerId) return;
             const ids = Array.from(selectedCaseIds);
             setBulkDeleting(true);
             if (!isOnline) {
@@ -532,7 +534,7 @@ export default function DiaryScreen() {
             const { error: e } = await supabase
               .from("cases")
               .update({ deleted_at: new Date().toISOString() })
-              .eq("user_id", session.user.id)
+              .eq("user_id", effectiveOwnerId)
               .in("id", ids);
             if (e) {
               setBulkDeleting(false);
@@ -550,7 +552,14 @@ export default function DiaryScreen() {
         },
       ],
     );
-  }, [session?.user?.id, selectedCount, bulkDeleting, selectedCaseIds, isOnline]);
+  }, [
+    session?.user?.id,
+    effectiveOwnerId,
+    selectedCount,
+    bulkDeleting,
+    selectedCaseIds,
+    isOnline,
+  ]);
 
   const exportSelectedAsText = useCallback(async () => {
     if (selectedCases.length === 0 || bulkExporting) return;
@@ -703,15 +712,17 @@ export default function DiaryScreen() {
                     {bulkExporting ? "Exporting..." : "Export"}
                   </ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.bulkActionBtn, styles.bulkDeleteBtn]}
-                  onPress={bulkDeleteSelected}
-                  disabled={selectedCount === 0 || bulkDeleting}
-                >
-                  <ThemedText style={styles.bulkDeleteBtnText}>
-                    {bulkDeleting ? "Deleting..." : "Delete"}
-                  </ThemedText>
-                </TouchableOpacity>
+                {canTrashCase ? (
+                  <TouchableOpacity
+                    style={[styles.bulkActionBtn, styles.bulkDeleteBtn]}
+                    onPress={bulkDeleteSelected}
+                    disabled={selectedCount === 0 || bulkDeleting}
+                  >
+                    <ThemedText style={styles.bulkDeleteBtnText}>
+                      {bulkDeleting ? "Deleting..." : "Delete"}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             </View>
           ) : null}
@@ -759,8 +770,8 @@ export default function DiaryScreen() {
               ) : (
                 <CaseCard
                   caseItem={item}
-                  onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
-                  onDelete={handleDeleteCase}
+                  onEdit={can("edit_cases") ? (caseId) => router.push(`/case/${caseId}/edit`) : undefined}
+                  onDelete={canTrashCase ? handleDeleteCase : undefined}
                 />
               )
             }

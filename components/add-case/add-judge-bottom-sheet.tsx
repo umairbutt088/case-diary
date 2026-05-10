@@ -149,7 +149,7 @@ export function AddJudgeBottomSheet({
   onSaved,
   inline = false,
 }: Props) {
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
@@ -192,7 +192,7 @@ export function AddJudgeBottomSheet({
       setError("Court tier is required.");
       return;
     }
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setError("You must be signed in to add a judge.");
       return;
     }
@@ -212,7 +212,7 @@ export function AddJudgeBottomSheet({
     setSaving(true);
     setError(null);
     const { error: e } = await supabase.from("judges").insert({
-      user_id: session.user.id,
+      user_id: effectiveOwnerId,
       name,
       court_room_address: form.courtRoomAddress.trim() || null,
       court_tier: activeCourtTier,
@@ -243,7 +243,7 @@ export function AddJudgeBottomSheet({
       courtTier: activeCourtTier,
     });
     onClose();
-  }, [form, activeCourtTier, session?.user?.id, onSaved, onClose, isOnline]);
+  }, [form, activeCourtTier, session?.user?.id, effectiveOwnerId, onSaved, onClose, isOnline]);
 
   if (!visible) return null;
 

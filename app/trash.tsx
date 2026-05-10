@@ -20,6 +20,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addPendingCaseHardDelete } from "@/lib/offline-queue";
@@ -158,7 +159,8 @@ function createStyles(C: AppColors) {
 
 export default function TrashScreen() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
+  const accessGuard = useAccessGuard("manage_settings");
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const styles = createStyles(C);
@@ -167,12 +169,12 @@ export default function TrashScreen() {
   const [loading, setLoading] = useState(false);
 
   const fetchDeleted = useCallback(async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || !effectiveOwnerId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("cases")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", effectiveOwnerId)
       .not("deleted_at", "is", null)
       .order("deleted_at", { ascending: false });
     setLoading(false);
@@ -181,7 +183,7 @@ export default function TrashScreen() {
       return;
     }
     setCases((data as CaseRow[]) ?? []);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, effectiveOwnerId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -199,12 +201,12 @@ export default function TrashScreen() {
           {
             text: "Restore",
             onPress: async () => {
-              if (!session?.user?.id) return;
+              if (!session?.user?.id || !effectiveOwnerId) return;
               const { error } = await supabase
                 .from("cases")
                 .update({ deleted_at: null })
                 .eq("id", caseItem.id)
-                .eq("user_id", session.user.id);
+                .eq("user_id", effectiveOwnerId);
               if (error) {
                 Alert.alert("Error", error.message);
               } else {
@@ -215,7 +217,7 @@ export default function TrashScreen() {
         ],
       );
     },
-    [session?.user?.id],
+    [session?.user?.id, effectiveOwnerId],
   );
 
   const handlePermanentDelete = useCallback(
@@ -229,7 +231,7 @@ export default function TrashScreen() {
             text: "Delete Forever",
             style: "destructive",
             onPress: async () => {
-              if (!session?.user?.id) return;
+              if (!session?.user?.id || !effectiveOwnerId) return;
               if (!isOnline) {
                 await addPendingCaseHardDelete(session.user.id, caseItem.id);
                 setCases((prev) => prev.filter((c) => c.id !== caseItem.id));
@@ -243,7 +245,7 @@ export default function TrashScreen() {
                 .from("cases")
                 .delete()
                 .eq("id", caseItem.id)
-                .eq("user_id", session.user.id);
+                .eq("user_id", effectiveOwnerId);
               if (error) {
                 Alert.alert("Error", error.message);
               } else {
@@ -254,7 +256,7 @@ export default function TrashScreen() {
         ],
       );
     },
-    [session?.user?.id, isOnline],
+    [session?.user?.id, effectiveOwnerId, isOnline],
   );
 
   const handleEmptyTrash = useCallback(() => {
@@ -268,12 +270,12 @@ export default function TrashScreen() {
           text: "Empty Trash",
           style: "destructive",
           onPress: async () => {
-            if (!session?.user?.id) return;
+            if (!session?.user?.id || !effectiveOwnerId) return;
             const ids = cases.map((c) => c.id);
             const { error } = await supabase
               .from("cases")
               .delete()
-              .eq("user_id", session.user.id)
+                .eq("user_id", effectiveOwnerId)
               .in("id", ids);
             if (error) {
               Alert.alert("Error", error.message);
@@ -284,7 +286,7 @@ export default function TrashScreen() {
         },
       ],
     );
-  }, [cases, session?.user?.id]);
+  }, [cases, session?.user?.id, effectiveOwnerId]);
 
   const renderItem = useCallback(
     ({ item }: { item: CaseRow }) => (
@@ -323,6 +325,8 @@ export default function TrashScreen() {
     ),
     [styles, handleRestore, handlePermanentDelete],
   );
+
+  if (accessGuard.blocked) return null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
