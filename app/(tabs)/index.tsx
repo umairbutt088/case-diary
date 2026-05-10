@@ -269,6 +269,13 @@ export default function HomeScreen() {
     );
   }, [isSidebarMounted, sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
 
+  const closeSidebarImmediately = useCallback(() => {
+    setIsSidebarOpen(false);
+    setIsSidebarMounted(false);
+    sidebarBackdropOpacity.value = 0;
+    sidebarTranslateX.value = -(sidebarWidth + 24);
+  }, [sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
+
   useEffect(() => {
     if (!isSidebarMounted || !isSidebarOpen) return;
     sidebarBackdropOpacity.value = withTiming(1, { duration: 180 });
@@ -604,6 +611,10 @@ export default function HomeScreen() {
 
     const open = async () => {
       try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (!canOpen) {
+          throw new Error("UNSUPPORTED_URL");
+        }
         await Linking.openURL(url);
       } catch {
         try {
@@ -845,7 +856,7 @@ export default function HomeScreen() {
             <Bounceable
               style={styles.sidebarItem}
               onPress={() => {
-                closeSidebar();
+                closeSidebarImmediately();
                 void openCourtSearchWebsite();
               }}
             >

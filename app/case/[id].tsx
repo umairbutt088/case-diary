@@ -743,6 +743,10 @@ export default function CaseDetailScreen() {
 
     const open = async () => {
       try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (!canOpen) {
+          throw new Error("UNSUPPORTED_URL");
+        }
         await Linking.openURL(url);
       } catch {
         try {
