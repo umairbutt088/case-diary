@@ -789,6 +789,7 @@ export default function HomeScreen() {
                       style={styles.sidebarAvatarImage}
                       contentFit="cover"
                     />
+
                   ) : (
                     <ThemedText style={styles.sidebarAvatarInitials}>
                       {sidebarInitials}
@@ -1153,6 +1154,7 @@ export default function HomeScreen() {
                   ? "Nothing for today"
                   : "Nothing this week"}
             </ThemedText>
+            <ThemedText style={styles.heading}>{isOffline ? "You're offline" : isTodayFilter ? "Nothing for today" : "Nothing this week"}</ThemedText>
             <ThemedText style={styles.subtext}>
               {isOffline
                 ? "Your cases will appear when you're connected. Cases you add while offline will sync automatically."
