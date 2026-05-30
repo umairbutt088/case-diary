@@ -92,6 +92,12 @@ function RootLayoutInner() {
                     }}
                   />
                   <Stack.Screen
+                    name="cases-overview"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
                     name="case/[id]"
                     options={{
                       headerShown: false,

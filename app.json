@@ -2,7 +2,7 @@
   "expo": {
     "name": "Case Diary for Lawyers",
     "slug": "legal-diary",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/launcher-icon.png",
     "scheme": "legaldiary",
@@ -16,6 +16,7 @@
       }
     },
     "android": {
+      "versionCode": 2,
       "googleServicesFile": "./google-services.json",
       "statusBar": {
         "barStyle": "dark-content",

@@ -61,11 +61,21 @@ function createClientsStyles(
       padding: 20,
     },
     headerAction: {
-      minWidth: 34,
       minHeight: 34,
       borderRadius: 17,
       alignItems: "center",
       justifyContent: "center",
+      flexDirection: "row",
+      paddingHorizontal: 10,
+      gap: 4,
+    },
+    headerActionDisabled: {
+      opacity: 0.45,
+    },
+    headerActionText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: C.black,
     },
     searchWrap: {
       flexDirection: "row",
@@ -479,8 +489,13 @@ export default function ClientsScreen() {
       <ScreenHeader
         title="Clients"
         rightComponent={
-          <Bounceable style={styles.headerAction} onPress={canInsertClient ? openAddModal : undefined} disabled={!canInsertClient}>
+          <Bounceable
+            style={[styles.headerAction, !canInsertClient && styles.headerActionDisabled]}
+            onPress={canInsertClient ? openAddModal : undefined}
+            disabled={!canInsertClient}
+          >
             <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />
+            <ThemedText style={styles.headerActionText}>Add client</ThemedText>
           </Bounceable>
         }
       />

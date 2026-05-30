@@ -67,11 +67,18 @@ function createJudgesStyles(
       padding: 20,
     },
     headerAction: {
-      minWidth: 34,
       minHeight: 34,
       borderRadius: 17,
       alignItems: "center",
       justifyContent: "center",
+      flexDirection: "row",
+      paddingHorizontal: 10,
+      gap: 4,
+    },
+    headerActionText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: C.black,
     },
     searchWrap: {
       flexDirection: "row",
@@ -501,6 +508,7 @@ export default function JudgesScreen() {
         rightComponent={
           <Bounceable style={styles.headerAction} onPress={openAddModal}>
             <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />
+            <ThemedText style={styles.headerActionText}>Add judge</ThemedText>
           </Bounceable>
         }
       />
