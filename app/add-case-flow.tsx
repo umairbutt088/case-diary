@@ -49,6 +49,7 @@ import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
@@ -200,6 +201,7 @@ function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
 
 export default function AddCaseFlowScreen() {
   const router = useRouter();
+  const { goBack } = useHomeBackNavigation();
   const isFocused = useIsFocused();
   const { effectiveOwnerId } = useAuth();
   const accessGuard = useAccessGuard("add_cases");
@@ -398,9 +400,9 @@ export default function AddCaseFlowScreen() {
     if (step > 1) {
       animateToStep(step - 1, -1);
     } else {
-      router.back();
+      goBack();
     }
-  }, [animateToStep, isStepAnimating, step, router]);
+  }, [animateToStep, isStepAnimating, step, goBack]);
 
   const onSave = useCallback(async () => {
     if (!validateStep4()) return;
@@ -474,7 +476,7 @@ export default function AddCaseFlowScreen() {
           return;
         }
       }
-      router.back();
+      goBack();
     } else {
       await addPendingCase(row);
       setSaving(false);
@@ -482,10 +484,10 @@ export default function AddCaseFlowScreen() {
       Alert.alert(
         "Saved offline",
         "Your case was saved locally. It will sync to the cloud when you're back online.",
-        [{ text: "OK", onPress: () => router.back() }]
+        [{ text: "OK", onPress: () => goBack() }]
       );
     }
-  }, [form, effectiveOwnerId, validateStep4, router, isOnline]);
+  }, [form, effectiveOwnerId, validateStep4, goBack, isOnline]);
 
   useFocusEffect(
     useCallback(() => {

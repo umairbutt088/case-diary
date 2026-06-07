@@ -7,8 +7,10 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  BackHandler,
   Linking,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,7 +24,7 @@ import { captureRef } from "react-native-view-shot";
 
 import { CourtPortalBottomSheet } from "@/components/court-portal-bottom-sheet";
 import { ThemedText } from "@/components/themed-text";
-import { Bounceable, Spacer } from "@/components/ui";
+import { Bounceable } from "@/components/ui";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { type AppColors, modalSheetBackground } from "@/constants/color-palette";
 import { type PakistanCourtPortal } from "@/constants/court-cms";
@@ -58,6 +60,23 @@ type HomeWidget = {
   onPress: () => void;
   disabled?: boolean;
 };
+
+const WIDGET_GRID_GAP = 10;
+const CONTAINER_H_PADDING = 20;
+const MIN_WIDGET_WIDTH = 148;
+
+function getWidgetLayout(screenWidth: number) {
+  const contentWidth = screenWidth - CONTAINER_H_PADDING * 2;
+  const columns = Math.min(
+    2,
+    Math.max(
+      1,
+      Math.floor((contentWidth + WIDGET_GRID_GAP) / (MIN_WIDGET_WIDTH + WIDGET_GRID_GAP)),
+    ),
+  );
+  const widgetWidth = (contentWidth - WIDGET_GRID_GAP * (columns - 1)) / columns;
+  return { columns, widgetWidth, contentWidth };
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -186,6 +205,20 @@ function getMonthCases(cases: CaseRow[], todayIso: string): CaseRow[] {
   });
 }
 
+function buildSharePayload(
+  shareFilter: HomeFilter,
+  hearingsToday: CaseRow[],
+  hearingsThisWeek: CaseRow[],
+): { title: string; sections: CaseSection[] } {
+  const isToday = shareFilter === "today";
+  const hearings = isToday ? hearingsToday : hearingsThisWeek;
+  const sectionTitle = isToday ? "Today hearings" : "This week hearings";
+  const title = isToday ? "Today Hearings" : "This Week Hearings";
+  const sections =
+    hearings.length > 0 ? [{ title: sectionTitle, data: hearings }] : [];
+  return { title, sections };
+}
+
 function isNetworkError(message: string): boolean {
   const msg = (message || "").toLowerCase();
   return (
@@ -206,14 +239,15 @@ export default function HomeScreen() {
   const styles = useMemo(() => createHomeStyles(C, modalSheet), [C, modalSheet]);
   const exportImageRef = useRef<View | null>(null);
   const { width: screenWidth } = useWindowDimensions();
+  const widgetLayout = useMemo(() => getWidgetLayout(screenWidth), [screenWidth]);
 
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
-  const [filter, setFilter] = useState<HomeFilter>("today");
   const [pendingCount, setPendingCount] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [shareExportFilter, setShareExportFilter] = useState<HomeFilter | null>(null);
   const [notesCount, setNotesCount] = useState(0);
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
@@ -328,6 +362,28 @@ export default function HomeScreen() {
     }, [fetchCases, loadNotesCount, session?.user?.id, isOnline]),
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== "android") return undefined;
+
+      const onBackPress = () => {
+        if (showFiledCasesModal) {
+          setShowFiledCasesModal(false);
+          return true;
+        }
+        if (showCourtPortalModal) {
+          setShowCourtPortalModal(false);
+          return true;
+        }
+        BackHandler.exitApp();
+        return true;
+      };
+
+      const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => sub.remove();
+    }, [showFiledCasesModal, showCourtPortalModal]),
+  );
+
   useEffect(() => {
     if (!isOnline || !session?.user?.id || !isSupabaseConfigured) return;
     if (isOffline) fetchCases(true);
@@ -337,9 +393,6 @@ export default function HomeScreen() {
   const { hearingsThisWeek, filedThisWeek } = getWeeklyCases(cases, weekStart, weekEnd);
   const filedThisMonth = useMemo(() => getMonthCases(cases, today), [cases, today]);
 
-  const isTodayFilter = filter === "today";
-  const selectedHearings = isTodayFilter ? hearingsToday : hearingsThisWeek;
-  const selectedSectionTitle = isTodayFilter ? "Today hearings" : "This week hearings";
   const filedCases = useMemo(() => {
     if (filedRange === "today") return filedToday;
     if (filedRange === "week") return filedThisWeek;
@@ -349,86 +402,115 @@ export default function HomeScreen() {
   const filedRangeLabel =
     filedRange === "today" ? "Today" : filedRange === "week" ? "This week" : "This month";
 
-  const shareSections = useMemo<CaseSection[]>(() => {
-    return selectedHearings.length > 0
-      ? [{ title: selectedSectionTitle, data: selectedHearings }]
-      : [];
-  }, [selectedHearings, selectedSectionTitle]);
+  const exportCapturePayload = useMemo(() => {
+    if (!shareExportFilter) return null;
+    return buildSharePayload(shareExportFilter, hearingsToday, hearingsThisWeek);
+  }, [shareExportFilter, hearingsToday, hearingsThisWeek]);
 
-  const shareTitle = isTodayFilter ? "Today Hearings" : "This Week Hearings";
+  const shareCasesAsPdf = useCallback(
+    async (shareFilter: HomeFilter) => {
+      const { title, sections } = buildSharePayload(
+        shareFilter,
+        hearingsToday,
+        hearingsThisWeek,
+      );
+      if (isExporting || sections.length === 0) return;
+      setIsExporting(true);
+      try {
+        const available = await Sharing.isAvailableAsync();
+        if (!available) {
+          Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+          return;
+        }
+        const html = buildCaseReportHtml(title, sections);
+        const { uri } = await Print.printToFileAsync({ html });
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          UTI: "com.adobe.pdf",
+          dialogTitle: `Share ${title} PDF`,
+        });
+      } catch (e: any) {
+        Alert.alert("Export failed", e?.message || "Could not export PDF.");
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [isExporting, hearingsToday, hearingsThisWeek],
+  );
 
-  const shareCasesAsPdf = useCallback(async () => {
-    if (isExporting || shareSections.length === 0) return;
-    setIsExporting(true);
-    try {
-      const available = await Sharing.isAvailableAsync();
-      if (!available) {
-        Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+  const shareCasesAsImage = useCallback(
+    async (shareFilter: HomeFilter) => {
+      const { title, sections } = buildSharePayload(
+        shareFilter,
+        hearingsToday,
+        hearingsThisWeek,
+      );
+      if (isExporting || sections.length === 0) return;
+      setIsExporting(true);
+      try {
+        const available = await Sharing.isAvailableAsync();
+        if (!available) {
+          Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+          return;
+        }
+
+        setShareExportFilter(shareFilter);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        if (!exportImageRef.current) {
+          Alert.alert("Export failed", "Could not capture the case list.");
+          return;
+        }
+
+        const uri = await captureRef(exportImageRef.current, {
+          format: "png",
+          quality: 1,
+          result: "tmpfile",
+        });
+        await Sharing.shareAsync(uri, {
+          mimeType: "image/png",
+          UTI: "public.png",
+          dialogTitle: `Share ${title} image`,
+        });
+      } catch (e: any) {
+        Alert.alert("Export failed", e?.message || "Could not export image.");
+      } finally {
+        setShareExportFilter(null);
+        setIsExporting(false);
+      }
+    },
+    [isExporting, hearingsToday, hearingsThisWeek],
+  );
+
+  const promptShareFormat = useCallback(
+    (shareFilter: HomeFilter) => {
+      const { sections } = buildSharePayload(shareFilter, hearingsToday, hearingsThisWeek);
+      if (sections.length === 0) {
+        Alert.alert(
+          "No hearings to share",
+          shareFilter === "today"
+            ? "There are no hearings today."
+            : "There are no hearings this week.",
+        );
         return;
       }
-      const html = buildCaseReportHtml(shareTitle, shareSections);
-      const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, {
-        mimeType: "application/pdf",
-        UTI: "com.adobe.pdf",
-        dialogTitle: `Share ${shareTitle} PDF`,
-      });
-    } catch (e: any) {
-      Alert.alert("Export failed", e?.message || "Could not export PDF.");
-    } finally {
-      setIsExporting(false);
-    }
-  }, [isExporting, shareSections, shareTitle]);
-
-  const shareCasesAsImage = useCallback(async () => {
-    if (isExporting || shareSections.length === 0) return;
-    setIsExporting(true);
-    try {
-      const available = await Sharing.isAvailableAsync();
-      if (!available) {
-        Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
-        return;
-      }
-      if (!exportImageRef.current) {
-        Alert.alert("Export failed", "Could not capture the case list.");
-        return;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 80));
-      const uri = await captureRef(exportImageRef.current, {
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
-      });
-      await Sharing.shareAsync(uri, {
-        mimeType: "image/png",
-        UTI: "public.png",
-        dialogTitle: `Share ${shareTitle} image`,
-      });
-    } catch (e: any) {
-      Alert.alert("Export failed", e?.message || "Could not export image.");
-    } finally {
-      setIsExporting(false);
-    }
-  }, [isExporting, shareSections.length, shareTitle]);
+      Alert.alert("Share case list", "Choose a format", [
+        { text: "PDF", onPress: () => void shareCasesAsPdf(shareFilter) },
+        { text: "Image", onPress: () => void shareCasesAsImage(shareFilter) },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    },
+    [hearingsToday, hearingsThisWeek, shareCasesAsPdf, shareCasesAsImage],
+  );
 
   const handleShareCases = useCallback(() => {
     if (isExporting) return;
-    if (shareSections.length === 0) {
-      Alert.alert(
-        "No hearings to share",
-        isTodayFilter
-          ? "There are no hearings today."
-          : "There are no hearings this week.",
-      );
-      return;
-    }
-    Alert.alert("Share case list", "Choose a format", [
-      { text: "PDF", onPress: () => void shareCasesAsPdf() },
-      { text: "Image", onPress: () => void shareCasesAsImage() },
+    Alert.alert("Share case list", "Which list would you like to share?", [
+      { text: "Today cases", onPress: () => promptShareFormat("today") },
+      { text: "This week cases", onPress: () => promptShareFormat("weekly") },
       { text: "Cancel", style: "cancel" },
     ]);
-  }, [isExporting, shareSections.length, isTodayFilter, shareCasesAsPdf, shareCasesAsImage]);
+  }, [isExporting, promptShareFormat]);
 
   const openCourtPortalUrl = useCallback((entry: PakistanCourtPortal) => {
     const url = entry.url;
@@ -456,6 +538,16 @@ export default function HomeScreen() {
     setShowCourtPortalModal(true);
   }, []);
 
+  const openFromHome = useCallback(
+    (pathname: string, params?: Record<string, string>) => {
+      router.push({
+        pathname,
+        params: { ...params, from: "home" },
+      } as never);
+    },
+    [router],
+  );
+
   const widgets = useMemo<HomeWidget[]>(() => {
     const list: HomeWidget[] = [
       {
@@ -464,10 +556,7 @@ export default function HomeScreen() {
         subtitle: "Open today's hearings",
         icon: "today",
         count: hearingsToday.length,
-        onPress: () => {
-          setFilter("today");
-          router.push({ pathname: "/cases-overview", params: { filter: "today" } });
-        },
+        onPress: () => openFromHome("/cases-overview", { filter: "today" }),
       },
       {
         key: "week-hearings",
@@ -475,10 +564,7 @@ export default function HomeScreen() {
         subtitle: "Open weekly hearings",
         icon: "date-range",
         count: hearingsThisWeek.length,
-        onPress: () => {
-          setFilter("weekly");
-          router.push({ pathname: "/cases-overview", params: { filter: "weekly" } });
-        },
+        onPress: () => openFromHome("/cases-overview", { filter: "weekly" }),
       },
       {
         key: "all-cases",
@@ -486,7 +572,7 @@ export default function HomeScreen() {
         subtitle: "Open full diary",
         icon: "list-alt",
         count: cases.length,
-        onPress: () => router.push("/(tabs)/diary"),
+        onPress: () => openFromHome("/(tabs)/diary"),
       },
       {
         key: "filed-cases",
@@ -501,7 +587,7 @@ export default function HomeScreen() {
         title: "Calendar",
         subtitle: "Date-based view",
         icon: "calendar-month",
-        onPress: () => router.push("/(tabs)/calendar"),
+        onPress: () => openFromHome("/(tabs)/calendar"),
       },
       {
         key: "notes",
@@ -509,7 +595,7 @@ export default function HomeScreen() {
         subtitle: "Daily reminders",
         icon: "sticky-note-2",
         count: notesCount,
-        onPress: () => router.push("/notes"),
+        onPress: () => openFromHome("/notes"),
       },
       {
         key: "add-case",
@@ -518,7 +604,7 @@ export default function HomeScreen() {
         icon: "add-circle-outline",
         onPress: () => {
           if (!canAddCases) return;
-          router.push("/add-case-flow");
+          openFromHome("/add-case-flow");
         },
         disabled: !canAddCases,
       },
@@ -534,14 +620,14 @@ export default function HomeScreen() {
         title: "Clients",
         subtitle: "Manage client list",
         icon: "groups-2",
-        onPress: () => router.push("/clients"),
+        onPress: () => openFromHome("/clients"),
       },
       {
         key: "judges",
         title: "Judges",
         subtitle: "Manage judge list",
         icon: "gavel",
-        onPress: () => router.push("/judges"),
+        onPress: () => openFromHome("/judges"),
       },
       {
         key: "share",
@@ -556,21 +642,21 @@ export default function HomeScreen() {
         title: "Settings",
         subtitle: "Open app settings",
         icon: "settings",
-        onPress: () => router.push("/settings"),
+        onPress: () => openFromHome("/settings"),
       },
       {
         key: "acts",
         title: "Acts & law books",
         subtitle: "Reference library",
         icon: "menu-book",
-        onPress: () => router.push("/acts"),
+        onPress: () => openFromHome("/acts"),
       },
       {
         key: "trash",
         title: "Trash",
         subtitle: "Restore deleted cases",
         icon: "delete-outline",
-        onPress: () => router.push("/trash"),
+        onPress: () => openFromHome("/trash"),
       },
     ];
 
@@ -595,7 +681,7 @@ export default function HomeScreen() {
     handleShareCases,
     isExporting,
     openCourtSearchWebsite,
-    router,
+    openFromHome,
   ]);
 
   const filedCasesModal = (
@@ -678,15 +764,25 @@ export default function HomeScreen() {
       return (
     <Bounceable
       key={widget.key}
-      style={[
-        styles.widgetCard,
-        isSelectedWidget && styles.widgetCardSelected,
-        widget.disabled && styles.widgetCardDisabled,
-      ]}
+      style={[styles.widgetPressable, { width: widgetLayout.widgetWidth }]}
       onPress={handleWidgetPress}
       disabled={widget.disabled}
       accessibilityLabel={widget.title}
+      activeScale={0.98}
     >
+      <View
+        style={[
+          styles.widgetShadowShell,
+          isSelectedWidget && styles.widgetShadowShellSelected,
+        ]}
+      >
+        <View
+          style={[
+            styles.widgetCard,
+            isSelectedWidget && styles.widgetCardSelected,
+            widget.disabled && styles.widgetCardDisabled,
+          ]}
+        >
       <View style={styles.widgetTopRow}>
         <View
           style={[
@@ -706,8 +802,14 @@ export default function HomeScreen() {
           </View>
         ) : null}
       </View>
-      <ThemedText style={styles.widgetTitle}>{widget.title}</ThemedText>
-      <ThemedText style={styles.widgetSubtitle}>{widget.subtitle}</ThemedText>
+      <ThemedText style={styles.widgetTitle} numberOfLines={2}>
+        {widget.title}
+      </ThemedText>
+      <ThemedText style={styles.widgetSubtitle} numberOfLines={2}>
+        {widget.subtitle}
+      </ThemedText>
+        </View>
+      </View>
     </Bounceable>
       );
     })()
@@ -760,22 +862,14 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          <View style={styles.heroCard}>
-            <ThemedText style={styles.heroTitle}>Home widgets</ThemedText>
-            <ThemedText style={styles.heroText}>
-              Tap a widget to jump to that service. Today and week widgets open the dedicated case
-              view screen.
-            </ThemedText>
-            {isOffline ? (
-              <View style={styles.offlineBadge}>
-                <MaterialIcons name="cloud-off" size={15} color={C.themeRed} />
-                <ThemedText style={styles.offlineText}>Offline mode: showing cached data</ThemedText>
-              </View>
-            ) : null}
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
-          </View>
+          {isOffline ? (
+            <View style={styles.offlineBadge}>
+              <MaterialIcons name="cloud-off" size={15} color={C.themeRed} />
+              <ThemedText style={styles.offlineText}>Offline mode: showing cached data</ThemedText>
+            </View>
+          ) : null}
+          {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
 
-          <Spacer.Column numberOfSpaces={5} />
           <View style={styles.widgetsGrid}>{widgets.map(renderWidget)}</View>
         </View>
       </Animated.ScrollView>
@@ -784,30 +878,38 @@ export default function HomeScreen() {
         <View
           ref={exportImageRef}
           collapsable={false}
-          style={[styles.exportCaptureCanvas, { width: Math.max(screenWidth - 48, 280) }]}
+          style={
+            exportCapturePayload
+              ? [styles.exportCaptureCanvas, { width: Math.max(screenWidth - 48, 280) }]
+              : undefined
+          }
         >
-          <ThemedText style={styles.exportCaptureHeading}>{shareTitle}</ThemedText>
-          {shareSections.map((section) => (
-            <View key={`export-${section.title}`} style={styles.exportSection}>
-              <ThemedText style={styles.exportSectionTitle}>{section.title}</ThemedText>
-              {section.data.map((caseItem) => (
-                <View key={`export-row-${caseItem.id}`} style={styles.exportRow}>
-                  <ThemedText style={styles.exportRowTitle}>
-                    {getCaseDisplayTitle(caseItem)}
-                  </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
-                    Case no: {caseItem.case_number?.trim() || "—"}
-                  </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
-                    Court: {caseItem.court_name?.trim() || "—"}
-                  </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
-                    Next: {formatCaseDate(caseItem.next_hearing_date)}
-                  </ThemedText>
+          {exportCapturePayload ? (
+            <>
+              <ThemedText style={styles.exportCaptureHeading}>{exportCapturePayload.title}</ThemedText>
+              {exportCapturePayload.sections.map((section) => (
+                <View key={`export-${section.title}`} style={styles.exportSection}>
+                  <ThemedText style={styles.exportSectionTitle}>{section.title}</ThemedText>
+                  {section.data.map((caseItem) => (
+                    <View key={`export-row-${caseItem.id}`} style={styles.exportRow}>
+                      <ThemedText style={styles.exportRowTitle}>
+                        {getCaseDisplayTitle(caseItem)}
+                      </ThemedText>
+                      <ThemedText style={styles.exportRowMeta}>
+                        Case no: {caseItem.case_number?.trim() || "—"}
+                      </ThemedText>
+                      <ThemedText style={styles.exportRowMeta}>
+                        Court: {caseItem.court_name?.trim() || "—"}
+                      </ThemedText>
+                      <ThemedText style={styles.exportRowMeta}>
+                        Next: {formatCaseDate(caseItem.next_hearing_date)}
+                      </ThemedText>
+                    </View>
+                  ))}
                 </View>
               ))}
-            </View>
-          ))}
+            </>
+          ) : null}
         </View>
       </View>
 
@@ -835,27 +937,8 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
       paddingTop: 14,
       backgroundColor: C.background,
     },
-    heroCard: {
-      borderRadius: 16,
-      padding: 14,
-      backgroundColor: C.pureWhite,
-      borderWidth: 1,
-      borderColor: C.borderGray,
-      ...theme.shadow,
-    },
-    heroTitle: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: C.black,
-    },
-    heroText: {
-      fontSize: 13,
-      color: C.gray50,
-      marginTop: 6,
-      lineHeight: 18,
-    },
     offlineBadge: {
-      marginTop: 10,
+      marginBottom: 10,
       borderRadius: 10,
       paddingHorizontal: 10,
       paddingVertical: 8,
@@ -889,22 +972,40 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     widgetsGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "space-between",
-      gap: 10,
+      gap: WIDGET_GRID_GAP,
     },
-    widgetCard: {
-      width: "48.5%",
+    widgetPressable: {
       borderRadius: 14,
-      padding: 12,
+    },
+    widgetShadowShell: {
+      borderRadius: 14,
+      backgroundColor: C.pureWhite,
       borderWidth: 1,
       borderColor: C.borderGray,
-      backgroundColor: C.pureWhite,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 4,
+        },
+        android: {
+          elevation: 3,
+        },
+        default: {},
+      }),
+    },
+    widgetShadowShellSelected: {
+      borderColor: C.zodiacColour,
+    },
+    widgetCard: {
+      borderRadius: 14,
+      padding: 12,
+      backgroundColor: "transparent",
       minHeight: 114,
-      ...theme.shadow,
     },
     widgetCardSelected: {
-      borderColor: C.zodiacColour + "3D",
-      backgroundColor: C.zodiacColour + "0D",
+      backgroundColor: C.zodiacColour + "12",
     },
     widgetCardDisabled: {
       opacity: 0.5,
@@ -944,16 +1045,18 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
       fontSize: 14,
       fontWeight: "700",
       color: C.black,
+      flexShrink: 1,
     },
     widgetSubtitle: {
       marginTop: 4,
       fontSize: 12,
       color: C.gray50,
       lineHeight: 16,
+      flexShrink: 1,
     },
     errorText: {
       color: C.themeRed,
-      marginTop: 8,
+      marginBottom: 10,
       fontSize: 13,
     },
     headerActions: {

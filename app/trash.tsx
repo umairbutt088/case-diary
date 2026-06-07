@@ -4,7 +4,7 @@
  * Users can restore a case (clears deleted_at) or permanently delete it.
  */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   Alert,
@@ -21,6 +21,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addPendingCaseHardDelete } from "@/lib/offline-queue";
@@ -158,7 +159,7 @@ function createStyles(C: AppColors) {
 }
 
 export default function TrashScreen() {
-  const router = useRouter();
+  const { goBack } = useHomeBackNavigation();
   const { session, effectiveOwnerId } = useAuth();
   const accessGuard = useAccessGuard("manage_settings");
   const isOnline = useIsOnline();
@@ -330,7 +331,7 @@ export default function TrashScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <ScreenHeader title="Trash" onBack={() => router.back()} />
+      <ScreenHeader title="Trash" onBack={goBack} />
 
       {cases.length > 0 && (
         <>

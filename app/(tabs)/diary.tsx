@@ -30,6 +30,7 @@ import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
 import { addPendingCaseDelete } from "@/lib/offline-queue";
@@ -44,10 +45,14 @@ function DiaryHeaderWithRef({
   copilot,
   title,
   rightComponent,
+  showBack = false,
+  onBack,
 }: {
   copilot?: { ref: React.RefObject<View | null>; onLayout: () => void };
   title: string;
   rightComponent?: React.ReactNode;
+  showBack?: boolean;
+  onBack?: () => void;
 }) {
   const copilotWalkthroughProps = copilot
     ? ({ ref: copilot.ref, onLayout: copilot.onLayout } as Record<string, unknown>)
@@ -55,7 +60,12 @@ function DiaryHeaderWithRef({
 
   return (
     <WalkthroughableView {...copilotWalkthroughProps} collapsable={false}>
-      <ScreenHeader title={title} showBack={false} rightComponent={rightComponent} />
+      <ScreenHeader
+        title={title}
+        showBack={showBack}
+        onBack={onBack}
+        rightComponent={rightComponent}
+      />
     </WalkthroughableView>
   );
 }
@@ -282,6 +292,7 @@ function createDiaryStyles(C: AppColors) {
 
 export default function DiaryScreen() {
   const router = useRouter();
+  const { fromHome, goBack } = useHomeBackNavigation();
   const isFocused = useIsFocused();
   const isOnline = useIsOnline();
   const { session, effectiveOwnerId, can } = useAuth();
@@ -620,11 +631,14 @@ export default function DiaryScreen() {
       <ThemedText style={styles.bulkToggleBtnText}>{bulkMode ? "Done" : "Select"}</ThemedText>
     </TouchableOpacity>
   );
+  const headerBackProps = fromHome
+    ? { showBack: true as const, onBack: goBack }
+    : { showBack: false as const };
 
   if (loading && cases.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <ScreenHeader title="Your cases" showBack={false} />
+        <ScreenHeader title="Your cases" {...headerBackProps} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.black} />
         </View>
@@ -641,7 +655,11 @@ export default function DiaryScreen() {
           name="diary-welcome"
           active={isFocused}
         >
-          <DiaryHeaderWithRef title="Your cases" rightComponent={headerRight} />
+          <DiaryHeaderWithRef
+            title="Your cases"
+            rightComponent={headerRight}
+            {...headerBackProps}
+          />
         </CopilotStep>
         <View style={styles.container}>
           <ThemedText style={styles.errorText}>{error}</ThemedText>
@@ -659,7 +677,11 @@ export default function DiaryScreen() {
           name="diary-welcome"
           active={isFocused}
         >
-          <DiaryHeaderWithRef title="Your cases" rightComponent={headerRight} />
+          <DiaryHeaderWithRef
+            title="Your cases"
+            rightComponent={headerRight}
+            {...headerBackProps}
+          />
         </CopilotStep>
         <View style={styles.container}>
           <ThemedText style={styles.placeholder}>
@@ -678,7 +700,11 @@ export default function DiaryScreen() {
         name="diary-welcome"
         active={isFocused}
       >
-        <DiaryHeaderWithRef title="Your cases" rightComponent={headerRight} />
+        <DiaryHeaderWithRef
+          title="Your cases"
+          rightComponent={headerRight}
+          {...headerBackProps}
+        />
       </CopilotStep>
       <Animated.View 
         style={{ flex: 1 }}

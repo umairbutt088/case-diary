@@ -26,6 +26,7 @@ import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ClientRow } from "@/types/client";
@@ -249,6 +250,7 @@ function createClientsStyles(
 }
 
 export default function ClientsScreen() {
+  const { goBack } = useHomeBackNavigation();
   const { session, effectiveOwnerId, can } = useAuth();
   const accessGuard = useAccessGuard("view_clients");
   const canAddCases = can("add_cases");
@@ -488,6 +490,7 @@ export default function ClientsScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader
         title="Clients"
+        onBack={goBack}
         rightComponent={
           <Bounceable
             style={[styles.headerAction, !canInsertClient && styles.headerActionDisabled]}

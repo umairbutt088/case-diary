@@ -27,6 +27,7 @@ import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { setCachedJudges } from "@/lib/offline-reference-data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -251,6 +252,7 @@ function createJudgesStyles(
 }
 
 export default function JudgesScreen() {
+  const { goBack } = useHomeBackNavigation();
   const { session, effectiveOwnerId } = useAuth();
   const accessGuard = useAccessGuard("add_cases", "edit_cases");
   const C = useThemePalette();
@@ -505,6 +507,7 @@ export default function JudgesScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader
         title="Judges"
+        onBack={goBack}
         rightComponent={
           <Bounceable style={styles.headerAction} onPress={openAddModal}>
             <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />

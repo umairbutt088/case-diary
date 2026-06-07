@@ -26,6 +26,7 @@ import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { deleteAuthenticatedAccount } from "@/lib/delete-account";
@@ -179,6 +180,7 @@ function createSettingsStyles(C: AppColors) {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { goBack } = useHomeBackNavigation();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const modalSheet = modalSheetBackground(C, isDark);
@@ -279,7 +281,7 @@ export default function SettingsScreen() {
   return (
     accessGuard.blocked ? null : (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScreenHeader title="Settings" />
+      <ScreenHeader title="Settings" onBack={goBack} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}

@@ -13,6 +13,7 @@ import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import {
   type ActivityNote,
@@ -219,6 +220,7 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
 }
 
 export default function NotesScreen() {
+  const { goBack } = useHomeBackNavigation();
   const { session } = useAuth();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
@@ -360,7 +362,7 @@ export default function NotesScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScreenHeader title="Notes" />
+      <ScreenHeader title="Notes" onBack={goBack} />
       <Animated.View style={styles.container} entering={FadeInUp.duration(320).springify()}>
         <View style={styles.filterRow}>
           <Pressable

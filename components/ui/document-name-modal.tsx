@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   TextInput,
@@ -37,13 +39,15 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
       justifyContent: "flex-end",
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      flex: 1,
       backgroundColor: "rgba(0,0,0,0.4)",
     },
-    sheet: {
+    sheetSafeArea: {
       backgroundColor: modalSheet,
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
+    },
+    sheet: {
       padding: 20,
       paddingBottom: 32,
     },
@@ -149,51 +153,59 @@ export function DocumentNameModal({
     onCancel();
   }, [onCancel]);
 
-  if (!visible) return null;
-
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={handleCancel}
+    >
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <Pressable style={styles.backdrop} onPress={handleCancel} />
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <ThemedText style={styles.title}>Name this document</ThemedText>
-            <Pressable onPress={handleCancel} hitSlop={12} disabled={saving}>
-              <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+        <SafeAreaView style={styles.sheetSafeArea} edges={["bottom"]}>
+          <View style={styles.sheet}>
+            <View style={styles.header}>
+              <ThemedText style={styles.title}>Name this document</ThemedText>
+              <Pressable onPress={handleCancel} hitSlop={12} disabled={saving}>
+                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+              </Pressable>
+            </View>
+
+            <ThemedText style={styles.label}>Document name</ThemedText>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Vakalatnama, FIR, Order Sheet"
+              placeholderTextColor={C.gray50}
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
+              editable={!saving}
+              autoCorrect={false}
+              spellCheck={false}
+            />
+            <ThemedText style={styles.hint}>
+              Give this document a meaningful name so you can find it easily.
+            </ThemedText>
+
+            <Pressable
+              style={styles.saveBtn}
+              onPress={handleSave}
+              disabled={saving || !name.trim()}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={onPrimary} />
+              ) : (
+                <ThemedText style={styles.saveBtnText}>Save document</ThemedText>
+              )}
             </Pressable>
           </View>
-
-          <ThemedText style={styles.label}>Document name</ThemedText>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Vakalatnama, FIR, Order Sheet"
-            placeholderTextColor={C.gray50}
-            returnKeyType="done"
-            onSubmitEditing={handleSave}
-            editable={!saving}
-            autoCorrect={false}
-            spellCheck={false}
-          />
-          <ThemedText style={styles.hint}>
-            Give this document a meaningful name so you can find it easily.
-          </ThemedText>
-
-          <Pressable
-            style={styles.saveBtn}
-            onPress={handleSave}
-            disabled={saving || !name.trim()}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color={onPrimary} />
-            ) : (
-              <ThemedText style={styles.saveBtnText}>Save document</ThemedText>
-            )}
-          </Pressable>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

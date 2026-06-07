@@ -22,6 +22,7 @@ import type { AppColors } from "@/constants/color-palette";
 import { ACTS_LIBRARY, type ActLibraryItem } from "@/constants/acts-library";
 import { theme } from "@/constants/theme";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 
 function normalizeForSearch(value: string): string {
@@ -120,6 +121,7 @@ function createActsStyles(C: AppColors) {
 }
 
 export default function ActsScreen() {
+  const { goBack } = useHomeBackNavigation();
   const accessGuard = useAccessGuard("manage_settings");
   const C = useThemePalette();
   const styles = useMemo(() => createActsStyles(C), [C]);
@@ -197,7 +199,7 @@ export default function ActsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="Acts & Laws" />
+      <ScreenHeader title="Acts & Laws" onBack={goBack} />
       <FlatList
         data={filteredActs}
         keyExtractor={(item) => item.id}

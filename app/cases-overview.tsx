@@ -26,6 +26,7 @@ import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
 import { addPendingCaseDelete } from "@/lib/offline-queue";
@@ -186,6 +187,7 @@ function normalizeFilter(value: string | string[] | undefined): HomeFilter {
 
 export default function CasesOverviewScreen() {
   const router = useRouter();
+  const { goBack } = useHomeBackNavigation();
   const params = useLocalSearchParams<{ filter?: string | string[] }>();
   const initialFilter = normalizeFilter(params.filter);
 
@@ -516,6 +518,7 @@ export default function CasesOverviewScreen() {
         <ScreenHeader
           title={isTodayFilter ? "Today Cases" : "This week Cases"}
           rightComponent={headerActions}
+          onBack={goBack}
         />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.black} />
@@ -529,6 +532,7 @@ export default function CasesOverviewScreen() {
       <ScreenHeader
         title={isTodayFilter ? "Today Cases" : "This week Cases"}
         rightComponent={headerActions}
+        onBack={goBack}
       />
       <View style={styles.container}>
         {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}

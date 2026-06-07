@@ -23,9 +23,11 @@ import {
 } from "@/components/calendar-case-card";
 import { ThemedText } from "@/components/themed-text";
 import { Spacer } from "@/components/ui";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, setCachedCases } from "@/lib/cases-cache";
@@ -379,6 +381,7 @@ function createCalendarScreenStyles(C: AppColors) {
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const { fromHome, goBack } = useHomeBackNavigation();
   const params = useLocalSearchParams<{ date?: string }>();
   const isFocused = useIsFocused();
   const { start, visible: copilotVisible, copilotEvents } = useCopilot();
@@ -560,6 +563,7 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {fromHome ? <ScreenHeader title="Calendar" onBack={goBack} /> : null}
       <ScrollView
         ref={scrollViewRef}
         style={styles.scroll}
