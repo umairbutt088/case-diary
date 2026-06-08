@@ -2,14 +2,14 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,8 +21,8 @@ import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { supabase } from "@/lib/supabase";
-import type { ProfileRow } from "@/types/profile";
 import type { AccessPermission } from "@/types/access";
+import type { ProfileRow } from "@/types/profile";
 import type { SubordinateLinkRow } from "@/types/subordinate-link";
 
 const TOGGLE_KEYS: { key: AccessPermission; label: string }[] = [
@@ -436,8 +436,7 @@ export default function SubordinatesScreen() {
             {addExpanded ? (
               <>
                 <ThemedText style={s.hintText}>
-                  Subordinate must sign up first with their own email, then add them here using that
-                  same email.
+                  Add a subordinate with the same email they used to sign up.
                 </ThemedText>
                 <View style={s.addRow}>
                   <TextInput

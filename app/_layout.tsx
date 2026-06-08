@@ -158,6 +158,12 @@ function RootLayoutInner() {
                     }}
                   />
                   <Stack.Screen
+                    name="share-app"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
                     name="acts"
                     options={{
                       headerShown: false,

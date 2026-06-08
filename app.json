@@ -85,6 +85,8 @@
     },
     "extra": {
       "router": {},
+      "androidPlayStoreUrl": "https://play.google.com/store/apps/details?id=com.umairbutt.legaldiary",
+      "iosAppStoreUrl": "",
       "eas": {
         "projectId": "4d913b2c-450d-48f9-a614-94ac21ba45b1"
       }

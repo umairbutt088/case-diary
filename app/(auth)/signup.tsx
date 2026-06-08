@@ -2,13 +2,13 @@ import * as Linking from "expo-linking";
 import { useCallback, useState } from "react";
 
 import {
-    AuthButton,
-    AuthScreenLayout,
-    FormInput,
-    FormMessage,
-    PasswordInput,
-    Spacer,
-    TermsCheckbox,
+  AuthButton,
+  AuthScreenLayout,
+  FormInput,
+  FormMessage,
+  PasswordInput,
+  Spacer,
+  TermsCheckbox,
 } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 
@@ -117,8 +117,10 @@ export default function SignUpScreen() {
       }
       if (!data.session && data.user) {
         setSignUpSuccessMessage(
-          "Account created. Check your email to confirm, then sign in."
+          "Account created. Check your email to confirm, then sign in.",
         );
+        setLoading(false);
+        return;
       }
     } catch (err) {
       setSubmitError(
