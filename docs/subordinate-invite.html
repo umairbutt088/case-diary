@@ -66,8 +66,9 @@
         return;
       }
 
+      // Use /login — present in all published app builds (subordinate-invite route is newer).
       var appUrl =
-        "legaldiary://subordinate-invite?token=" + encodeURIComponent(token);
+        "legaldiary://login?token=" + encodeURIComponent(token);
 
       openLink.addEventListener("click", function (ev) {
         ev.preventDefault();
