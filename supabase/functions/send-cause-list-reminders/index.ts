@@ -248,7 +248,9 @@ Deno.serve(async (req) => {
           "id, case_title, petitioner_name, respondent_name, next_hearing_date",
         )
         .eq("user_id", profile.id)
-        .eq("next_hearing_date", tomorrowDate);
+        .eq("next_hearing_date", tomorrowDate)
+        .is("deleted_at", null)
+        .is("disposed_at", null);
 
       if (casesError) {
         summary.failed += 1;

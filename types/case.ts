@@ -26,7 +26,15 @@ export type CaseRow = {
   updated_at: string;
   /** Soft-delete timestamp. NULL = active case. Non-null = moved to Trash. */
   deleted_at: string | null;
+  /** When the case was disposed off (finished). NULL = still active. */
+  disposed_at: string | null;
+  /** Optional note when disposing (e.g. decree, compromise). */
+  disposal_note: string | null;
 };
+
+export function isActiveCase(row: Pick<CaseRow, "deleted_at" | "disposed_at">): boolean {
+  return !row.deleted_at && !row.disposed_at;
+}
 
 /** Display title: "Petitioner vs. Respondent" (or case_title if set) */
 export function getCaseDisplayTitle(row: CaseRow): string {

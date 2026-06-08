@@ -255,6 +255,7 @@ export default function HomeScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [shareExportFilter, setShareExportFilter] = useState<HomeFilter | null>(null);
   const [notesCount, setNotesCount] = useState(0);
+  const [disposedCount, setDisposedCount] = useState(0);
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
@@ -294,6 +295,7 @@ export default function HomeScreen() {
         .select("*")
         .eq("user_id", effectiveOwnerId)
         .is("deleted_at", null)
+        .is("disposed_at", null)
         .order("next_hearing_date", { ascending: true, nullsFirst: false });
 
       setLoading(false);
@@ -342,11 +344,28 @@ export default function HomeScreen() {
     }
   }, [notesStorageKey, today]);
 
+  const loadDisposedCount = useCallback(async () => {
+    if (!effectiveOwnerId || !isSupabaseConfigured || !isOnline) {
+      setDisposedCount(0);
+      return;
+    }
+
+    const { count, error: countError } = await supabase
+      .from("cases")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", effectiveOwnerId)
+      .is("deleted_at", null)
+      .not("disposed_at", "is", null);
+
+    setDisposedCount(countError ? 0 : (count ?? 0));
+  }, [effectiveOwnerId, isOnline]);
+
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
         await loadNotesCount();
+        await loadDisposedCount();
         if (!isOnline && session?.user?.id && isSupabaseConfigured) {
           const cached = await getCachedCases(session.user.id);
           setLoading(false);
@@ -365,7 +384,7 @@ export default function HomeScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchCases, loadNotesCount, session?.user?.id, isOnline]),
+    }, [fetchCases, loadNotesCount, loadDisposedCount, session?.user?.id, isOnline]),
   );
 
   useFocusEffect(
@@ -657,6 +676,14 @@ export default function HomeScreen() {
         onPress: () => openFromHome("/acts"),
       },
       {
+        key: "disposed-cases",
+        title: "Disposed cases",
+        subtitle: "Finished matters",
+        icon: "archive",
+        count: disposedCount,
+        onPress: () => openFromHome("/disposed-cases"),
+      },
+      {
         key: "trash",
         title: "Trash",
         subtitle: "Restore deleted cases",
@@ -668,6 +695,7 @@ export default function HomeScreen() {
     return list.filter((item) => {
       if (item.key === "clients") return can("view_clients");
       if (item.key === "judges") return canManageJudges;
+      if (item.key === "disposed-cases") return can("view_cases");
       if (item.key === "settings" || item.key === "acts" || item.key === "trash") {
         return canManageSettings;
       }
@@ -678,6 +706,7 @@ export default function HomeScreen() {
     hearingsThisWeek.length,
     filedToday.length,
     notesCount,
+    disposedCount,
     canAddCases,
     canManageJudges,
     canManageSettings,

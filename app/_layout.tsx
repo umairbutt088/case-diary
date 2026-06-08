@@ -152,6 +152,12 @@ function RootLayoutInner() {
                     }}
                   />
                   <Stack.Screen
+                    name="disposed-cases"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
                     name="acts"
                     options={{
                       headerShown: false,

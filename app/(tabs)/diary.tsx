@@ -363,6 +363,7 @@ export default function DiaryScreen() {
       .select("*")
       .eq("user_id", effectiveOwnerId)
       .is("deleted_at", null)
+      .is("disposed_at", null)
       .order("created_at", { ascending: false });
     setLoading(false);
     if (e) {

@@ -245,6 +245,7 @@ export default function CasesOverviewScreen() {
         .select("*")
         .eq("user_id", effectiveOwnerId)
         .is("deleted_at", null)
+        .is("disposed_at", null)
         .order("next_hearing_date", { ascending: true, nullsFirst: false });
 
       setLoading(false);

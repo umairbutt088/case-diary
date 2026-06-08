@@ -7,6 +7,7 @@ export type SubordinateLinkRow = {
   can_add_cases: boolean;
   can_edit_cases: boolean;
   can_delete_cases: boolean;
+  can_dispose_cases: boolean;
   can_view_clients: boolean;
   can_manage_documents: boolean;
   can_manage_settings: boolean;
