@@ -1,16 +1,13 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useIsFocused } from "@react-navigation/native";
-import { Image } from "expo-image";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BackHandler,
-  ActivityIndicator,
   Alert,
-  InteractionManager,
+  BackHandler,
   Linking,
   Modal,
   Platform,
@@ -21,47 +18,65 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import Animated, {
-  FadeInUp,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CopilotStep, useCopilot, walkthroughable } from "react-native-copilot";
-
-import { CaseCard } from "@/components/case-card";
 import { CourtPortalBottomSheet } from "@/components/court-portal-bottom-sheet";
 import { ThemedText } from "@/components/themed-text";
-import { Bounceable, Spacer } from "@/components/ui";
+import { Bounceable } from "@/components/ui";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import {
-  type AppColors,
-  modalSheetBackground,
-} from "@/constants/color-palette";
+import { type AppColors, modalSheetBackground } from "@/constants/color-palette";
 import { type PakistanCourtPortal } from "@/constants/court-cms";
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
-import { getActivityNotesStorageKey, sanitizeActivityNotes } from "@/lib/activity-notes";
-import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
-import { addPendingCaseDelete, getPendingCasesCount } from "@/lib/offline-queue";
+import {
+  getActivityNotesStorageKey,
+  sanitizeActivityNotes,
+} from "@/lib/activity-notes";
+import { getCachedCases, setCachedCases } from "@/lib/cases-cache";
+import { getPendingCasesCount } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
-import { formatCaseDate, getCaseDisplayTitle, getTodayISO, getWeekBounds } from "@/types/case";
-import type { ProfileRow } from "@/types/profile";
-
-const WalkthroughableView = walkthroughable(View);
+import {
+  formatCaseDate,
+  getCaseDisplayTitle,
+  getTodayISO,
+  getWeekBounds,
+} from "@/types/case";
 
 type HomeFilter = "today" | "weekly";
 type FiledRange = "today" | "week" | "month";
 type CaseSection = { title: string; data: CaseRow[] };
+type HomeWidget = {
+  key: string;
+  title: string;
+  subtitle: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  count?: number;
+  onPress: () => void;
+  disabled?: boolean;
+};
+
+const WIDGET_GRID_GAP = 10;
+const CONTAINER_H_PADDING = 20;
+const MIN_WIDGET_WIDTH = 148;
+
+function getWidgetLayout(screenWidth: number) {
+  const contentWidth = screenWidth - CONTAINER_H_PADDING * 2;
+  const columns = Math.min(
+    2,
+    Math.max(
+      1,
+      Math.floor((contentWidth + WIDGET_GRID_GAP) / (MIN_WIDGET_WIDTH + WIDGET_GRID_GAP)),
+    ),
+  );
+  const widgetWidth = (contentWidth - WIDGET_GRID_GAP * (columns - 1)) / columns;
+  return { columns, widgetWidth, contentWidth };
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -72,10 +87,7 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-function buildCaseReportHtml(
-  reportTitle: string,
-  sections: CaseSection[],
-): string {
+function buildCaseReportHtml(reportTitle: string, sections: CaseSection[]): string {
   const generatedAt = new Date().toLocaleString();
   const totalCases = sections.reduce((sum, section) => sum + section.data.length, 0);
   const rowsHtml = sections
@@ -193,6 +205,20 @@ function getMonthCases(cases: CaseRow[], todayIso: string): CaseRow[] {
   });
 }
 
+function buildSharePayload(
+  shareFilter: HomeFilter,
+  hearingsToday: CaseRow[],
+  hearingsThisWeek: CaseRow[],
+): { title: string; sections: CaseSection[] } {
+  const isToday = shareFilter === "today";
+  const hearings = isToday ? hearingsToday : hearingsThisWeek;
+  const sectionTitle = isToday ? "Today hearings" : "This week hearings";
+  const title = isToday ? "Today Hearings" : "This Week Hearings";
+  const sections =
+    hearings.length > 0 ? [{ title: sectionTitle, data: hearings }] : [];
+  return { title, sections };
+}
+
 function isNetworkError(message: string): boolean {
   const msg = (message || "").toLowerCase();
   return (
@@ -204,87 +230,40 @@ function isNetworkError(message: string): boolean {
 }
 
 export default function HomeScreen() {
-  const isFocused = useIsFocused();
   const isOnline = useIsOnline();
-  const { start } = useCopilot();
   const router = useRouter();
-  const { session, signOut } = useAuth();
+  const { session, effectiveOwnerId, can } = useAuth();
+  const C = useThemePalette();
+  const { isDark } = useAppTheme();
+  const modalSheet = modalSheetBackground(C, isDark);
+  const styles = useMemo(() => createHomeStyles(C, modalSheet), [C, modalSheet]);
+  const exportImageRef = useRef<View | null>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const widgetLayout = useMemo(() => getWidgetLayout(screenWidth), [screenWidth]);
+
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
-  const [filter, setFilter] = useState<HomeFilter>("today");
   const [pendingCount, setPendingCount] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [shareExportFilter, setShareExportFilter] = useState<HomeFilter | null>(null);
   const [notesCount, setNotesCount] = useState(0);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarMounted, setIsSidebarMounted] = useState(false);
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
-  const [sidebarProfile, setSidebarProfile] = useState<
-    Pick<ProfileRow, "full_name" | "first_name" | "last_name" | "email" | "avatar_url"> | null
-  >(null);
-  const exportImageRef = useRef<View | null>(null);
-  const { width: screenWidth } = useWindowDimensions();
-  const sidebarWidth = Math.min(screenWidth * 0.78, 320);
-  const sidebarTranslateX = useSharedValue(-(sidebarWidth + 24));
-  const sidebarBackdropOpacity = useSharedValue(0);
-  const C = useThemePalette();
-  const { isDark } = useAppTheme();
-  const modalSheet = modalSheetBackground(C, isDark);
-  const styles = useMemo(
-    () => createHomeStyles(C, modalSheet),
-    [C, modalSheet],
-  );
+  const [selectedWidgetKey, setSelectedWidgetKey] = useState<string>("today-hearings");
+
+  const canAddCases = can("add_cases");
+  const canManageSettings = can("manage_settings");
+  const canManageJudges = can("add_cases") || can("edit_cases");
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
 
-  const sidebarPanelAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: sidebarTranslateX.value }],
-  }));
-  const sidebarBackdropAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: sidebarBackdropOpacity.value,
-  }));
-
-  const openSidebar = useCallback(() => {
-    if (isSidebarOpen) return;
-    sidebarTranslateX.value = -(sidebarWidth + 24);
-    sidebarBackdropOpacity.value = 0;
-    setIsSidebarMounted(true);
-    setIsSidebarOpen(true);
-  }, [isSidebarOpen, sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
-
-  const closeSidebar = useCallback(() => {
-    if (!isSidebarMounted) return;
-    setIsSidebarOpen(false);
-    sidebarBackdropOpacity.value = withTiming(0, { duration: 180 });
-    sidebarTranslateX.value = withTiming(
-      -(sidebarWidth + 24),
-      { duration: 220 },
-      (finished) => {
-        if (finished) runOnJS(setIsSidebarMounted)(false);
-      },
-    );
-  }, [isSidebarMounted, sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
-
-  const closeSidebarImmediately = useCallback(() => {
-    setIsSidebarOpen(false);
-    setIsSidebarMounted(false);
-    sidebarBackdropOpacity.value = 0;
-    sidebarTranslateX.value = -(sidebarWidth + 24);
-  }, [sidebarBackdropOpacity, sidebarTranslateX, sidebarWidth]);
-
-  useEffect(() => {
-    if (!isSidebarMounted || !isSidebarOpen) return;
-    sidebarBackdropOpacity.value = withTiming(1, { duration: 180 });
-    sidebarTranslateX.value = withTiming(0, { duration: 220 });
-  }, [isSidebarMounted, isSidebarOpen, sidebarBackdropOpacity, sidebarTranslateX]);
-
   const fetchCases = useCallback(
     async (isSilent = false) => {
-      if (!session?.user?.id || !isSupabaseConfigured) {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
         setCases([]);
         setLoading(false);
         setIsOffline(false);
@@ -300,16 +279,14 @@ export default function HomeScreen() {
         return;
       }
 
-      // Only show loading if not silent
-      if (!isSilent) {
-        setLoading(true);
-      }
+      if (!isSilent) setLoading(true);
       setError(null);
       setIsOffline(false);
+
       const { data, error: e } = await supabase
         .from("cases")
         .select("*")
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .is("deleted_at", null)
         .order("next_hearing_date", { ascending: true, nullsFirst: false });
 
@@ -327,12 +304,13 @@ export default function HomeScreen() {
         }
         return;
       }
+
       setIsOffline(false);
       const nextCases = (data as CaseRow[]) ?? [];
       setCases(nextCases);
       await setCachedCases(session.user.id, nextCases);
     },
-    [session?.user?.id, isOnline],
+    [session?.user?.id, effectiveOwnerId, isOnline],
   );
 
   const notesStorageKey = useMemo(
@@ -361,10 +339,6 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      let copilotStartTimeout: ReturnType<typeof setTimeout> | null = null;
-      let raf1 = 0;
-      let raf2 = 0;
-      let interactionTask: { cancel?: () => void } | null = null;
       (async () => {
         await loadNotesCount();
         if (!isOnline && session?.user?.id && isSupabaseConfigured) {
@@ -381,34 +355,11 @@ export default function HomeScreen() {
           const count = await getPendingCasesCount(session.user.id);
           if (!cancelled) setPendingCount(count);
         }
-        const hasSeenTour = await AsyncStorage.getItem(
-          "hasSeenHomeTourCopilot",
-        );
-        if (!hasSeenTour) {
-          copilotStartTimeout = setTimeout(() => {
-            if (cancelled) return;
-            interactionTask = InteractionManager.runAfterInteractions(() => {
-              if (cancelled) return;
-              raf1 = requestAnimationFrame(() => {
-                if (cancelled) return;
-                raf2 = requestAnimationFrame(() => {
-                  if (cancelled) return;
-                  start();
-                  AsyncStorage.setItem("hasSeenHomeTourCopilot", "true");
-                });
-              });
-            });
-          }, 600);
-        }
       })();
       return () => {
         cancelled = true;
-        if (copilotStartTimeout) clearTimeout(copilotStartTimeout);
-        interactionTask?.cancel?.();
-        cancelAnimationFrame(raf1);
-        cancelAnimationFrame(raf2);
       };
-    }, [fetchCases, loadNotesCount, start, session?.user?.id, isOnline]),
+    }, [fetchCases, loadNotesCount, session?.user?.id, isOnline]),
   );
 
   useFocusEffect(
@@ -416,11 +367,6 @@ export default function HomeScreen() {
       if (Platform.OS !== "android") return undefined;
 
       const onBackPress = () => {
-        // Close transient overlays first; otherwise leave app instead of navigating to auth stack.
-        if (isSidebarOpen || isSidebarMounted) {
-          closeSidebar();
-          return true;
-        }
         if (showFiledCasesModal) {
           setShowFiledCasesModal(false);
           return true;
@@ -435,186 +381,143 @@ export default function HomeScreen() {
 
       const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => sub.remove();
-    }, [isSidebarOpen, isSidebarMounted, closeSidebar, showFiledCasesModal, showCourtPortalModal]),
+    }, [showFiledCasesModal, showCourtPortalModal]),
   );
 
-  // Refetch when coming back online (smooth transition, no flicker)
   useEffect(() => {
     if (!isOnline || !session?.user?.id || !isSupabaseConfigured) return;
-    if (isOffline) {
-      fetchCases(true);
-    }
+    if (isOffline) fetchCases(true);
   }, [isOnline, isOffline, session?.user?.id, fetchCases]);
 
-  const handleDeleteCase = useCallback(
-    (caseId: string) => {
-      Alert.alert(
-        "Move to Trash?",
-        "The case will be moved to Trash. You can restore it anytime from Settings → Trash.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Move to Trash",
-            style: "destructive",
-            onPress: async () => {
-              if (!session?.user?.id) return;
-              if (!isOnline) {
-                await addPendingCaseDelete(session.user.id, caseId);
-                await removeCachedCase(session.user.id, caseId);
-                setCases((prev) => prev.filter((c) => c.id !== caseId));
-                Alert.alert(
-                  "Queued",
-                  "Case will be moved to Trash when internet is available.",
-                );
-                return;
-              }
-              const { error: e } = await supabase
-                .from("cases")
-                .update({ deleted_at: new Date().toISOString() })
-                .eq("id", caseId)
-                .eq("user_id", session.user.id);
-              if (e) Alert.alert("Error", e.message);
-              else {
-                await removeCachedCase(session.user.id, caseId);
-                fetchCases();
-              }
-            },
-          },
-        ],
-      );
-    },
-    [session?.user?.id, fetchCases, isOnline],
-  );
-
   const { hearingsToday, filedToday } = getTodayCases(cases, today);
-  const { hearingsThisWeek, filedThisWeek } = getWeeklyCases(
-    cases,
-    weekStart,
-    weekEnd,
-  );
+  const { hearingsThisWeek, filedThisWeek } = getWeeklyCases(cases, weekStart, weekEnd);
   const filedThisMonth = useMemo(() => getMonthCases(cases, today), [cases, today]);
 
-  const isTodayFilter = filter === "today";
-  const hasAnyToday = hearingsToday.length > 0;
-  const hasAnyWeekly = hearingsThisWeek.length > 0;
-  const hasAny = isTodayFilter ? hasAnyToday : hasAnyWeekly;
-  const sections = useMemo<CaseSection[]>(() => {
-    const result: CaseSection[] = [];
-    if (isTodayFilter) {
-      if (hearingsToday.length > 0) {
-        result.push({ title: "Hearings today", data: hearingsToday });
-      }
-    } else {
-      if (hearingsThisWeek.length > 0) {
-        result.push({ title: "Hearings this week", data: hearingsThisWeek });
-      }
-    }
-    return result;
-  }, [isTodayFilter, hearingsToday, hearingsThisWeek]);
   const filedCases = useMemo(() => {
     if (filedRange === "today") return filedToday;
     if (filedRange === "week") return filedThisWeek;
     return filedThisMonth;
   }, [filedRange, filedToday, filedThisWeek, filedThisMonth]);
+
   const filedRangeLabel =
     filedRange === "today" ? "Today" : filedRange === "week" ? "This week" : "This month";
-  const shareSections = useMemo<CaseSection[]>(() => {
-    if (isTodayFilter) {
-      return hearingsToday.length > 0
-        ? [{ title: "Hearings today", data: hearingsToday }]
-        : [];
-    }
-    return hearingsThisWeek.length > 0
-      ? [{ title: "Hearings this week", data: hearingsThisWeek }]
-      : [];
-  }, [isTodayFilter, hearingsToday, hearingsThisWeek]);
-  const hasShareableHearings = shareSections.length > 0;
 
-  const shareCasesAsPdf = useCallback(async () => {
-    if (isExporting || shareSections.length === 0) return;
-    setIsExporting(true);
-    try {
-      const available = await Sharing.isAvailableAsync();
-      if (!available) {
-        Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+  const exportCapturePayload = useMemo(() => {
+    if (!shareExportFilter) return null;
+    return buildSharePayload(shareExportFilter, hearingsToday, hearingsThisWeek);
+  }, [shareExportFilter, hearingsToday, hearingsThisWeek]);
+
+  const shareCasesAsPdf = useCallback(
+    async (shareFilter: HomeFilter) => {
+      const { title, sections } = buildSharePayload(
+        shareFilter,
+        hearingsToday,
+        hearingsThisWeek,
+      );
+      if (isExporting || sections.length === 0) return;
+      setIsExporting(true);
+      try {
+        const available = await Sharing.isAvailableAsync();
+        if (!available) {
+          Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+          return;
+        }
+        const html = buildCaseReportHtml(title, sections);
+        const { uri } = await Print.printToFileAsync({ html });
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          UTI: "com.adobe.pdf",
+          dialogTitle: `Share ${title} PDF`,
+        });
+      } catch (e: any) {
+        Alert.alert("Export failed", e?.message || "Could not export PDF.");
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [isExporting, hearingsToday, hearingsThisWeek],
+  );
+
+  const shareCasesAsImage = useCallback(
+    async (shareFilter: HomeFilter) => {
+      const { title, sections } = buildSharePayload(
+        shareFilter,
+        hearingsToday,
+        hearingsThisWeek,
+      );
+      if (isExporting || sections.length === 0) return;
+      setIsExporting(true);
+      try {
+        const available = await Sharing.isAvailableAsync();
+        if (!available) {
+          Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
+          return;
+        }
+
+        setShareExportFilter(shareFilter);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        if (!exportImageRef.current) {
+          Alert.alert("Export failed", "Could not capture the case list.");
+          return;
+        }
+
+        const uri = await captureRef(exportImageRef.current, {
+          format: "png",
+          quality: 1,
+          result: "tmpfile",
+        });
+        await Sharing.shareAsync(uri, {
+          mimeType: "image/png",
+          UTI: "public.png",
+          dialogTitle: `Share ${title} image`,
+        });
+      } catch (e: any) {
+        Alert.alert("Export failed", e?.message || "Could not export image.");
+      } finally {
+        setShareExportFilter(null);
+        setIsExporting(false);
+      }
+    },
+    [isExporting, hearingsToday, hearingsThisWeek],
+  );
+
+  const promptShareFormat = useCallback(
+    (shareFilter: HomeFilter) => {
+      const { sections } = buildSharePayload(shareFilter, hearingsToday, hearingsThisWeek);
+      if (sections.length === 0) {
+        Alert.alert(
+          "No hearings to share",
+          shareFilter === "today"
+            ? "There are no hearings today."
+            : "There are no hearings this week.",
+        );
         return;
       }
-      const reportTitle = isTodayFilter ? "Today Hearings" : "This Week Hearings";
-      const html = buildCaseReportHtml(reportTitle, shareSections);
-      const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, {
-        mimeType: "application/pdf",
-        UTI: "com.adobe.pdf",
-        dialogTitle: `Share ${reportTitle} PDF`,
-      });
-    } catch (e: any) {
-      Alert.alert("Export failed", e?.message || "Could not export PDF.");
-    } finally {
-      setIsExporting(false);
-    }
-  }, [isExporting, shareSections, isTodayFilter]);
-
-  const shareCasesAsImage = useCallback(async () => {
-    if (isExporting || shareSections.length === 0) return;
-    setIsExporting(true);
-    try {
-      const available = await Sharing.isAvailableAsync();
-      if (!available) {
-        Alert.alert("Sharing unavailable", "Sharing is not available on this device.");
-        return;
-      }
-      if (!exportImageRef.current) {
-        Alert.alert("Export failed", "Could not capture the case list.");
-        return;
-      }
-
-      // Allow one frame so hidden export view has the latest layout.
-      await new Promise((resolve) => setTimeout(resolve, 80));
-      const uri = await captureRef(exportImageRef.current, {
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
-      });
-      const reportTitle = isTodayFilter ? "Today Hearings" : "This Week Hearings";
-      await Sharing.shareAsync(uri, {
-        mimeType: "image/png",
-        UTI: "public.png",
-        dialogTitle: `Share ${reportTitle} image`,
-      });
-    } catch (e: any) {
-      Alert.alert("Export failed", e?.message || "Could not export image.");
-    } finally {
-      setIsExporting(false);
-    }
-  }, [isExporting, shareSections.length, isTodayFilter]);
+      Alert.alert("Share case list", "Choose a format", [
+        { text: "PDF", onPress: () => void shareCasesAsPdf(shareFilter) },
+        { text: "Image", onPress: () => void shareCasesAsImage(shareFilter) },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    },
+    [hearingsToday, hearingsThisWeek, shareCasesAsPdf, shareCasesAsImage],
+  );
 
   const handleShareCases = useCallback(() => {
     if (isExporting) return;
-    if (shareSections.length === 0) {
-      Alert.alert(
-        "No hearings to share",
-        isTodayFilter
-          ? "There are no hearings today."
-          : "There are no hearings this week.",
-      );
-      return;
-    }
-    Alert.alert("Share case list", "Choose a format", [
-      { text: "PDF", onPress: () => void shareCasesAsPdf() },
-      { text: "Image", onPress: () => void shareCasesAsImage() },
+    Alert.alert("Share case list", "Which list would you like to share?", [
+      { text: "Today cases", onPress: () => promptShareFormat("today") },
+      { text: "This week cases", onPress: () => promptShareFormat("weekly") },
       { text: "Cancel", style: "cancel" },
     ]);
-  }, [isExporting, shareSections.length, isTodayFilter, shareCasesAsPdf, shareCasesAsImage]);
+  }, [isExporting, promptShareFormat]);
 
   const openCourtPortalUrl = useCallback((entry: PakistanCourtPortal) => {
     const url = entry.url;
-
     const open = async () => {
       try {
         const canOpen = await Linking.canOpenURL(url);
-        if (!canOpen) {
-          throw new Error("UNSUPPORTED_URL");
-        }
+        if (!canOpen) throw new Error("UNSUPPORTED_URL");
         await Linking.openURL(url);
       } catch {
         try {
@@ -626,307 +529,161 @@ export default function HomeScreen() {
         }
       }
     };
-
     setTimeout(() => {
       void open();
     }, 150);
   }, []);
 
-  const openCourtSearchWebsite = useCallback(async () => {
-    try {
-      setShowCourtPortalModal(true);
-    } catch {
-      Alert.alert("Error", "Could not open court search options.");
-    }
+  const openCourtSearchWebsite = useCallback(() => {
+    setShowCourtPortalModal(true);
   }, []);
 
-  useEffect(() => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
-      setSidebarProfile(null);
-      return;
-    }
-    let mounted = true;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("full_name, first_name, last_name, email, avatar_url")
-          .eq("id", session.user.id)
-          .maybeSingle();
-        if (mounted) setSidebarProfile(data ?? null);
-      } catch {
-        if (mounted) setSidebarProfile(null);
+  const openFromHome = useCallback(
+    (pathname: string, params?: Record<string, string>) => {
+      router.push({
+        pathname,
+        params: { ...params, from: "home" },
+      } as never);
+    },
+    [router],
+  );
+
+  const widgets = useMemo<HomeWidget[]>(() => {
+    const list: HomeWidget[] = [
+      {
+        key: "today-hearings",
+        title: "Today cases",
+        subtitle: "Open today's hearings",
+        icon: "today",
+        count: hearingsToday.length,
+        onPress: () => openFromHome("/cases-overview", { filter: "today" }),
+      },
+      {
+        key: "week-hearings",
+        title: "This week cases",
+        subtitle: "Open weekly hearings",
+        icon: "date-range",
+        count: hearingsThisWeek.length,
+        onPress: () => openFromHome("/cases-overview", { filter: "weekly" }),
+      },
+      {
+        key: "all-cases",
+        title: "All cases",
+        subtitle: "Open full diary",
+        icon: "list-alt",
+        count: cases.length,
+        onPress: () => openFromHome("/(tabs)/diary"),
+      },
+      {
+        key: "filed-cases",
+        title: "Filed cases",
+        subtitle: "Today, week, month",
+        icon: "description",
+        count: filedToday.length,
+        onPress: () => setShowFiledCasesModal(true),
+      },
+      {
+        key: "calendar",
+        title: "Calendar",
+        subtitle: "Date-based view",
+        icon: "calendar-month",
+        onPress: () => openFromHome("/(tabs)/calendar"),
+      },
+      {
+        key: "notes",
+        title: "Notes",
+        subtitle: "Daily reminders",
+        icon: "sticky-note-2",
+        count: notesCount,
+        onPress: () => openFromHome("/notes"),
+      },
+      {
+        key: "add-case",
+        title: "Add case",
+        subtitle: "Create a new file",
+        icon: "add-circle-outline",
+        onPress: () => {
+          if (!canAddCases) return;
+          openFromHome("/add-case-flow");
+        },
+        disabled: !canAddCases,
+      },
+      {
+        key: "court-links",
+        title: "Court links",
+        subtitle: "Open court portals",
+        icon: "public",
+        onPress: openCourtSearchWebsite,
+      },
+      {
+        key: "clients",
+        title: "Clients",
+        subtitle: "Manage client list",
+        icon: "groups-2",
+        onPress: () => openFromHome("/clients"),
+      },
+      {
+        key: "judges",
+        title: "Judges",
+        subtitle: "Manage judge list",
+        icon: "gavel",
+        onPress: () => openFromHome("/judges"),
+      },
+      {
+        key: "share",
+        title: "Share list",
+        subtitle: "Export hearings",
+        icon: "share",
+        onPress: handleShareCases,
+        disabled: isExporting,
+      },
+      {
+        key: "settings",
+        title: "Settings",
+        subtitle: "Open app settings",
+        icon: "settings",
+        onPress: () => openFromHome("/settings"),
+      },
+      {
+        key: "acts",
+        title: "Acts & law books",
+        subtitle: "Reference library",
+        icon: "menu-book",
+        onPress: () => openFromHome("/acts"),
+      },
+      {
+        key: "trash",
+        title: "Trash",
+        subtitle: "Restore deleted cases",
+        icon: "delete-outline",
+        onPress: () => openFromHome("/trash"),
+      },
+    ];
+
+    return list.filter((item) => {
+      if (item.key === "clients") return can("view_clients");
+      if (item.key === "judges") return canManageJudges;
+      if (item.key === "settings" || item.key === "acts" || item.key === "trash") {
+        return canManageSettings;
       }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [session?.user?.id]);
+      return true;
+    });
+  }, [
+    hearingsToday.length,
+    hearingsThisWeek.length,
+    cases.length,
+    filedToday.length,
+    notesCount,
+    canAddCases,
+    canManageJudges,
+    canManageSettings,
+    can,
+    handleShareCases,
+    isExporting,
+    openCourtSearchWebsite,
+    openFromHome,
+  ]);
 
-  const sidebarDisplayName = useMemo(() => {
-    if (sidebarProfile?.full_name?.trim()) return sidebarProfile.full_name.trim();
-    const first = sidebarProfile?.first_name?.trim() ?? "";
-    const last = sidebarProfile?.last_name?.trim() ?? "";
-    const full = [first, last].filter(Boolean).join(" ").trim();
-    if (full) return full;
-    const metadataName =
-      (session?.user?.user_metadata?.full_name as string | undefined)?.trim() ||
-      (session?.user?.user_metadata?.name as string | undefined)?.trim();
-    return metadataName || "User";
-  }, [sidebarProfile, session?.user?.user_metadata]);
-
-  const sidebarEmail = useMemo(() => {
-    return sidebarProfile?.email?.trim() || session?.user?.email?.trim() || "No email";
-  }, [sidebarProfile?.email, session?.user?.email]);
-
-  const sidebarAvatarUrl = useMemo(() => {
-    const metadataAvatar =
-      (session?.user?.user_metadata?.avatar_url as string | undefined)?.trim() ||
-      (session?.user?.user_metadata?.picture as string | undefined)?.trim();
-    return sidebarProfile?.avatar_url?.trim() || metadataAvatar || "";
-  }, [sidebarProfile?.avatar_url, session?.user?.user_metadata]);
-
-  const sidebarInitials = useMemo(() => {
-    const source =
-      sidebarDisplayName && sidebarDisplayName !== "User" ? sidebarDisplayName : sidebarEmail;
-    const parts = source
-      .replace("@", " ")
-      .split(/\s+/)
-      .filter(Boolean);
-    if (parts.length === 0) return "U";
-    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }, [sidebarDisplayName, sidebarEmail]);
-
-  const shareButton = hasShareableHearings ? (
-    <Bounceable
-      onPress={handleShareCases}
-      style={styles.shareButton}
-      accessibilityLabel="Share case list"
-      disabled={isExporting}
-    >
-      {isExporting ? (
-        <ActivityIndicator size="small" color={C.black} />
-      ) : (
-        <MaterialIcons name="share" size={21} color={C.black} />
-      )}
-    </Bounceable>
-  ) : null;
-
-  const notesHeaderButton = (
-    <CopilotStep
-      text="Tap Notes to add and manage your daily notes."
-      order={2}
-      name="home-notes"
-      active={isFocused}
-    >
-      <WalkthroughableView collapsable={false}>
-        <Bounceable
-          style={styles.notesHeaderButton}
-          onPress={() => router.push("/notes")}
-          accessibilityLabel="Open notes"
-        >
-          <MaterialIcons name="sticky-note-2" size={16} color={C.pureWhite} />
-          <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
-          {notesCount > 0 ? (
-            <View style={styles.notesCountBadge}>
-              <ThemedText style={styles.notesCountText}>
-                {notesCount > 99 ? "99+" : String(notesCount)}
-              </ThemedText>
-            </View>
-          ) : null}
-        </Bounceable>
-      </WalkthroughableView>
-    </CopilotStep>
-  );
-  const menuHeaderButton = (
-    <Bounceable
-      onPress={openSidebar}
-      style={styles.menuHeaderButton}
-      accessibilityLabel="Open menu"
-    >
-      <MaterialIcons name="menu" size={21} color={C.black} />
-    </Bounceable>
-  );
-  const headerActions = (
-    <View style={styles.headerActions}>
-      {shareButton}
-      {notesHeaderButton}
-    </View>
-  );
-  const sidebarMenu = (
-    <Modal
-      visible={isSidebarMounted}
-      transparent
-      animationType="none"
-      onRequestClose={closeSidebar}
-    >
-      <View style={styles.sidebarOverlay}>
-        <Animated.View
-          style={[styles.sidebarBackdrop, sidebarBackdropAnimatedStyle]}
-          pointerEvents="box-none"
-        >
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeSidebar} />
-        </Animated.View>
-        <Animated.View
-          style={[
-            styles.sidebarPanel,
-            { width: sidebarWidth },
-            sidebarPanelAnimatedStyle,
-          ]}
-        >
-          <View style={styles.sidebarMainItems}>
-            <View style={styles.sidebarHeader}>
-              <View style={styles.sidebarProfileInfo}>
-                <View style={styles.sidebarAvatarWrap}>
-                  {sidebarAvatarUrl ? (
-                    <Image
-                      source={{ uri: sidebarAvatarUrl }}
-                      style={styles.sidebarAvatarImage}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <ThemedText style={styles.sidebarAvatarInitials}>
-                      {sidebarInitials}
-                    </ThemedText>
-                  )}
-                </View>
-                <View style={styles.sidebarProfileTextWrap}>
-                  <ThemedText style={styles.sidebarProfileName} numberOfLines={1}>
-                    {sidebarDisplayName}
-                  </ThemedText>
-                  <ThemedText style={styles.sidebarProfileEmail} numberOfLines={1}>
-                    {sidebarEmail}
-                  </ThemedText>
-                </View>
-              </View>
-              <Bounceable
-                style={styles.sidebarCloseButton}
-                onPress={closeSidebar}
-              >
-                <MaterialIcons name="close" size={20} color={C.black} />
-              </Bounceable>
-            </View>
-            <View style={styles.sidebarDivider} />
-
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/notes");
-              }}
-            >
-              <MaterialIcons name="sticky-note-2" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Notes</ThemedText>
-            </Bounceable>
-
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/clients");
-              }}
-            >
-              <MaterialIcons name="groups-2" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Manage clients list</ThemedText>
-            </Bounceable>
-
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/judges");
-              }}
-            >
-              <MaterialIcons name="gavel" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Manage judges list</ThemedText>
-            </Bounceable>
-
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                handleShareCases();
-              }}
-            >
-              <MaterialIcons name="share" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Share case list</ThemedText>
-            </Bounceable>
-
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebarImmediately();
-                void openCourtSearchWebsite();
-              }}
-            >
-              <MaterialIcons name="public" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Court links</ThemedText>
-            </Bounceable>
-
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/acts");
-              }}
-            >
-              <MaterialIcons name="menu-book" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Acts & law books</ThemedText>
-            </Bounceable>
-
-            <Bounceable
-              style={styles.sidebarItem}
-              onPress={() => {
-                closeSidebar();
-                router.push("/trash");
-              }}
-            >
-              <MaterialIcons name="delete-outline" size={19} color={C.black} />
-              <ThemedText style={styles.sidebarItemText}>Trash</ThemedText>
-            </Bounceable>
-          </View>
-
-          <View style={styles.sidebarBottomAction}>
-            <Bounceable
-              style={[styles.sidebarItem, styles.sidebarItemDanger]}
-              onPress={() => {
-                closeSidebar();
-                Alert.alert("Sign out?", "You can sign in again anytime.", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Sign out", style: "destructive", onPress: () => void signOut() },
-                ]);
-              }}
-            >
-              <MaterialIcons name="logout" size={19} color={C.themeRed} />
-              <ThemedText style={styles.sidebarItemDangerText}>Sign out</ThemedText>
-            </Bounceable>
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-  const filedCasesButton = (
-    <CopilotStep
-      text="Tap Filed cases to quickly view cases filed today, this week, or this month."
-      order={3}
-      name="home-filed-cases"
-      active={isFocused}
-    >
-      <WalkthroughableView collapsable={false}>
-        <View style={styles.filedCasesRow}>
-          <Bounceable
-            style={styles.filedCasesBtn}
-            onPress={() => setShowFiledCasesModal(true)}
-          >
-            <MaterialIcons name="description" size={15} color={C.black} />
-            <ThemedText style={styles.filedCasesBtnText}>Filed cases</ThemedText>
-            <MaterialIcons name="keyboard-arrow-down" size={16} color={C.black} />
-          </Bounceable>
-        </View>
-      </WalkthroughableView>
-    </CopilotStep>
-  );
   const filedCasesModal = (
     <Modal
       visible={showFiledCasesModal}
@@ -950,7 +707,8 @@ export default function HomeScreen() {
           >
             {(["today", "week", "month"] as const).map((range) => {
               const active = filedRange === range;
-              const label = range === "today" ? "Today" : range === "week" ? "This week" : "This month";
+              const label =
+                range === "today" ? "Today" : range === "week" ? "This week" : "This month";
               return (
                 <Bounceable
                   key={range}
@@ -996,372 +754,165 @@ export default function HomeScreen() {
     </Modal>
   );
 
-  if (loading && cases.length === 0 && !isOffline) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <ScreenHeader
-          title="Home"
-          showBack={false}
-          leftComponent={menuHeaderButton}
-          rightComponent={headerActions}
-        />
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
-        </View>
-        {sidebarMenu}
-        <CourtPortalBottomSheet
-          visible={showCourtPortalModal}
-          onClose={() => setShowCourtPortalModal(false)}
-          onOpenPortal={openCourtPortalUrl}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  if (error && cases.length === 0 && !isOffline) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <ScreenHeader
-          title="Home"
-          showBack={false}
-          leftComponent={menuHeaderButton}
-          rightComponent={headerActions}
-        />
-        <View style={styles.container}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        </View>
-        {sidebarMenu}
-        <CourtPortalBottomSheet
-          visible={showCourtPortalModal}
-          onClose={() => setShowCourtPortalModal(false)}
-          onOpenPortal={openCourtPortalUrl}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  if (!hasAny) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <CopilotStep
-          text="This is your dashboard where you can see all your upcoming hearings and filings."
-          order={1}
-          name="welcome"
-          active={isFocused}
+  const renderWidget = (widget: HomeWidget) => (
+    (() => {
+      const isSelectedWidget = selectedWidgetKey === widget.key;
+      const handleWidgetPress = () => {
+        setSelectedWidgetKey(widget.key);
+        widget.onPress();
+      };
+      return (
+    <Bounceable
+      key={widget.key}
+      style={[styles.widgetPressable, { width: widgetLayout.widgetWidth }]}
+      onPress={handleWidgetPress}
+      disabled={widget.disabled}
+      accessibilityLabel={widget.title}
+      activeScale={0.98}
+    >
+      <View
+        style={[
+          styles.widgetShadowShell,
+          isSelectedWidget && styles.widgetShadowShellSelected,
+        ]}
+      >
+        <View
+          style={[
+            styles.widgetCard,
+            isSelectedWidget && styles.widgetCardSelected,
+            widget.disabled && styles.widgetCardDisabled,
+          ]}
         >
-          <WalkthroughableView collapsable={false}>
-            <ScreenHeader
-              title={isTodayFilter ? "Today" : "This week"}
-              showBack={false}
-              leftComponent={menuHeaderButton}
-              rightComponent={headerActions}
-            />
-          </WalkthroughableView>
-        </CopilotStep>
-        {pendingCount > 0 && (
-          <View style={styles.pendingBanner}>
-            <MaterialIcons
-              name="cloud-upload"
-              size={18}
-              color={C.zodiacColour}
-            />
-            <ThemedText style={styles.pendingBannerText}>
-              {pendingCount} case{pendingCount !== 1 ? "s" : ""} waiting to sync
-            </ThemedText>
-          </View>
-        )}
-        <View style={styles.container}>
-          {filedCasesButton}
-          <View style={styles.filterRow}>
-            <CopilotStep
-              text="Tap here to see only today's cases."
-              order={4}
-              name="filter-today"
-              active={isFocused}
-            >
-              <WalkthroughableView style={{ width: "45%" }} collapsable={false}>
-                <Pressable
-                  style={[
-                    styles.filterBtn,
-                    isTodayFilter && styles.filterBtnActive,
-                  ]}
-                  onPress={() => setFilter("today")}
-                >
-                  <ThemedText
-                    style={[
-                      styles.filterBtnText,
-                      isTodayFilter && styles.filterBtnTextActive,
-                    ]}
-                  >
-                    Today
-                  </ThemedText>
-                </Pressable>
-              </WalkthroughableView>
-            </CopilotStep>
-
-            <CopilotStep
-              text="Tap here to see this week's hearings and filings."
-              order={5}
-              name="filter-weekly"
-              active={isFocused}
-            >
-              <WalkthroughableView style={{ width: "45%" }} collapsable={false}>
-                <Pressable
-                  style={[
-                    styles.filterBtn,
-                    !isTodayFilter && styles.filterBtnActive,
-                  ]}
-                  onPress={() => setFilter("weekly")}
-                >
-                  <ThemedText
-                    style={[
-                      styles.filterBtnText,
-                      !isTodayFilter && styles.filterBtnTextActive,
-                    ]}
-                  >
-                    Weekly
-                  </ThemedText>
-                </Pressable>
-              </WalkthroughableView>
-            </CopilotStep>
-          </View>
-          <Spacer.Column numberOfSpaces={10} />
-          <View style={styles.card}>
-            <View style={styles.iconCircle}>
-              <MaterialIcons
-                name={isOffline ? "cloud-off" : "today"}
-                size={40}
-                color={C.zodiacColour}
-              />
-            </View>
-            <ThemedText style={styles.heading}>
-              {isOffline
-                ? "You're offline"
-                : isTodayFilter
-                  ? "Nothing for today"
-                  : "Nothing this week"}
-            </ThemedText>
-            <ThemedText style={styles.subtext}>
-              {isOffline
-                ? "Your cases will appear when you're connected. Cases you add while offline will sync automatically."
-                : isTodayFilter
-                  ? "Cases with a hearing today will appear here."
-                  : "Cases with a hearing this week will appear here."}
-            </ThemedText>
-            <CopilotStep
-              text="Tap here to start adding your cases and stay organized."
-              order={6}
-              name="add-case"
-              active={isFocused}
-            >
-              <WalkthroughableView collapsable={false}>
-                <Bounceable
-                  style={styles.addButton}
-                  onPress={() => router.push("/add-case-flow")}
-                >
-                  <MaterialIcons
-                    name="add"
-                    size={22}
-                    color={C.pureWhite}
-                  />
-                  <ThemedText style={styles.addButtonText}>
-                    Add Case
-                  </ThemedText>
-                </Bounceable>
-              </WalkthroughableView>
-            </CopilotStep>
-            <Bounceable
-              style={styles.diaryLink}
-              onPress={() => router.push("/(tabs)/diary")}
-            >
-              <ThemedText style={styles.diaryLinkText}>
-                View all cases
-              </ThemedText>
-              <MaterialIcons
-                name="chevron-right"
-                size={20}
-                color={C.black}
-              />
-            </Bounceable>
-          </View>
+      <View style={styles.widgetTopRow}>
+        <View
+          style={[
+            styles.widgetIconWrap,
+            isSelectedWidget && styles.widgetIconWrapSelected,
+          ]}
+        >
+          <MaterialIcons
+            name={widget.icon}
+            size={20}
+            color={isSelectedWidget ? C.zodiacColour : C.black}
+          />
         </View>
-        {sidebarMenu}
-        {filedCasesModal}
-        <CourtPortalBottomSheet
-          visible={showCourtPortalModal}
-          onClose={() => setShowCourtPortalModal(false)}
-          onOpenPortal={openCourtPortalUrl}
-        />
-      </SafeAreaView>
-    );
-  }
+        {typeof widget.count === "number" ? (
+          <View style={styles.widgetCountPill}>
+            <ThemedText style={styles.widgetCountText}>{widget.count}</ThemedText>
+          </View>
+        ) : null}
+      </View>
+      <ThemedText style={styles.widgetTitle} numberOfLines={2}>
+        {widget.title}
+      </ThemedText>
+      <ThemedText style={styles.widgetSubtitle} numberOfLines={2}>
+        {widget.subtitle}
+      </ThemedText>
+        </View>
+      </View>
+    </Bounceable>
+      );
+    })()
+  );
+
+  const headerActions = (
+    <View style={styles.headerActions}>
+      <Bounceable
+        onPress={() => router.push("/notes")}
+        style={styles.notesHeaderButton}
+        accessibilityLabel="Open notes"
+      >
+        <MaterialIcons name="sticky-note-2" size={16} color={C.pureWhite} />
+        <ThemedText style={styles.notesHeaderButtonText}>Notes</ThemedText>
+        {notesCount > 0 ? (
+          <View style={styles.notesCountBadge}>
+            <ThemedText style={styles.notesCountText}>
+              {notesCount > 99 ? "99+" : String(notesCount)}
+            </ThemedText>
+          </View>
+        ) : null}
+      </Bounceable>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <CopilotStep
-        text="This is your dashboard where you can see all your upcoming hearings and filings."
-        order={1}
-        name="welcome"
-        active={isFocused}
-      >
-        <WalkthroughableView collapsable={false}>
-          <ScreenHeader
-            title={isTodayFilter ? "Today Cases" : "This week Cases"}
-            showBack={false}
-            leftComponent={menuHeaderButton}
-            rightComponent={headerActions}
-          />
-        </WalkthroughableView>
-      </CopilotStep>
-      {pendingCount > 0 && (
+      <ScreenHeader title="Dashboard" showBack={false} rightComponent={headerActions} />
+
+      {pendingCount > 0 ? (
         <View style={styles.pendingBanner}>
-          <MaterialIcons
-            name="cloud-upload"
-            size={18}
-            color={C.zodiacColour}
-          />
+          <MaterialIcons name="cloud-upload" size={18} color={C.zodiacColour} />
           <ThemedText style={styles.pendingBannerText}>
             {pendingCount} case{pendingCount !== 1 ? "s" : ""} waiting to sync
           </ThemedText>
         </View>
-      )}
-      <Animated.View
-        style={{ flex: 1 }}
-        entering={FadeInUp.duration(400).springify().damping(20)}
+      ) : null}
+
+      <Animated.ScrollView
+        entering={FadeInUp.duration(300)}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={fetchCases}
+            colors={[C.black]}
+            tintColor={C.black}
+          />
+        }
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          <Spacer.Column numberOfSpaces={4} />
-          {filedCasesButton}
+          {isOffline ? (
+            <View style={styles.offlineBadge}>
+              <MaterialIcons name="cloud-off" size={15} color={C.themeRed} />
+              <ThemedText style={styles.offlineText}>Offline mode: showing cached data</ThemedText>
+            </View>
+          ) : null}
+          {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
 
-          <View style={styles.filterRow}>
-            <CopilotStep
-              text="Tap here to see only today's cases."
-              order={4}
-              name="filter-today"
-              active={isFocused}
-            >
-              <WalkthroughableView style={styles.filterBtnWrapper} collapsable={false}>
-                <Pressable
-                  style={[
-                    styles.filterBtn,
-                    isTodayFilter && styles.filterBtnActive,
-                  ]}
-                  onPress={() => setFilter("today")}
-                >
-                  <ThemedText
-                    style={[
-                      styles.filterBtnText,
-                      isTodayFilter && styles.filterBtnTextActive,
-                    ]}
-                  >
-                    Today
-                  </ThemedText>
-                </Pressable>
-              </WalkthroughableView>
-            </CopilotStep>
-
-            <CopilotStep
-              text="Tap here to see this week's hearings and filings."
-              order={5}
-              name="filter-weekly"
-              active={isFocused}
-            >
-              <WalkthroughableView style={styles.filterBtnWrapper} collapsable={false}>
-                <Pressable
-                  style={[
-                    styles.filterBtn,
-                    !isTodayFilter && styles.filterBtnActive,
-                  ]}
-                  onPress={() => setFilter("weekly")}
-                >
-                  <ThemedText
-                    style={[
-                      styles.filterBtnText,
-                      !isTodayFilter && styles.filterBtnTextActive,
-                    ]}
-                  >
-                    Weekly
-                  </ThemedText>
-                </Pressable>
-              </WalkthroughableView>
-            </CopilotStep>
-          </View>
-          <Spacer.Column numberOfSpaces={5} />
-          <Animated.ScrollView
-            refreshControl={
-              <RefreshControl
-                refreshing={loading}
-                onRefresh={fetchCases}
-                colors={[C.black]}
-                tintColor={C.black}
-              />
-            }
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {sections.map((section, sectionIndex) => {
-              const previousItemsCount = sections
-                .slice(0, sectionIndex)
-                .reduce((acc, s) => acc + s.data.length, 0);
-
-              return (
-                <View key={section.title} style={styles.section}>
-                  <ThemedText style={styles.sectionTitle}>{section.title}</ThemedText>
-                  <Spacer.Column numberOfSpaces={5} />
-                  {section.data.map((caseItem, itemIndex) => (
-                    <CaseCard
-                      key={caseItem.id}
-                      index={previousItemsCount + itemIndex}
-                      caseItem={caseItem}
-                      onEdit={(caseId) => router.push(`/case/${caseId}/edit`)}
-                      onDelete={handleDeleteCase}
-                      walkthroughEnabled={previousItemsCount + itemIndex === 0}
-                      walkthroughContext="home-case-actions"
-                      walkthroughActive={isFocused}
-                    />
-                  ))}
-                </View>
-              );
-            })}
-          </Animated.ScrollView>
+          <View style={styles.widgetsGrid}>{widgets.map(renderWidget)}</View>
         </View>
-      </Animated.View>
+      </Animated.ScrollView>
+
       <View pointerEvents="none" style={styles.exportCaptureRoot}>
         <View
           ref={exportImageRef}
           collapsable={false}
-          style={[
-            styles.exportCaptureCanvas,
-            { width: Math.max(screenWidth - 48, 280) },
-          ]}
+          style={
+            exportCapturePayload
+              ? [styles.exportCaptureCanvas, { width: Math.max(screenWidth - 48, 280) }]
+              : undefined
+          }
         >
-          <ThemedText style={styles.exportCaptureHeading}>
-            {isTodayFilter ? "Today Hearings" : "This Week Hearings"}
-          </ThemedText>
-          {shareSections.map((section) => (
-            <View key={`export-${section.title}`} style={styles.exportSection}>
-              <ThemedText style={styles.exportSectionTitle}>{section.title}</ThemedText>
-              {section.data.map((caseItem) => (
-                <View key={`export-row-${caseItem.id}`} style={styles.exportRow}>
-                  <ThemedText style={styles.exportRowTitle}>
-                    {getCaseDisplayTitle(caseItem)}
-                  </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
-                    Case no: {caseItem.case_number?.trim() || "—"}
-                  </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
-                    Court: {caseItem.court_name?.trim() || "—"}
-                  </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
-                    Next: {formatCaseDate(caseItem.next_hearing_date)}
-                  </ThemedText>
+          {exportCapturePayload ? (
+            <>
+              <ThemedText style={styles.exportCaptureHeading}>{exportCapturePayload.title}</ThemedText>
+              {exportCapturePayload.sections.map((section) => (
+                <View key={`export-${section.title}`} style={styles.exportSection}>
+                  <ThemedText style={styles.exportSectionTitle}>{section.title}</ThemedText>
+                  {section.data.map((caseItem) => (
+                    <View key={`export-row-${caseItem.id}`} style={styles.exportRow}>
+                      <ThemedText style={styles.exportRowTitle}>
+                        {getCaseDisplayTitle(caseItem)}
+                      </ThemedText>
+                      <ThemedText style={styles.exportRowMeta}>
+                        Case no: {caseItem.case_number?.trim() || "—"}
+                      </ThemedText>
+                      <ThemedText style={styles.exportRowMeta}>
+                        Court: {caseItem.court_name?.trim() || "—"}
+                      </ThemedText>
+                      <ThemedText style={styles.exportRowMeta}>
+                        Next: {formatCaseDate(caseItem.next_hearing_date)}
+                      </ThemedText>
+                    </View>
+                  ))}
                 </View>
               ))}
-            </View>
-          ))}
+            </>
+          ) : null}
         </View>
       </View>
-      {sidebarMenu}
+
       {filedCasesModal}
       <CourtPortalBottomSheet
         visible={showCourtPortalModal}
@@ -1374,549 +925,316 @@ export default function HomeScreen() {
 
 function createHomeStyles(C: AppColors, modalSheet: string) {
   return StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
-  pendingBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: C.zodiacColour + "20",
-    marginHorizontal: 24,
-    marginTop: 8,
-    borderRadius: 8,
-  },
-  pendingBannerText: {
-    fontSize: 14,
-    color: C.zodiacColour,
-    fontWeight: "500",
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    backgroundColor: C.background,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    marginBottom: 12,
-    alignSelf: "center",
-    color: C.black,
-    backgroundColor: C.background,
-  },
-  filterRow: {
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    width: "100%",
-    paddingVertical: 10,
-    justifyContent: "space-around",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.borderGray,
-  },
-  filterBtnWrapper: {
-    width: "45%",
-  },
-  filterBtn: {
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 12,
-    backgroundColor: C.grey100,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  filterBtnActive: {
-    backgroundColor: C.themeBlack,
-    borderColor: C.themeBlack,
-  },
-  filterBtnText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.gray50,
-  },
-  filterBtnTextActive: {
-    color: C.pureWhite,
-  },
-  filedCasesRow: {
-    width: "100%",
-    alignItems: "flex-end",
-    marginBottom: 8,
-  },
-  filedCasesBtn: {
-    minHeight: 34,
-    paddingHorizontal: 10,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: C.borderGray,
-    backgroundColor: C.pureWhite,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  filedCasesBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: C.black,
-  },
-  filedRangeRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-    paddingRight: 4,
-  },
-  filedRangeBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.borderGray,
-    backgroundColor: C.background,
-  },
-  filedRangeBtnActive: {
-    backgroundColor: C.themeBlack,
-    borderColor: C.themeBlack,
-  },
-  filedRangeBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: C.gray50,
-    paddingHorizontal: 10,
-  },
-  filedRangeBtnTextActive: {
-    color: C.pureWhite,
-  },
-  filedListScroll: {
-    maxHeight: 300,
-  },
-  filedCaseCard: {
-    borderWidth: 1,
-    borderColor: C.borderGray,
-    backgroundColor: C.background,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
-  },
-  filedCaseTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: C.black,
-    marginBottom: 4,
-  },
-  filedCaseMeta: {
-    fontSize: 12,
-    color: C.gray50,
-  },
-  filedEmptyText: {
-    fontSize: 13,
-    color: C.gray50,
-    paddingVertical: 8,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.gray50,
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  exportCaptureRoot: {
-    position: "absolute",
-    left: -10000,
-    top: 0,
-    opacity: 0,
-  },
-  exportCaptureCanvas: {
-    backgroundColor: C.pureWhite,
-    padding: 16,
-    borderRadius: 12,
-  },
-  exportCaptureHeading: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: C.black,
-    marginBottom: 12,
-  },
-  exportSection: {
-    marginBottom: 14,
-  },
-  exportSectionTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: C.gray50,
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  exportRow: {
-    backgroundColor: C.background,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
-  },
-  exportRowTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: C.black,
-    marginBottom: 2,
-  },
-  exportRowMeta: {
-    fontSize: 12,
-    color: C.gray50,
-  },
-  errorText: {
-    color: C.themeRed,
-    marginTop: 8,
-  },
-  shareButton: {
-    minWidth: 34,
-    minHeight: 34,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  notesHeaderButton: {
-    position: "relative",
-    minWidth: 76,
-    minHeight: 34,
-    borderRadius: 17,
-    backgroundColor: C.zodiacColour,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 4,
-    paddingHorizontal: 10,
-    ...theme.shadow,
-  },
-  notesHeaderButtonText: {
-    color: C.pureWhite,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  notesCountBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: C.themeRed,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 3,
-  },
-  notesCountText: {
-    fontSize: 9,
-    lineHeight: 10,
-    textAlign: "center",
-    includeFontPadding: false,
-    color: C.pureWhite,
-    fontWeight: "700",
-  },
-  menuHeaderButton: {
-    minWidth: 34,
-    minHeight: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.background,
-  },
-  sidebarOverlay: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  sidebarBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  sidebarPanel: {
-    backgroundColor: modalSheet,
-    minHeight: 360,
-    height: "80%",
-    paddingTop: 18,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
-
-  },
-  sidebarMainItems: {
-    flex: 1,
-  },
-  sidebarBottomAction: {
-    paddingTop: 8,
-  },
-  sidebarHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 8,
-    gap: 10,
-  },
-  sidebarProfileInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    minWidth: 0,
-  },
-  sidebarAvatarWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: C.grey100,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: C.borderGray,
-  },
-  sidebarAvatarImage: {
-    width: "100%",
-    height: "100%",
-  },
-  sidebarAvatarInitials: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: C.gray50,
-  },
-  sidebarProfileTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sidebarProfileName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: C.black,
-  },
-  sidebarProfileEmail: {
-    fontSize: 14,
-    color: C.gray50,
-    marginTop: 2,
-  },
-  sidebarDivider: {
-    height: 1,
-    backgroundColor: C.borderGray,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  sidebarCloseButton: {
-    minHeight: 34,
-    minWidth: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.background,
-  },
-  sidebarItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-  },
-  sidebarItemText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.black,
-  },
-  sidebarItemDanger: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: C.themeRed + "33",
-    backgroundColor: C.themeRed + "10",
-  },
-  sidebarItemDangerText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: C.themeRed,
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.34)",
-  },
-  modalCard: {
-    backgroundColor: modalSheet,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 18,
-    maxHeight: "74%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: C.black,
-  },
-  modalClose: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.background,
-  },
-  courtPortalModalIntro: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: C.gray50,
-    marginBottom: 10,
-  },
-  courtPortalScroll: {
-    marginBottom: 12,
-  },
-  courtPortalListContent: {
-    paddingBottom: 8,
-  },
-  courtPortalSectionTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: C.gray50,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  courtPortalSectionTitleFirst: {
-    marginTop: 0,
-  },
-  courtPortalOption: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.borderGray,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
-    backgroundColor: C.background,
-  },
-  courtPortalOptionSelected: {
-    borderColor: C.themeBlack,
-    backgroundColor: C.gray100,
-  },
-  courtPortalOptionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  courtPortalOptionTexts: {
-    flex: 1,
-    gap: 2,
-  },
-  courtPortalOptionLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: C.black,
-  },
-  courtPortalOptionDesc: {
-    fontSize: 12,
-    color: C.gray50,
-    lineHeight: 17,
-  },
-  courtPortalOptionIconCol: {
-    width: 26,
-    alignItems: "flex-end",
-  },
-  courtPortalOpenBtn: {
-    height: 46,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.themeBlack,
-  },
-  courtPortalOpenBtnDisabled: {
-    opacity: 0.5,
-  },
-  courtPortalOpenBtnText: {
-    color: C.pureWhite,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  card: {
-    backgroundColor: C.pureWhite,
-    borderRadius: 16,
-    paddingVertical: 32,
-    paddingHorizontal: 28,
-    alignItems: "center",
-    minWidth: "100%",
-    ...theme.shadow,
-  },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: C.gray100,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  heading: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: C.black,
-    marginBottom: 8,
-  },
-  subtext: {
-    fontSize: 15,
-    color: C.gray50,
-    marginBottom: 24,
-    textAlign: "center",
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: C.themeBlack,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    color: C.pureWhite,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  diaryLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 16,
-    gap: 4,
-  },
-  diaryLinkText: {
-    fontSize: 15,
-    color: C.black,
-    fontWeight: "500",
-  },
+    safeArea: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    scrollContent: {
+      paddingBottom: 30,
+    },
+    container: {
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      backgroundColor: C.background,
+    },
+    offlineBadge: {
+      marginBottom: 10,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: C.themeRed + "12",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    offlineText: {
+      fontSize: 12,
+      color: C.themeRed,
+      fontWeight: "600",
+    },
+    pendingBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      backgroundColor: C.zodiacColour + "20",
+      marginHorizontal: 20,
+      marginTop: 8,
+      borderRadius: 8,
+    },
+    pendingBannerText: {
+      fontSize: 14,
+      color: C.zodiacColour,
+      fontWeight: "500",
+    },
+    widgetsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: WIDGET_GRID_GAP,
+    },
+    widgetPressable: {
+      borderRadius: 14,
+    },
+    widgetShadowShell: {
+      borderRadius: 14,
+      backgroundColor: C.pureWhite,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 4,
+        },
+        android: {
+          elevation: 3,
+        },
+        default: {},
+      }),
+    },
+    widgetShadowShellSelected: {
+      borderColor: C.zodiacColour,
+    },
+    widgetCard: {
+      borderRadius: 14,
+      padding: 12,
+      backgroundColor: "transparent",
+      minHeight: 114,
+    },
+    widgetCardSelected: {
+      backgroundColor: C.zodiacColour + "12",
+    },
+    widgetCardDisabled: {
+      opacity: 0.5,
+    },
+    widgetTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    widgetIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: C.grey100,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    widgetIconWrapSelected: {
+      backgroundColor: C.pureWhite,
+    },
+    widgetCountPill: {
+      minWidth: 28,
+      height: 22,
+      paddingHorizontal: 8,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.themeBlack,
+    },
+    widgetCountText: {
+      fontSize: 12,
+      color: C.pureWhite,
+      fontWeight: "700",
+    },
+    widgetTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: C.black,
+      flexShrink: 1,
+    },
+    widgetSubtitle: {
+      marginTop: 4,
+      fontSize: 12,
+      color: C.gray50,
+      lineHeight: 16,
+      flexShrink: 1,
+    },
+    errorText: {
+      color: C.themeRed,
+      marginBottom: 10,
+      fontSize: 13,
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    notesHeaderButton: {
+      position: "relative",
+      minWidth: 76,
+      minHeight: 34,
+      borderRadius: 17,
+      backgroundColor: C.zodiacColour,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 4,
+      paddingHorizontal: 10,
+      ...theme.shadow,
+    },
+    notesHeaderButtonText: {
+      color: C.pureWhite,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    notesCountBadge: {
+      position: "absolute",
+      top: -4,
+      right: -4,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: C.themeRed,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 3,
+    },
+    notesCountText: {
+      fontSize: 9,
+      lineHeight: 10,
+      textAlign: "center",
+      includeFontPadding: false,
+      color: C.pureWhite,
+      fontWeight: "700",
+    },
+    modalRoot: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    modalOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.34)",
+    },
+    modalCard: {
+      backgroundColor: modalSheet,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 18,
+      maxHeight: "74%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: C.black,
+    },
+    modalClose: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.background,
+    },
+    filedRangeRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 12,
+      paddingRight: 4,
+    },
+    filedRangeBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      backgroundColor: C.background,
+    },
+    filedRangeBtnActive: {
+      backgroundColor: C.themeBlack,
+      borderColor: C.themeBlack,
+    },
+    filedRangeBtnText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: C.gray50,
+      paddingHorizontal: 10,
+    },
+    filedRangeBtnTextActive: {
+      color: C.pureWhite,
+    },
+    filedListScroll: {
+      maxHeight: 300,
+    },
+    filedCaseCard: {
+      borderWidth: 1,
+      borderColor: C.borderGray,
+      backgroundColor: C.background,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 8,
+    },
+    filedCaseTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 4,
+    },
+    filedCaseMeta: {
+      fontSize: 12,
+      color: C.gray50,
+    },
+    filedEmptyText: {
+      fontSize: 13,
+      color: C.gray50,
+      paddingVertical: 8,
+    },
+    exportCaptureRoot: {
+      position: "absolute",
+      left: -10000,
+      top: 0,
+      opacity: 0,
+    },
+    exportCaptureCanvas: {
+      backgroundColor: C.pureWhite,
+      padding: 16,
+      borderRadius: 12,
+    },
+    exportCaptureHeading: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 12,
+    },
+    exportSection: {
+      marginBottom: 14,
+    },
+    exportSectionTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: C.gray50,
+      marginBottom: 8,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    exportRow: {
+      backgroundColor: C.background,
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 8,
+    },
+    exportRowTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 2,
+    },
+    exportRowMeta: {
+      fontSize: 12,
+      color: C.gray50,
+    },
   });
 }

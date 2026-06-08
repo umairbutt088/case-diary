@@ -13,6 +13,13 @@ import { AppState, type AppStateStatus } from "react-native";
 
 import { tryApplySupabaseAuthFromUrl } from "@/lib/auth-deeplink";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import type { AccessPermission, AccessPermissions, AccessRole } from "@/types/access";
+import {
+  FULL_ACCESS_PERMISSIONS,
+  SUBORDINATE_FALLBACK_PERMISSIONS,
+} from "@/types/access";
+import type { ProfileRow } from "@/types/profile";
+import type { SubordinateLinkRow } from "@/types/subordinate-link";
 
 const ONBOARDING_STORAGE_KEY = "@legal_diary/onboarding_completed";
 const EXPECTS_PASSWORD_CHANGE_KEY = "@legal_diary/expects_password_change";
@@ -35,9 +42,29 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
   ]);
 }
 
+function normalizeRole(value: string | null | undefined): AccessRole {
+  if (
+    value === "user" ||
+    value === "partner" ||
+    value === "admin" ||
+    value === "subordinate"
+  ) {
+    return value;
+  }
+  return "user";
+}
+
 type AuthContextValue = {
   session: Session | null;
   isLoading: boolean;
+  isAccessLoading: boolean;
+  profile: ProfileRow | null;
+  role: AccessRole;
+  effectiveOwnerId: string | null;
+  permissions: AccessPermissions;
+  subordinateLink: SubordinateLinkRow | null;
+  can: (permission: AccessPermission) => boolean;
+  refreshAccess: () => Promise<void>;
   /** True after opening a password-recovery deep link until the user sets a new password or signs out. */
   expectsPasswordChange: boolean;
   clearPasswordRecoveryExpectation: () => Promise<void>;
@@ -52,6 +79,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expectsPasswordChange, setExpectsPasswordChange] = useState(false);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [role, setRole] = useState<AccessRole>("user");
+  const [effectiveOwnerId, setEffectiveOwnerId] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<AccessPermissions>(FULL_ACCESS_PERMISSIONS);
+  const [subordinateLink, setSubordinateLink] = useState<SubordinateLinkRow | null>(null);
+  const [isAccessLoading, setIsAccessLoading] = useState(false);
   const [onboardingCompleted, setOnboardingCompletedState] = useState<
     boolean | null
   >(null);
@@ -82,6 +115,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearPasswordRecoveryExpectation();
     if (isSupabaseConfigured) await supabase.auth.signOut();
   }, [clearPasswordRecoveryExpectation]);
+
+  const refreshAccess = useCallback(async () => {
+    const userId = session?.user?.id;
+    if (!isSupabaseConfigured || !userId) {
+      setProfile(null);
+      setRole("user");
+      setEffectiveOwnerId(null);
+      setPermissions(FULL_ACCESS_PERMISSIONS);
+      setSubordinateLink(null);
+      setIsAccessLoading(false);
+      return;
+    }
+
+    setIsAccessLoading(true);
+    try {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const nextProfile = (profileData as ProfileRow | null) ?? null;
+      setProfile(nextProfile);
+
+      const nextRole = normalizeRole(nextProfile?.role);
+      setRole(nextRole);
+
+      if (nextRole !== "subordinate") {
+        setSubordinateLink(null);
+        setEffectiveOwnerId(userId);
+        setPermissions(FULL_ACCESS_PERMISSIONS);
+        return;
+      }
+
+      const { data: linkData } = await supabase
+        .from("subordinate_links")
+        .select("*")
+        .eq("subordinate_user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      const link = (linkData as SubordinateLinkRow | null) ?? null;
+      setSubordinateLink(link);
+      setEffectiveOwnerId(link?.supervisor_user_id ?? userId);
+      setPermissions(
+        link
+          ? {
+              view_cases: Boolean(link.can_view_cases),
+              add_cases: Boolean(link.can_add_cases),
+              edit_cases: Boolean(link.can_edit_cases),
+              delete_cases: Boolean(link.can_delete_cases),
+              view_clients: Boolean(link.can_view_clients),
+              manage_documents: Boolean(link.can_manage_documents),
+              manage_settings: Boolean(link.can_manage_settings),
+            }
+          : SUBORDINATE_FALLBACK_PERMISSIONS,
+      );
+    } catch {
+      setProfile(null);
+      setRole("user");
+      setEffectiveOwnerId(userId);
+      setPermissions(FULL_ACCESS_PERMISSIONS);
+      setSubordinateLink(null);
+    } finally {
+      setIsAccessLoading(false);
+    }
+  }, [session?.user?.id]);
 
   useEffect(() => {
     loadOnboardingFlag();
@@ -200,6 +300,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!session?.user?.id) {
+      setProfile(null);
+      setRole("user");
+      setEffectiveOwnerId(null);
+      setPermissions(FULL_ACCESS_PERMISSIONS);
+      setSubordinateLink(null);
+      setIsAccessLoading(false);
+      return;
+    }
+    void refreshAccess();
+  }, [session?.user?.id, refreshAccess]);
+
+  const can = useCallback(
+    (permission: AccessPermission) => Boolean(permissions[permission]),
+    [permissions],
+  );
+
+  useEffect(() => {
     if (!isSupabaseConfigured) return;
     const sub = Linking.addEventListener("url", ({ url }) => {
       void (async () => {
@@ -238,6 +356,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session,
       isLoading,
+      isAccessLoading,
+      profile,
+      role,
+      effectiveOwnerId,
+      permissions,
+      subordinateLink,
+      can,
+      refreshAccess,
       expectsPasswordChange,
       clearPasswordRecoveryExpectation,
       onboardingCompleted,
@@ -247,6 +373,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [
       session,
       isLoading,
+      isAccessLoading,
+      profile,
+      role,
+      effectiveOwnerId,
+      permissions,
+      subordinateLink,
+      can,
+      refreshAccess,
       expectsPasswordChange,
       clearPasswordRecoveryExpectation,
       onboardingCompleted,

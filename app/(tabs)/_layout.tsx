@@ -13,7 +13,6 @@ export default function TabLayout() {
   const { isDark } = useAppTheme();
   const C = useThemePalette();
   const insets = useSafeAreaInsets();
-
   const screenOptions = useMemo(() => {
     const bottomInset = Math.max(insets.bottom, 0);
     const tabBarPaddingBottom = Math.max(bottomInset, 8);

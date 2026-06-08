@@ -148,7 +148,7 @@ export function LinkExistingClientField({
   placeholder = "Select from your saved clients",
   hint,
 }: Props) {
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
   const C = useThemePalette();
   const styles = useMemo(() => createLinkExistingClientStyles(C), [C]);
   const [open, setOpen] = useState(false);
@@ -157,7 +157,7 @@ export function LinkExistingClientField({
   const [search, setSearch] = useState("");
 
   const fetchNames = useCallback(async () => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setNames([]);
       return;
     }
@@ -165,7 +165,7 @@ export function LinkExistingClientField({
     const { data, error } = await supabase
       .from("clients")
       .select("name")
-      .eq("user_id", session.user.id)
+      .eq("user_id", effectiveOwnerId)
       .order("name", { ascending: true });
     setLoading(false);
     if (error) {
@@ -176,7 +176,7 @@ export function LinkExistingClientField({
       .map((r: { name: string }) => r.name?.trim())
       .filter(Boolean);
     setNames(sortNames(fromClients));
-  }, [session?.user?.id]);
+  }, [session?.user?.id, effectiveOwnerId]);
 
   useEffect(() => {
     if (open) {

@@ -8,6 +8,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCaseHearingHistory } from "@/lib/case-hearings";
 import { supabase } from "@/lib/supabase";
@@ -88,7 +89,8 @@ function createHearingsStyles(C: AppColors) {
 
 export default function CaseHearingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
+  const accessGuard = useAccessGuard("view_cases");
   const C = useThemePalette();
   const styles = useMemo(() => createHearingsStyles(C), [C]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function CaseHearingsScreen() {
 
   const loadHearings = useCallback(
     async ({ reset, offset = 0 }: { reset: boolean; offset?: number }) => {
-      if (!id || !session?.user?.id) {
+      if (!id || !session?.user?.id || !effectiveOwnerId) {
         setLoading(false);
         setError("Invalid case.");
         return;
@@ -115,7 +117,7 @@ export default function CaseHearingsScreen() {
 
       try {
         const pageOffset = reset ? 0 : Math.max(0, offset);
-        const chunk = await getCaseHearingHistory(id, session.user.id, {
+        const chunk = await getCaseHearingHistory(id, effectiveOwnerId, {
           limit: HEARINGS_PAGE_SIZE,
           offset: pageOffset,
         });
@@ -138,11 +140,11 @@ export default function CaseHearingsScreen() {
         setLoadingMore(false);
       }
     },
-    [id, session?.user?.id],
+    [id, session?.user?.id, effectiveOwnerId],
   );
 
   useEffect(() => {
-    if (!id || !session?.user?.id) {
+    if (!id || !session?.user?.id || !effectiveOwnerId) {
       setLoading(false);
       setError("Invalid case.");
       return;
@@ -167,7 +169,11 @@ export default function CaseHearingsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, session?.user?.id, loadHearings]);
+  }, [id, session?.user?.id, effectiveOwnerId, loadHearings]);
+
+  if (accessGuard.blocked) {
+    return null;
+  }
 
   if (loading) {
     return (

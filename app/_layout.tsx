@@ -92,6 +92,12 @@ function RootLayoutInner() {
                     }}
                   />
                   <Stack.Screen
+                    name="cases-overview"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
                     name="case/[id]"
                     options={{
                       headerShown: false,
@@ -129,6 +135,12 @@ function RootLayoutInner() {
                   />
                   <Stack.Screen
                     name="settings"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="subordinates"
                     options={{
                       headerShown: false,
                     }}

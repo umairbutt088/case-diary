@@ -48,6 +48,8 @@ import {
 import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
@@ -199,8 +201,10 @@ function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
 
 export default function AddCaseFlowScreen() {
   const router = useRouter();
+  const { goBack } = useHomeBackNavigation();
   const isFocused = useIsFocused();
-  const { session } = useAuth();
+  const { effectiveOwnerId } = useAuth();
+  const accessGuard = useAccessGuard("add_cases");
   const { start, visible: copilotVisible, copilotEvents } = useCopilot();
   const scrollRef = useRef<KeyboardAwareScrollView | null>(null);
   const isOnline = useIsOnline();
@@ -255,12 +259,12 @@ export default function AddCaseFlowScreen() {
     async (role: "petitioner" | "respondent") => {
       update({ myClientIs: role });
       const selectedName = getClientNameForRole(role);
-      if (!selectedName || !session?.user?.id || !isSupabaseConfigured || !isOnline) return;
+      if (!selectedName || !effectiveOwnerId || !isSupabaseConfigured || !isOnline) return;
 
       const { data, error } = await supabase
         .from("clients")
         .select("id,name")
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .ilike("name", selectedName)
         .limit(1);
       if (error) return;
@@ -291,7 +295,7 @@ export default function AddCaseFlowScreen() {
         ],
       );
     },
-    [update, getClientNameForRole, session?.user?.id, isOnline],
+    [update, getClientNameForRole, effectiveOwnerId, isOnline],
   );
 
   const validateStep1 = useCallback((): boolean => {
@@ -396,15 +400,15 @@ export default function AddCaseFlowScreen() {
     if (step > 1) {
       animateToStep(step - 1, -1);
     } else {
-      router.back();
+      goBack();
     }
-  }, [animateToStep, isStepAnimating, step, router]);
+  }, [animateToStep, isStepAnimating, step, goBack]);
 
   const onSave = useCallback(async () => {
     if (!validateStep4()) return;
     setSaveError(null);
 
-    const userId = session?.user?.id;
+    const userId = effectiveOwnerId;
     if (!userId) {
       setSaveError("You must be signed in to save a case.");
       return;
@@ -472,7 +476,7 @@ export default function AddCaseFlowScreen() {
           return;
         }
       }
-      router.back();
+      goBack();
     } else {
       await addPendingCase(row);
       setSaving(false);
@@ -480,10 +484,10 @@ export default function AddCaseFlowScreen() {
       Alert.alert(
         "Saved offline",
         "Your case was saved locally. It will sync to the cloud when you're back online.",
-        [{ text: "OK", onPress: () => router.back() }]
+        [{ text: "OK", onPress: () => goBack() }]
       );
     }
-  }, [form, session?.user?.id, validateStep4, router, isOnline]);
+  }, [form, effectiveOwnerId, validateStep4, goBack, isOnline]);
 
   useFocusEffect(
     useCallback(() => {
@@ -557,6 +561,8 @@ export default function AddCaseFlowScreen() {
 
   const scrollLockedForWalkthrough =
     isFocused && (blockScrollForCopilot || copilotVisible);
+
+  if (accessGuard.blocked) return null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>

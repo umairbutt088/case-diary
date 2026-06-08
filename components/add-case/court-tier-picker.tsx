@@ -178,7 +178,7 @@ export function CourtTierPicker({
   error,
   hint,
 }: Props) {
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
@@ -226,7 +226,7 @@ export function CourtTierPicker({
   }, [options, search]);
 
   const loadCustomTiers = useCallback(async () => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setCustomTiers([]);
       setFetchError(null);
       return;
@@ -243,7 +243,7 @@ export function CourtTierPicker({
     const { data, error: e } = await supabase
       .from("court_tiers")
       .select("name")
-      .eq("user_id", session.user.id)
+      .eq("user_id", effectiveOwnerId)
       .order("name", { ascending: true });
     setLoading(false);
     if (e) {
@@ -268,7 +268,7 @@ export function CourtTierPicker({
       .filter(Boolean) as string[];
     setCustomTiers(names);
     await setCachedCustomCourtTiers(session.user.id, names);
-  }, [session?.user?.id, isOnline]);
+  }, [session?.user?.id, effectiveOwnerId, isOnline]);
 
   useEffect(() => {
     if (!open) return;
@@ -285,7 +285,7 @@ export function CourtTierPicker({
       setAddError("This court tier already exists.");
       return;
     }
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setAddError("You must be signed in to add a court tier.");
       return;
     }
@@ -300,7 +300,7 @@ export function CourtTierPicker({
     setAddingTier(true);
     setAddError(null);
     const { error: e } = await supabase.from("court_tiers").insert({
-      user_id: session.user.id,
+      user_id: effectiveOwnerId,
       name,
     });
     setAddingTier(false);
@@ -316,11 +316,11 @@ export function CourtTierPicker({
     await addCachedCustomCourtTier(session.user.id, name);
     setNewTier("");
     onChange(name);
-  }, [newTier, options, session?.user?.id, onChange, isOnline]);
+  }, [newTier, options, session?.user?.id, effectiveOwnerId, onChange, isOnline]);
 
   const handleDeleteTier = useCallback(
     async (tierName: string) => {
-      if (!session?.user?.id || !isSupabaseConfigured) {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
         setAddError("You must be signed in to remove a court tier.");
         return;
       }
@@ -338,7 +338,7 @@ export function CourtTierPicker({
       const { error: e } = await supabase
         .from("court_tiers")
         .delete()
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .eq("name", tierName);
       setDeletingTier(null);
       if (e) {
@@ -351,7 +351,7 @@ export function CourtTierPicker({
         onChange("");
       }
     },
-    [session?.user?.id, value, onChange, isOnline],
+    [session?.user?.id, effectiveOwnerId, value, onChange, isOnline],
   );
 
   return (

@@ -43,6 +43,7 @@ import { type PakistanCourtPortal } from "@/constants/court-cms";
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import {
@@ -697,7 +698,11 @@ export default function CaseDetailScreen() {
   }>();
   const id = Array.isArray(idParam) ? idParam[0] : idParam;
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, effectiveOwnerId, can } = useAuth();
+  const viewAccessGuard = useAccessGuard("view_cases");
+  const canEditCases = can("edit_cases");
+  const canTrashCase = can("edit_cases") && can("delete_cases");
+  const canManageDocuments = can("manage_documents");
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
@@ -934,7 +939,7 @@ export default function CaseDetailScreen() {
     if (showProceedingForm && caseData) {
       setJudgeNameDraft(caseData.judge_name?.trim() ?? "");
     }
-  }, [showProceedingForm, caseData?.judge_name]);
+  }, [showProceedingForm, caseData]);
 
   useEffect(() => {
     return () => {
@@ -943,6 +948,10 @@ export default function CaseDetailScreen() {
       }
     };
   }, []);
+
+  if (viewAccessGuard.blocked) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -1049,6 +1058,10 @@ export default function CaseDetailScreen() {
 
   const partyTerms = getPartyTerminology(caseData.court_tier ?? "", caseData.case_sub_type ?? "");
   const openAddProceedingForm = () => {
+    if (!canEditCases) {
+      Alert.alert("Restricted", "You do not have permission to edit case proceedings.");
+      return;
+    }
     setProceedingError(null);
     setNextStatusDraft("");
     setNextDateDraft(caseData.next_hearing_date || "");
@@ -1056,7 +1069,7 @@ export default function CaseDetailScreen() {
     setShowProceedingForm(true);
   };
   const saveProceeding = async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || !effectiveOwnerId) return;
     if (!nextDateDraft.trim()) {
       setProceedingError("Next hearing date is required.");
       return;
@@ -1088,7 +1101,7 @@ export default function CaseDetailScreen() {
     };
 
     if (!isOnline) {
-      const uid = session.user.id;
+      const uid = effectiveOwnerId;
       const judgeResolved = judgeNameDraft.trim() || null;
       try {
         await addPendingProceedingSave({
@@ -1143,7 +1156,7 @@ export default function CaseDetailScreen() {
 
     const hearingResult = await addCaseHearingEntry({
       caseId: caseData.id,
-      userId: session.user.id,
+      userId: effectiveOwnerId,
       hearingDate: previousHearingDate,
       proceeding: previousProceeding,
       currentStatus: resolvedCurrentStatus,
@@ -1162,7 +1175,7 @@ export default function CaseDetailScreen() {
       .from("cases")
       .update(patch)
       .eq("id", caseData.id)
-      .eq("user_id", session.user.id);
+      .eq("user_id", effectiveOwnerId);
 
     if (updateError) {
       setSavingProceeding(false);
@@ -1173,7 +1186,7 @@ export default function CaseDetailScreen() {
     await patchCachedCase(session.user.id, caseData.id, patch);
     setCaseData((prev) => (prev ? { ...prev, ...patch } : prev));
 
-    const history = await getCaseHearingHistory(caseData.id, session.user.id, {
+    const history = await getCaseHearingHistory(caseData.id, effectiveOwnerId, {
       limit: DETAIL_HEARING_PAGE_SIZE,
       offset: 0,
     });
@@ -1192,12 +1205,12 @@ export default function CaseDetailScreen() {
       return;
     }
     
-    if (!caseData?.id || !session?.user?.id) return;
+    if (!caseData?.id || !session?.user?.id || !effectiveOwnerId) return;
     setUploadingDoc(true);
     try {
       const newDoc = await uploadCaseDocument({
         caseId: caseData.id,
-        userId: session.user.id,
+        userId: effectiveOwnerId,
         fileUri,
         fileName,
         mimeType,
@@ -1295,6 +1308,10 @@ export default function CaseDetailScreen() {
   };
 
   const handleAddDocument = async () => {
+    if (!canManageDocuments) {
+      Alert.alert("Restricted", "You do not have permission to manage documents.");
+      return;
+    }
     if (!caseData?.id || !session?.user?.id) return;
     if (!isOnline) {
       Alert.alert("Offline", "You need to be online to upload documents.");
@@ -1314,6 +1331,10 @@ export default function CaseDetailScreen() {
   };
 
   const handleDeleteDocument = (docId: string, filePath: string) => {
+    if (!canManageDocuments) {
+      Alert.alert("Restricted", "You do not have permission to delete documents.");
+      return;
+    }
     if (!isOnline) {
       Alert.alert("Offline", "You need to be online to delete documents.");
       return;
@@ -1331,7 +1352,7 @@ export default function CaseDetailScreen() {
             try {
               await deleteCaseDocument(docId, filePath);
               setDocuments((prev) => prev.filter((d) => d.id !== docId));
-            } catch (error) {
+            } catch {
               Alert.alert("Error", "Could not delete document.");
             }
           }
@@ -1348,7 +1369,7 @@ export default function CaseDetailScreen() {
       } else {
         await WebBrowser.openBrowserAsync(url, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Could not open document.");
     }
   };
@@ -1375,7 +1396,8 @@ export default function CaseDetailScreen() {
             </Bounceable>
             <Bounceable
               style={styles.editBtn}
-              onPress={() => router.push(`/case/${id}/edit`)}
+              onPress={canEditCases ? () => router.push(`/case/${id}/edit`) : undefined}
+              disabled={!canEditCases}
               accessibilityLabel="Edit case"
             >
               <MaterialIcons name="edit" size={20} color={C.black} />
@@ -1488,7 +1510,8 @@ export default function CaseDetailScreen() {
             {isCaseOverdue ? (
               <Bounceable
                 style={[styles.overduePill, styles.overduePillButton]}
-                onPress={openAddProceedingForm}
+                onPress={canEditCases ? openAddProceedingForm : undefined}
+                disabled={!canEditCases}
                 accessibilityRole="button"
                 accessibilityLabel="Overdue. Add proceeding"
               >
@@ -1504,6 +1527,7 @@ export default function CaseDetailScreen() {
             <Bounceable
               style={styles.addProceedingBtn}
               onPress={() => {
+                if (!canEditCases) return;
                 if (showProceedingForm) {
                   setShowProceedingForm(false);
                   setProceedingError(null);
@@ -1586,7 +1610,7 @@ export default function CaseDetailScreen() {
             <Bounceable
               style={styles.addProceedingBtn}
               onPress={handleAddDocument}
-              disabled={uploadingDoc}
+              disabled={uploadingDoc || !canManageDocuments}
             >
               {uploadingDoc ? (
                 <ActivityIndicator size="small" color={C.black} />
@@ -1617,7 +1641,10 @@ export default function CaseDetailScreen() {
                         </View>
                       </Bounceable>
                       <View style={{ flexDirection: "row", gap: 12 }}>
-                        <Bounceable onPress={() => handleDeleteDocument(doc.id, doc.file_path)}>
+                        <Bounceable
+                          onPress={() => handleDeleteDocument(doc.id, doc.file_path)}
+                          disabled={!canManageDocuments}
+                        >
                           <MaterialIcons name="delete-outline" size={20} color={C.themeRed} />
                         </Bounceable>
                       </View>
@@ -1637,9 +1664,10 @@ export default function CaseDetailScreen() {
             )}
           </SectionCard>
 
-          <Bounceable
-            style={styles.deleteButton}
-            onPress={() => {
+          {canTrashCase ? (
+            <Bounceable
+              style={styles.deleteButton}
+              onPress={() => {
               Alert.alert(
                 "Move to Trash?",
                 "The case will be moved to Trash. You can restore it anytime from Settings → Trash.",
@@ -1661,7 +1689,7 @@ export default function CaseDetailScreen() {
                         .from("cases")
                         .update({ deleted_at: new Date().toISOString() })
                         .eq("id", id)
-                        .eq("user_id", session.user.id);
+                        .eq("user_id", effectiveOwnerId ?? session.user.id);
                       setDeleting(false);
                       if (e) {
                         Alert.alert("Error", e.message);
@@ -1673,15 +1701,16 @@ export default function CaseDetailScreen() {
                   },
                 ],
               );
-            }}
-            disabled={deleting}
-          >
-            {deleting ? (
-              <ThemedText style={styles.deleteButtonText}>Moving to Trash…</ThemedText>
-            ) : (
-              <ThemedText style={styles.deleteButtonText}>Move to Trash</ThemedText>
-            )}
-          </Bounceable>
+              }}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ThemedText style={styles.deleteButtonText}>Moving to Trash…</ThemedText>
+              ) : (
+                <ThemedText style={styles.deleteButtonText}>Move to Trash</ThemedText>
+              )}
+            </Bounceable>
+          ) : null}
         </Animated.View>
       </ScrollView>
 

@@ -222,7 +222,7 @@ export function JudgeNameSelector({
   hint,
   error,
 }: Props) {
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const styles = useMemo(() => createJudgeNameSelectorStyles(C), [C]);
@@ -242,7 +242,7 @@ export function JudgeNameSelector({
   }, [query, judges, normalize]);
 
   const fetchJudges = useCallback(async () => {
-    if (!session?.user?.id || !isSupabaseConfigured || !courtTier) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured || !courtTier) {
       setJudges([]);
       setFetchError(null);
       return;
@@ -260,7 +260,7 @@ export function JudgeNameSelector({
     const { data, error: e } = await supabase
       .from("judges")
       .select("name, court_room_address, court_tier")
-      .eq("user_id", session.user.id)
+      .eq("user_id", effectiveOwnerId)
       .eq("court_tier", courtTier)
       .order("name", { ascending: true });
     setLoading(false);
@@ -306,7 +306,7 @@ export function JudgeNameSelector({
       (item) => item.courtTier.toLowerCase() !== courtTier.toLowerCase(),
     );
     await setCachedJudges(session.user.id, [...otherTierJudges, ...list]);
-  }, [session?.user?.id, courtTier, isOnline]);
+  }, [session?.user?.id, effectiveOwnerId, courtTier, isOnline]);
 
   useEffect(() => {
     setOpen(false);
@@ -330,7 +330,7 @@ export function JudgeNameSelector({
 
   const handleDeleteJudge = useCallback(
     async (judge: JudgeRecord) => {
-      if (!session?.user?.id || !isSupabaseConfigured || !courtTier) {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured || !courtTier) {
         setFetchError("You must be signed in to delete a judge.");
         return;
       }
@@ -365,7 +365,7 @@ export function JudgeNameSelector({
       const { error: e } = await supabase
         .from("judges")
         .delete()
-        .eq("user_id", session.user.id)
+        .eq("user_id", effectiveOwnerId)
         .eq("court_tier", courtTier)
         .eq("name", judge.name);
       setDeletingJudgeName(null);
@@ -395,7 +395,7 @@ export function JudgeNameSelector({
         });
       }
     },
-    [session?.user?.id, courtTier, value, onChange, onSelectJudge, isOnline],
+    [session?.user?.id, effectiveOwnerId, courtTier, value, onChange, onSelectJudge, isOnline],
   );
 
   const handlePressAddJudge = useCallback(() => {

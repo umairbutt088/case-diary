@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import type { AppColors } from "@/constants/color-palette";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useAuth } from "@/context/auth-context";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 
@@ -44,6 +45,8 @@ function createAddCaseStyles(C: AppColors, onPrimary: string) {
 // This tab is the target of the center FAB. Show a single button to open the Add Case form.
 export default function AddCasePlaceholderScreen() {
   const router = useRouter();
+  const { can } = useAuth();
+  const canAddCases = can("add_cases");
   const { isDark } = useAppTheme();
   const C = useThemePalette();
   const onPrimary = isDark ? C.black : C.pureWhite;
@@ -60,7 +63,11 @@ export default function AddCasePlaceholderScreen() {
         </ThemedText>
         <Pressable
           style={styles.button}
-          onPress={() => router.push("/add-case-flow" as const)}
+          disabled={!canAddCases}
+          onPress={() => {
+            if (!canAddCases) return;
+            router.push("/add-case-flow" as const);
+          }}
         >
           <MaterialIcons name="add" size={24} color={onPrimary} />
           <ThemedText style={styles.buttonText}>Open Add Case Form</ThemedText>

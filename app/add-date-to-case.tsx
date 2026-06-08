@@ -17,6 +17,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { getCachedCases, patchCachedCase, setCachedCases } from "@/lib/cases-cache";
@@ -141,7 +142,8 @@ export default function AddDateToCaseScreen() {
   const C = useThemePalette();
   const styles = useMemo(() => createAddDateToCaseStyles(C), [C]);
 
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
+  const accessGuard = useAccessGuard("edit_cases");
   const isOnline = useIsOnline();
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +152,7 @@ export default function AddDateToCaseScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCases = useCallback(async () => {
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setCases([]);
       setLoading(false);
       return;
@@ -166,7 +168,7 @@ export default function AddDateToCaseScreen() {
     const { data, error: e } = await supabase
       .from("cases")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", effectiveOwnerId)
       .order("updated_at", { ascending: false });
     setLoading(false);
     if (e) {
@@ -189,7 +191,7 @@ export default function AddDateToCaseScreen() {
     const nextCases = (data as CaseRow[]) ?? [];
     setCases(nextCases);
     await setCachedCases(session.user.id, nextCases);
-  }, [session?.user?.id, isOnline]);
+  }, [session?.user?.id, effectiveOwnerId, isOnline]);
 
   useEffect(() => {
     fetchCases();
@@ -212,7 +214,7 @@ export default function AddDateToCaseScreen() {
         setError("Database not configured");
         return;
       }
-      if (!session?.user?.id) return;
+      if (!session?.user?.id || !effectiveOwnerId) return;
       setSavingId(caseItem.id);
       setError(null);
       if (!isOnline) {
@@ -233,7 +235,7 @@ export default function AddDateToCaseScreen() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", caseItem.id)
-        .eq("user_id", session?.user?.id ?? "");
+        .eq("user_id", effectiveOwnerId);
 
       setSavingId(null);
       if (e) {
@@ -246,7 +248,7 @@ export default function AddDateToCaseScreen() {
       });
       const hearingResult = await addCaseHearingEntry({
         caseId: caseItem.id,
-        userId: session.user.id,
+        userId: effectiveOwnerId,
         hearingDate: caseItem.next_hearing_date ?? selectedDate,
         nextHearingDate: selectedDate,
         proceeding: "Next hearing date updated",
@@ -259,8 +261,10 @@ export default function AddDateToCaseScreen() {
       setError(null);
       router.back();
     },
-    [selectedDate, session?.user?.id, router, isOnline]
+    [selectedDate, session?.user?.id, effectiveOwnerId, router, isOnline]
   );
+
+  if (accessGuard.blocked) return null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>

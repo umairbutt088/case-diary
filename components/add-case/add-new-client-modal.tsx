@@ -129,7 +129,7 @@ export function AddNewClientModal({
   onClose,
   onSaved,
 }: Props) {
-  const { session } = useAuth();
+  const { session, effectiveOwnerId } = useAuth();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const onPrimary = isDark ? C.black : C.pureWhite;
@@ -174,7 +174,7 @@ export function AddNewClientModal({
       setError("Name is required.");
       return;
     }
-    if (!session?.user?.id || !isSupabaseConfigured) {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
       setError("You must be signed in to add a client.");
       return;
     }
@@ -183,7 +183,7 @@ export function AddNewClientModal({
     const { data, error: e } = await supabase
       .from("clients")
       .insert({
-        user_id: session.user.id,
+        user_id: effectiveOwnerId,
         name,
         address: form.address.trim() || null,
         phone: form.phone.trim() || null,
@@ -207,7 +207,7 @@ export function AddNewClientModal({
       onSaved(data.id);
       onClose();
     }
-  }, [form, session?.user?.id, onSaved, onClose, resetForm]);
+  }, [form, session?.user?.id, effectiveOwnerId, onSaved, onClose, resetForm]);
 
   if (!visible) return null;
 
