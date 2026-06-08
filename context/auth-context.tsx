@@ -166,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               add_cases: Boolean(link.can_add_cases),
               edit_cases: Boolean(link.can_edit_cases),
               delete_cases: Boolean(link.can_delete_cases),
+              dispose_cases: Boolean(link.can_dispose_cases),
               view_clients: Boolean(link.can_view_clients),
               manage_documents: Boolean(link.can_manage_documents),
               manage_settings: Boolean(link.can_manage_settings),

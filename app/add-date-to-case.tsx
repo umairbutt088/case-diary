@@ -169,6 +169,8 @@ export default function AddDateToCaseScreen() {
       .from("cases")
       .select("*")
       .eq("user_id", effectiveOwnerId)
+      .is("deleted_at", null)
+      .is("disposed_at", null)
       .order("updated_at", { ascending: false });
     setLoading(false);
     if (e) {

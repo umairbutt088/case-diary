@@ -441,7 +441,9 @@ export default function CalendarScreen() {
       const { data, error: e } = await supabase
         .from("cases")
         .select("*")
-        .eq("user_id", effectiveOwnerId);
+        .eq("user_id", effectiveOwnerId)
+        .is("deleted_at", null)
+        .is("disposed_at", null);
       setLoading(false);
       if (e) {
         const msg = (e.message || "").toLowerCase();

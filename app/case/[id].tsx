@@ -28,6 +28,10 @@ import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-shee
 import { DateField } from "@/components/add-case/date-field";
 import { JudgeNameSelector } from "@/components/add-case/judge-name-selector";
 import { CourtPortalBottomSheet } from "@/components/court-portal-bottom-sheet";
+import {
+  DisposeCaseModal,
+  type DisposeCaseFormValues,
+} from "@/components/dispose-case-modal";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { DocumentIconPreview } from "@/components/ui/document-icon-preview";
@@ -514,7 +518,7 @@ function createCaseDetailStyles(
       fontSize: 16,
     },
     deleteButton: {
-      marginTop: 24,
+      marginTop: 12,
       paddingVertical: 14,
       paddingHorizontal: 20,
       borderRadius: 12,
@@ -527,6 +531,53 @@ function createCaseDetailStyles(
       fontSize: 16,
       fontWeight: "600",
       color: C.themeRed,
+    },
+    disposeButton: {
+      marginTop: 24,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      alignItems: "center",
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: C.borderGray,
+    },
+    disposeButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: C.black,
+    },
+    disposedBanner: {
+      marginBottom: 14,
+      padding: 14,
+      borderRadius: 12,
+      backgroundColor: C.grey100,
+      borderWidth: 1,
+      borderColor: C.borderGray,
+    },
+    disposedBannerTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 4,
+    },
+    disposedBannerText: {
+      fontSize: 14,
+      color: C.gray50,
+      lineHeight: 20,
+    },
+    restoreButton: {
+      marginTop: 12,
+      alignSelf: "flex-start",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      backgroundColor: C.themeBlack,
+    },
+    restoreButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: onPrimary,
     },
   });
 }
@@ -702,6 +753,7 @@ export default function CaseDetailScreen() {
   const viewAccessGuard = useAccessGuard("view_cases");
   const canEditCases = can("edit_cases");
   const canTrashCase = can("edit_cases") && can("delete_cases");
+  const canDisposeCase = can("edit_cases") && can("dispose_cases");
   const canManageDocuments = can("manage_documents");
   const isOnline = useIsOnline();
   const C = useThemePalette();
@@ -717,6 +769,9 @@ export default function CaseDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [disposeModalVisible, setDisposeModalVisible] = useState(false);
+  const [disposing, setDisposing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [hearingHistory, setHearingHistory] = useState<CaseHearingRow[]>([]);
   const [showProceedingForm, setShowProceedingForm] = useState(false);
   const [nextStatusDraft, setNextStatusDraft] = useState("");
@@ -977,6 +1032,7 @@ export default function CaseDetailScreen() {
   }
 
   const title = getCaseDisplayTitle(caseData);
+  const isDisposed = Boolean(caseData.disposed_at);
   const todayIso = getTodayISO();
   const isCaseOverdue =
     Boolean(caseData.next_hearing_date) &&
@@ -1375,6 +1431,95 @@ export default function CaseDetailScreen() {
   };
 
 
+  const handleDisposeCase = async (values: DisposeCaseFormValues) => {
+    if (!caseData?.id || !session?.user?.id) return;
+    if (!canDisposeCase) {
+      Alert.alert("Restricted", "You do not have permission to dispose cases.");
+      return;
+    }
+    if (!isOnline) {
+      Alert.alert("Offline", "You need to be online to dispose a case.");
+      return;
+    }
+    if (!values.disposedDate || values.disposedDate.length < 10) {
+      Alert.alert("Missing date", "Select a disposal date.");
+      return;
+    }
+
+    setDisposing(true);
+    try {
+      const disposedAt = new Date(`${values.disposedDate.slice(0, 10)}T12:00:00`).toISOString();
+      const { error } = await supabase
+        .from("cases")
+        .update({
+          disposed_at: disposedAt,
+          disposal_note: values.note.trim() || null,
+        })
+        .eq("id", caseData.id)
+        .eq("user_id", effectiveOwnerId ?? session.user.id);
+
+      if (error) throw error;
+
+      await removeCachedCase(session.user.id, caseData.id);
+      setDisposeModalVisible(false);
+      Alert.alert("Case disposed", "This case has been moved to Disposed cases.", [
+        { text: "OK", onPress: () => router.replace("/(tabs)") },
+      ]);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Could not dispose case.";
+      Alert.alert("Error", message);
+    } finally {
+      setDisposing(false);
+    }
+  };
+
+  const handleRestoreDisposedCase = () => {
+    if (!caseData?.id || !session?.user?.id) return;
+    if (!canDisposeCase) {
+      Alert.alert("Restricted", "You do not have permission to restore disposed cases.");
+      return;
+    }
+    if (!isOnline) {
+      Alert.alert("Offline", "You need to be online to restore a case.");
+      return;
+    }
+
+    Alert.alert(
+      "Restore to active?",
+      "This case will reappear in your diary and cause lists.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restore",
+          onPress: async () => {
+            setRestoring(true);
+            try {
+              const { data, error } = await supabase
+                .from("cases")
+                .update({ disposed_at: null, disposal_note: null })
+                .eq("id", caseData.id)
+                .eq("user_id", effectiveOwnerId ?? session.user.id)
+                .select("*")
+                .single();
+
+              if (error) throw error;
+
+              const row = data as CaseRow;
+              setCaseData(row);
+              await upsertCachedCase(session.user.id, row);
+              Alert.alert("Restored", "Case is active again.");
+            } catch (e: unknown) {
+              const message = e instanceof Error ? e.message : "Could not restore case.";
+              Alert.alert("Error", message);
+            } finally {
+              setRestoring(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader
@@ -1411,6 +1556,32 @@ export default function CaseDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
+          {isDisposed ? (
+            <View style={styles.disposedBanner}>
+              <ThemedText style={styles.disposedBannerTitle}>
+                Disposed · {formatCaseDate(caseData.disposed_at?.slice(0, 10) ?? null)}
+              </ThemedText>
+              {caseData.disposal_note ? (
+                <ThemedText style={styles.disposedBannerText}>{caseData.disposal_note}</ThemedText>
+              ) : (
+                <ThemedText style={styles.disposedBannerText}>
+                  This case is hidden from active diary and cause lists.
+                </ThemedText>
+              )}
+              {canDisposeCase ? (
+                <Bounceable
+                  style={styles.restoreButton}
+                  onPress={handleRestoreDisposedCase}
+                  disabled={restoring}
+                >
+                  <ThemedText style={styles.restoreButtonText}>
+                    {restoring ? "Restoring…" : "Restore to active"}
+                  </ThemedText>
+                </Bounceable>
+              ) : null}
+            </View>
+          ) : null}
+
           <SectionCard s={styles} title="Parties & type">
             <DetailRow s={styles} C={C} label={partyTerms.firstParty} value={caseData.petitioner_name} />
             <DetailRow s={styles} C={C} label={partyTerms.secondParty} value={caseData.respondent_name} />
@@ -1664,7 +1835,23 @@ export default function CaseDetailScreen() {
             )}
           </SectionCard>
 
-          {canTrashCase ? (
+          {canDisposeCase && !isDisposed ? (
+            <Bounceable
+              style={styles.disposeButton}
+              onPress={() => {
+                if (!isOnline) {
+                  Alert.alert("Offline", "You need to be online to dispose a case.");
+                  return;
+                }
+                setDisposeModalVisible(true);
+              }}
+              disabled={disposing}
+            >
+              <ThemedText style={styles.disposeButtonText}>Mark as disposed</ThemedText>
+            </Bounceable>
+          ) : null}
+
+          {canTrashCase && !isDisposed ? (
             <Bounceable
               style={styles.deleteButton}
               onPress={() => {
@@ -1862,6 +2049,16 @@ export default function CaseDetailScreen() {
         saving={uploadingDoc}
         onConfirm={(name) => void handleDocumentNameConfirmed(name)}
         onCancel={handleDocumentNameCancelled}
+      />
+
+      <DisposeCaseModal
+        visible={disposeModalVisible}
+        saving={disposing}
+        onSave={(values) => void handleDisposeCase(values)}
+        onCancel={() => {
+          if (disposing) return;
+          setDisposeModalVisible(false);
+        }}
       />
     </SafeAreaView>
   );

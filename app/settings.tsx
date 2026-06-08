@@ -372,6 +372,21 @@ export default function SettingsScreen() {
               styles.rowButton,
               pressed && styles.rowButtonPressed,
             ]}
+            onPress={() => router.push("/disposed-cases")}
+            accessibilityRole="button"
+            accessibilityLabel="Disposed cases"
+          >
+            <View style={styles.rowLeading}>
+              <ThemedText style={styles.rowLabel}>Disposed cases</ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={({ pressed }) => [
+              styles.rowButton,
+              pressed && styles.rowButtonPressed,
+            ]}
             onPress={() => router.push("/trash")}
             accessibilityRole="button"
             accessibilityLabel="Trash"
