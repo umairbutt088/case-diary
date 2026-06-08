@@ -64,3 +64,8 @@ export function sanitizeActivityNotes(
     .filter((item) => item.noteDate >= cutoffDate)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
+
+export function countActiveNotesForDate(notes: ActivityNote[], date: string): number {
+  const day = date.length >= 10 ? date.slice(0, 10) : date;
+  return notes.filter((note) => note.noteDate === day && !note.isDone).length;
+}

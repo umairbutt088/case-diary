@@ -1,8 +1,16 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -34,6 +42,10 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
       flex: 1,
       paddingHorizontal: 24,
       paddingTop: 14,
+      paddingBottom: 20,
+    },
+    keyboardAvoid: {
+      flex: 1,
     },
     filterRow: {
       flexDirection: "row",
@@ -113,19 +125,16 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
       color: C.gray50,
     },
     notesList: {
+      flex: 1,
       marginTop: 12,
     },
     notesListContent: {
-      paddingBottom: 104,
+      paddingBottom: 16,
       gap: 10,
     },
     composerWrap: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 86,
-      paddingHorizontal: 24,
-      zIndex: 20,
+      paddingTop: 8,
+      backgroundColor: C.background,
     },
     emptyText: {
       color: C.gray50,
@@ -206,7 +215,7 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
     fab: {
       position: "absolute",
       right: 24,
-      bottom: 24,
+      bottom: 50,
       width: 56,
       height: 56,
       borderRadius: 28,
@@ -363,135 +372,144 @@ export default function NotesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader title="Notes" onBack={goBack} />
-      <Animated.View style={styles.container} entering={FadeInUp.duration(320).springify()}>
-        <View style={styles.filterRow}>
-          <Pressable
-            style={[styles.filterBtn, filter === "today" && styles.filterBtnActive]}
-            onPress={() => setFilter("today")}
-          >
-            <ThemedText
-              style={[styles.filterBtnText, filter === "today" && styles.filterBtnTextActive]}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 6 : 0}
+      >
+        <Animated.View style={styles.container} entering={FadeInUp.duration(320).springify()}>
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterBtn, filter === "today" && styles.filterBtnActive]}
+              onPress={() => setFilter("today")}
             >
-              Today Notes
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            style={[styles.filterBtn, filter === "all" && styles.filterBtnActive]}
-            onPress={() => setFilter("all")}
-          >
-            <ThemedText
-              style={[styles.filterBtnText, filter === "all" && styles.filterBtnTextActive]}
+              <ThemedText
+                style={[styles.filterBtnText, filter === "today" && styles.filterBtnTextActive]}
+              >
+                Today Notes
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.filterBtn, filter === "all" && styles.filterBtnActive]}
+              onPress={() => setFilter("all")}
             >
-              All Notes
-            </ThemedText>
-          </Pressable>
-        </View>
+              <ThemedText
+                style={[styles.filterBtnText, filter === "all" && styles.filterBtnTextActive]}
+              >
+                All Notes
+              </ThemedText>
+            </Pressable>
+          </View>
 
-        <Animated.ScrollView
-          style={styles.notesList}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.notesListContent}
-        >
-          {visibleNotes.length === 0 ? (
-            <ThemedText style={styles.emptyText}>
-              {filter === "today"
-                ? "No notes for today yet."
-                : "No notes yet. Add one to get started."}
-            </ThemedText>
-          ) : (
-            visibleNotes.map((note) => (
-              <View key={note.id} style={styles.noteCard}>
-                <View style={styles.noteTopRow}>
-                  <ThemedText style={[styles.noteContent, note.isDone && styles.noteContentDone]}>
-                    {note.content}
-                  </ThemedText>
-                  <View style={[styles.noteStatusBadge, note.isDone && styles.noteStatusBadgeDone]}>
-                    <ThemedText
-                      style={[styles.noteStatusText, note.isDone && styles.noteStatusTextDone]}
-                    >
-                      {note.isDone ? "Done" : "Active"}
+          <Animated.ScrollView
+            style={styles.notesList}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.notesListContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {visibleNotes.length === 0 ? (
+              <ThemedText style={styles.emptyText}>
+                {filter === "today"
+                  ? "No notes for today yet."
+                  : "No notes yet. Add one to get started."}
+              </ThemedText>
+            ) : (
+              visibleNotes.map((note) => (
+                <View key={note.id} style={styles.noteCard}>
+                  <View style={styles.noteTopRow}>
+                    <ThemedText style={[styles.noteContent, note.isDone && styles.noteContentDone]}>
+                      {note.content}
                     </ThemedText>
+                    <View style={[styles.noteStatusBadge, note.isDone && styles.noteStatusBadgeDone]}>
+                      <ThemedText
+                        style={[styles.noteStatusText, note.isDone && styles.noteStatusTextDone]}
+                      >
+                        {note.isDone ? "Done" : "Active"}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <ThemedText style={styles.noteTime}>
+                    {filter === "all" ? `Date ${note.noteDate} - ` : ""}
+                    Updated {new Date(note.updatedAt).toLocaleString()}
+                  </ThemedText>
+
+                  <View style={styles.noteActions}>
+                    <Bounceable style={styles.noteAction} onPress={() => toggleDone(note.id)}>
+                      <MaterialIcons
+                        name={note.isDone ? "radio-button-unchecked" : "check-circle"}
+                        size={16}
+                        color={note.isDone ? C.gray50 : C.zodiacColour}
+                      />
+                      <ThemedText
+                        style={[styles.noteActionText, note.isDone && styles.noteActionInactive]}
+                      >
+                        {note.isDone ? "Mark active" : "Done"}
+                      </ThemedText>
+                    </Bounceable>
+                    <Bounceable style={styles.noteAction} onPress={() => editNote(note)}>
+                      <MaterialIcons name="edit" size={16} color={C.zodiacColour} />
+                      <ThemedText style={styles.noteActionText}>Edit</ThemedText>
+                    </Bounceable>
+                    <Bounceable style={styles.noteAction} onPress={() => deleteNote(note.id)}>
+                      <MaterialIcons name="delete" size={16} color={C.themeRed} />
+                      <ThemedText style={[styles.noteActionText, styles.noteActionDelete]}>
+                        Delete
+                      </ThemedText>
+                    </Bounceable>
                   </View>
                 </View>
-                <ThemedText style={styles.noteTime}>
-                  {filter === "all" ? `Date ${note.noteDate} - ` : ""}
-                  Updated {new Date(note.updatedAt).toLocaleString()}
-                </ThemedText>
+              ))
+            )}
+          </Animated.ScrollView>
 
-                <View style={styles.noteActions}>
-                  <Bounceable style={styles.noteAction} onPress={() => toggleDone(note.id)}>
-                    <MaterialIcons
-                      name={note.isDone ? "radio-button-unchecked" : "check-circle"}
-                      size={16}
-                      color={note.isDone ? C.gray50 : C.zodiacColour}
-                    />
-                    <ThemedText
-                      style={[styles.noteActionText, note.isDone && styles.noteActionInactive]}
-                    >
-                      {note.isDone ? "Mark active" : "Done"}
+          {isComposerOpen ? (
+            <SafeAreaView edges={["bottom"]} style={styles.composerWrap}>
+              <View style={styles.editorCard}>
+                <TextInput
+                  style={styles.notesInput}
+                  placeholder={
+                    filter === "today"
+                      ? "Write a note for today..."
+                      : "Write a note (saved for today)..."
+                  }
+                  placeholderTextColor={C.gray50}
+                  value={noteInput}
+                  onChangeText={setNoteInput}
+                  multiline
+                  autoFocus
+                  autoCorrect={false}
+                  spellCheck={false}
+                />
+                <View style={styles.actionsRow}>
+                  <Bounceable style={styles.secondaryButton} onPress={resetEditor}>
+                    <ThemedText style={styles.secondaryButtonText}>
+                      {editingNoteId ? "Cancel edit" : "Close"}
                     </ThemedText>
                   </Bounceable>
-                  <Bounceable style={styles.noteAction} onPress={() => editNote(note)}>
-                    <MaterialIcons name="edit" size={16} color={C.zodiacColour} />
-                    <ThemedText style={styles.noteActionText}>Edit</ThemedText>
-                  </Bounceable>
-                  <Bounceable style={styles.noteAction} onPress={() => deleteNote(note.id)}>
-                    <MaterialIcons name="delete" size={16} color={C.themeRed} />
-                    <ThemedText style={[styles.noteActionText, styles.noteActionDelete]}>
-                      Delete
+                  <Bounceable style={styles.primaryButton} onPress={() => void saveNote()}>
+                    <ThemedText style={styles.primaryButtonText}>
+                      {editingNoteId ? "Update note" : "Save note"}
                     </ThemedText>
                   </Bounceable>
                 </View>
               </View>
-            ))
-          )}
-        </Animated.ScrollView>
+            </SafeAreaView>
+          ) : null}
 
-        {isComposerOpen ? (
-          <View style={styles.composerWrap}>
-            <View style={styles.editorCard}>
-              <TextInput
-                style={styles.notesInput}
-                placeholder={
-                  filter === "today"
-                    ? "Write a note for today..."
-                    : "Write a note (saved for today)..."
-                }
-                placeholderTextColor={C.gray50}
-                value={noteInput}
-                onChangeText={setNoteInput}
-                multiline
-                autoFocus
-                autoCorrect={false}
-                spellCheck={false}
-              />
-              <View style={styles.actionsRow}>
-                <Bounceable style={styles.secondaryButton} onPress={resetEditor}>
-                  <ThemedText style={styles.secondaryButtonText}>
-                    {editingNoteId ? "Cancel edit" : "Close"}
-                  </ThemedText>
-                </Bounceable>
-                <Bounceable style={styles.primaryButton} onPress={() => void saveNote()}>
-                  <ThemedText style={styles.primaryButtonText}>
-                    {editingNoteId ? "Update note" : "Save note"}
-                  </ThemedText>
-                </Bounceable>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        <Bounceable
-          style={styles.fab}
-          onPress={() => {
-            setEditingNoteId(null);
-            setNoteInput("");
-            setIsComposerOpen(true);
-          }}
-        >
-          <MaterialIcons name="add" size={28} color={onPrimary} />
-        </Bounceable>
-      </Animated.View>
+          {!isComposerOpen ? (
+            <Bounceable
+              style={styles.fab}
+              onPress={() => {
+                setEditingNoteId(null);
+                setNoteInput("");
+                setIsComposerOpen(true);
+              }}
+            >
+              <MaterialIcons name="add" size={28} color={onPrimary} />
+            </Bounceable>
+          ) : null}
+        </Animated.View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

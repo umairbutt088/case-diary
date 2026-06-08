@@ -34,6 +34,7 @@ import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import {
+  countActiveNotesForDate,
   getActivityNotesStorageKey,
   sanitizeActivityNotes,
 } from "@/lib/activity-notes";
@@ -76,6 +77,11 @@ function getWidgetLayout(screenWidth: number) {
   );
   const widgetWidth = (contentWidth - WIDGET_GRID_GAP * (columns - 1)) / columns;
   return { columns, widgetWidth, contentWidth };
+}
+
+function formatWidgetCount(count: number): string {
+  if (count > 99) return "99+";
+  return String(count);
 }
 
 function escapeHtml(value: string): string {
@@ -327,7 +333,7 @@ export default function HomeScreen() {
       }
       const parsed = JSON.parse(raw);
       const sanitized = sanitizeActivityNotes(parsed, today);
-      setNotesCount(sanitized.length);
+      setNotesCount(countActiveNotesForDate(sanitized, today));
       if (Array.isArray(parsed) && sanitized.length !== parsed.length) {
         await AsyncStorage.setItem(notesStorageKey, JSON.stringify(sanitized));
       }
@@ -571,7 +577,6 @@ export default function HomeScreen() {
         title: "All cases",
         subtitle: "Open full diary",
         icon: "list-alt",
-        count: cases.length,
         onPress: () => openFromHome("/(tabs)/diary"),
       },
       {
@@ -592,7 +597,7 @@ export default function HomeScreen() {
       {
         key: "notes",
         title: "Notes",
-        subtitle: "Daily reminders",
+        subtitle: "Active today",
         icon: "sticky-note-2",
         count: notesCount,
         onPress: () => openFromHome("/notes"),
@@ -671,7 +676,6 @@ export default function HomeScreen() {
   }, [
     hearingsToday.length,
     hearingsThisWeek.length,
-    cases.length,
     filedToday.length,
     notesCount,
     canAddCases,
@@ -796,9 +800,11 @@ export default function HomeScreen() {
             color={isSelectedWidget ? C.zodiacColour : C.black}
           />
         </View>
-        {typeof widget.count === "number" ? (
+        {typeof widget.count === "number" && widget.count > 0 ? (
           <View style={styles.widgetCountPill}>
-            <ThemedText style={styles.widgetCountText}>{widget.count}</ThemedText>
+            <ThemedText style={styles.widgetCountText} numberOfLines={1}>
+              {widget.key === "notes" ? String(widget.count) : formatWidgetCount(widget.count)}
+            </ThemedText>
           </View>
         ) : null}
       </View>
@@ -827,7 +833,7 @@ export default function HomeScreen() {
         {notesCount > 0 ? (
           <View style={styles.notesCountBadge}>
             <ThemedText style={styles.notesCountText}>
-              {notesCount > 99 ? "99+" : String(notesCount)}
+              {String(notesCount)}
             </ThemedText>
           </View>
         ) : null}
@@ -1028,18 +1034,21 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
       backgroundColor: C.pureWhite,
     },
     widgetCountPill: {
-      minWidth: 28,
-      height: 22,
-      paddingHorizontal: 8,
-      borderRadius: 12,
+      minWidth: 22,
+      minHeight: 22,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 11,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: C.themeBlack,
     },
     widgetCountText: {
-      fontSize: 12,
+      fontSize: 11,
       color: C.pureWhite,
       fontWeight: "700",
+      lineHeight: 14,
+      includeFontPadding: false,
     },
     widgetTitle: {
       fontSize: 14,
