@@ -355,6 +355,21 @@ export default function SettingsScreen() {
               styles.rowButton,
               pressed && styles.rowButtonPressed,
             ]}
+            onPress={() => router.push("/share-app")}
+            accessibilityRole="button"
+            accessibilityLabel="Share app"
+          >
+            <View style={styles.rowLeading}>
+              <ThemedText style={styles.rowLabel}>Share app</ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={({ pressed }) => [
+              styles.rowButton,
+              pressed && styles.rowButtonPressed,
+            ]}
             onPress={() => void startWalkthrough()}
             accessibilityRole="button"
             accessibilityLabel="Start a walkthrough"
