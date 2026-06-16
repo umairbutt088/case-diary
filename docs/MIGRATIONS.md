@@ -6,112 +6,82 @@ This document describes the database migrations used by Legal Diary and how to r
 
 ## Overview
 
-Migrations are SQL files in `supabase/migrations/`. They run in **numeric order** by filename. Each file is idempotent where possible (`create table if not exists`, `create index if not exists`, etc.) so re-running is safe.
+Migrations are SQL files in `supabase/migrations/`. They run in **numeric order** by filename prefix (`001`, `002`, …). Each file is idempotent where possible (`create table if not exists`, `drop … if exists`, etc.) so re-running individual statements is usually safe.
 
 **Run migrations** after creating a Supabase project so the app has the required tables and Row Level Security (RLS) policies.
+
+> **Do not renumber migrations that are already applied** on a remote database. Supabase tracks applied files by name in `supabase_migrations.schema_migrations`. Renaming `030_…` to `029_…` on a deployed project will cause drift.
 
 ---
 
 ## Migration list (in order)
 
-| File                      | Purpose                                                                    |
-| ------------------------- | -------------------------------------------------------------------------- |
-| `001_create_profiles.sql` | Profiles table + trigger to create a profile on signup; RLS for profiles.  |
-| `002_create_cases.sql`    | Cases table for add-case form data; RLS so users only see their own cases. |
-| `003_create_judges.sql`   | Saved judges table (per user) with RLS and unique judge name per user.     |
-| `008_add_court_room_address_to_judges.sql` | Adds optional `court_room_address` to saved judges.            |
-| `009_add_court_tier_to_judges.sql` | Adds `court_tier` to judges for tier-based selector filtering.             |
+| # | File | Purpose |
+|---|------|---------|
+| 001 | `001_create_profiles.sql` | Profiles table, signup trigger, `set_updated_at()`, profile RLS |
+| 002 | `002_create_cases.sql` | Cases table and owner-scoped RLS |
+| 003 | `003_create_judges.sql` | Saved judges per user |
+| 004 | `004_create_clients.sql` | Clients table |
+| 005 | `005_add_linked_client_name.sql` | `linked_client_name` on cases |
+| 006 | `006_clients_add_detail_columns.sql` | Extra client detail columns |
+| 007 | `007_profiles_add_contact_avatar.sql` | Profile phone, address, avatar |
+| 008 | `008_add_court_room_address_to_judges.sql` | Judge court room address |
+| 009 | `009_add_court_tier_to_judges.sql` | Judge court tier + index |
+| 010 | `010_add_cause_list_notifications.sql` | Cause-list reminder columns on profiles |
+| 011 | `011_set_pakistan_timezone_default.sql` | Default timezone for profiles |
+| — | *(012, 013 unused)* | Numbers skipped in repo history |
+| 014 | `014_create_court_tiers.sql` | Court tiers table |
+| 015 | `015_create_case_hearings.sql` | Case hearing history |
+| 016 | `016_add_update_policy_to_judges.sql` | Judges update RLS |
+| 017 | `017_make_judges_unique_by_tier.sql` | Unique judge per user per tier |
+| 018 | `018_create_case_documents.sql` | Case documents table + storage policies |
+| — | *(019 unused)* | Number skipped in repo history |
+| 020 | `020_add_soft_delete_to_cases.sql` | `deleted_at` soft delete on cases |
+| 021 | `021_delete_own_account.sql` | Account deletion RPC |
+| 022 | `022_subordinate_access.sql` | Subordinate role, `subordinate_links`, RLS helpers |
+| 023 | `023_subordinate_link_rpc.sql` | `create_subordinate_link_by_email` RPC |
+| 024 | `024_split_add_and_edit_case_permissions.sql` | `can_add_cases`; split add vs edit in RLS |
+| 025 | `025_subordinate_cannot_delete_cases.sql` | Only owners may hard-delete cases |
+| 026 | `026_subordinate_delete_cases_permission.sql` | `can_delete_cases` permission |
+| 027 | `027_add_disposed_to_cases.sql` | Disposed case flag |
+| 028 | `028_subordinate_dispose_cases_permission.sql` | `can_dispose_cases` + latest add-subordinate RPC |
+| — | *(029 unused)* | Number skipped; invite feature was never committed as a create migration |
+| 030 | `030_drop_subordinate_invites.sql` | Drop invite-by-link table/RPCs (safe if never created) |
+| 031 | `031_subordinate_link_delete.sql` | Trigger: reset profile role when link is deleted |
+| 032 | `032_subordinate_single_supervisor.sql` | Block linking a subordinate who already belongs to another supervisor |
+
+**Next migration:** use `033_<name>.sql`.
 
 ---
 
-## 001 – Profiles
+## Intentional numbering gaps
 
-**File:** `supabase/migrations/001_create_profiles.sql`
+These numbers have **no file** in the repo. That is normal — Supabase only requires unique, sortable names, not a contiguous sequence. Do **not** insert retroactive files for 012, 013, 019, or 029 on a database that already ran later migrations.
 
-**Creates:**
-
-- **Table `public.profiles`**
-  - `id` (uuid, PK, references `auth.users.id`)
-  - `email`, `first_name`, `last_name`, `full_name`, `role`
-  - `created_at`, `updated_at`
-  - One row per user; `role` in `('user','partner','admin')`.
-- **Trigger `on_auth_user_created`**  
-  After insert on `auth.users`, inserts a row into `profiles` using signup metadata (e.g. `first_name`, `last_name`, `full_name`, `role`).
-- **Function `set_updated_at()`**  
-  Used by `updated_at` trigger (and by later migrations).
-- **RLS on `profiles`**
-  - Users can **select** and **update** only their own row (`auth.uid() = id`).
-  - **Insert** is disallowed for users (only the trigger inserts).
-
-**Dependencies:** None (first migration).
+| Gap | Notes |
+|-----|-------|
+| 012, 013 | Early court-tier work shipped as `014` |
+| 019 | Soft delete shipped as `020` |
+| 029 | Invite-by-link was removed in `030` without a matching create migration in this repo |
 
 ---
 
-## 002 – Cases
+## Subordinate migrations (022–031)
 
-**File:** `supabase/migrations/002_create_cases.sql`
+Applied in sequence:
 
-**Creates:**
+1. **022** – Core model: one supervisor per subordinate (`unique (subordinate_user_id)`), permission flags, `can_access_owner_data()`.
+2. **023** – Add subordinate by email RPC.
+3. **024** – `can_add_cases` column; updates RLS and RPC.
+4. **025** – Subordinates cannot trash/delete cases unless owner.
+5. **026** – Optional `can_delete_cases` for subordinates.
+6. **027** – `disposed` on cases.
+7. **028** – Optional `can_dispose_cases`; canonical `create_subordinate_link_by_email`.
+8. **030** – Removes experimental invite flow (`subordinate_invites`).
+9. **031** – On link delete, set `profiles.role` back to `'user'`.
+10. **032** – One subordinate per supervisor; no reassignment via add RPC or direct insert/update.
 
-- **Table `public.cases`**
-  - `id` (uuid, PK, default `gen_random_uuid()`)
-  - `user_id` (uuid, required, references `auth.users.id`) – case owner
-  - **Step 1:** `case_title`, `case_number`, `case_type`, `case_sub_type`, `petitioner_name`, `respondent_name`
-  - **Step 2:** `court_tier`, `court_name`, `court_room`, `judge_name`
-  - **Step 3:** `my_client_is` (petitioner/respondent), `linked_client_id`
-  - **Step 4:** `date_of_filing`, `next_hearing_date`, `current_status`, `next_status`, `notes`
-  - `created_at`, `updated_at`
-- **Indexes:** `user_id`, `next_hearing_date`, `created_at desc`
-- **RLS on `cases`**
-  - Users can **select**, **insert**, **update**, and **delete** only rows where `auth.uid() = user_id`.
-- **Trigger**  
-  `updated_at` set via `set_updated_at()` on update.
-
-**Dependencies:** Requires `001_create_profiles.sql` (for `set_updated_at()`). If you run migrations in order, this is satisfied.
-
----
-
-## 003 – Judges
-
-**File:** `supabase/migrations/003_create_judges.sql`
-
-**Creates:**
-
-- **Table `public.judges`**
-  - `id` (uuid, PK, default `gen_random_uuid()`)
-  - `user_id` (uuid, required, references `auth.users.id`) – owner
-  - `name` (text, required)
-  - `created_at` (timestamp)
-- **Indexes**
-  - `judges_user_id_idx` on `user_id`
-  - `judges_user_name_unique` unique on `(user_id, lower(trim(name)))` to prevent duplicates like "Judge A" vs " judge a "
-- **RLS on `judges`**
-  - Users can **select**, **insert**, and **delete** only their own rows.
-
----
-
-## 008 – Judge court room address
-
-**File:** `supabase/migrations/008_add_court_room_address_to_judges.sql`
-
-**Adds:**
-
-- `court_room_address` (text, optional) to `public.judges`
-
-This lets the app auto-fill `Court room location` when a judge is selected, while keeping the case field editable.
-
----
-
-## 009 – Judge court tier
-
-**File:** `supabase/migrations/009_add_court_tier_to_judges.sql`
-
-**Adds:**
-
-- `court_tier` (text, optional initially) to `public.judges`
-- index `judges_user_court_tier_idx` on `(user_id, court_tier)`
-
-This supports filtering judges by selected case court tier and keeps judge suggestions relevant.
+Later migrations **replace** `create_subordinate_link_by_email` and `can_access_owner_data` — always run the full chain on fresh databases.
 
 ---
 
@@ -120,61 +90,41 @@ This supports filtering judges by selected case court tier and keeps judge sugge
 ### Option A: Supabase Dashboard (SQL Editor)
 
 1. Open your project at [supabase.com](https://supabase.com) → **SQL Editor**.
-2. Run migrations **in order**:
-   - Open `supabase/migrations/001_create_profiles.sql`, copy its full contents, paste into the editor, click **Run**.
-   - Then open `supabase/migrations/002_create_cases.sql`, copy, paste, **Run**.
-   - Then run `supabase/migrations/003_create_judges.sql`.
-   - Then run `supabase/migrations/008_add_court_room_address_to_judges.sql`.
-   - Then run `supabase/migrations/009_add_court_tier_to_judges.sql`.
-
-Re-running is safe because of `if not exists` and `drop trigger if exists` where used.
+2. Run each file in **numeric order** (copy full file contents → Run).
 
 ### Option B: Supabase CLI
 
-From the **project root** (where `package.json` is):
+From the project root:
 
 ```bash
+npx supabase link --project-ref YOUR_PROJECT_REF   # one-time
 npx supabase db push
 ```
 
-Or, if Supabase CLI is installed globally:
-
-```bash
-supabase db push
-```
-
-This applies all migrations in `supabase/migrations/` that have not yet been applied to the linked remote database.
-
-**Linking a project (one-time):**
-
-```bash
-npx supabase link --project-ref YOUR_PROJECT_REF
-```
-
-`YOUR_PROJECT_REF` is in the project URL: `https://YOUR_PROJECT_REF.supabase.co`.
+This applies only migrations not yet recorded in `supabase_migrations.schema_migrations`.
 
 ---
 
-## Adding a new migration (future reference)
+## Adding a new migration
 
-1. **Create a new file** in `supabase/migrations/` with the next number and a short name, e.g.  
-   `003_add_clients_table.sql`
-2. **Keep it idempotent** where possible:
-   - `create table if not exists`
-   - `create index if not exists`
-   - `drop trigger if exists ... ; create trigger ...`
-   - For "alter table add column", you can use `do $$ ... end $$` to check if the column exists before adding.
-3. **Document it** in this file: add a row to the "Migration list" table and a section like "003 – …" describing tables, indexes, RLS, and dependencies.
-4. **Run it** via Dashboard (paste and run) or `supabase db push`.
+1. Create `supabase/migrations/033_short_description.sql` (use the next free number).
+2. Keep it idempotent where possible.
+3. Add a row to the table above in this file.
+4. Run via Dashboard or `supabase db push`.
 
 ---
 
-## Quick reference: tables
+## Quick reference: main tables
 
-| Table      | Key columns / purpose                                      |
-| ---------- | ---------------------------------------------------------- |
-| `profiles` | One per user; `id` = `auth.users.id`; name, email, role.   |
-| `cases`    | One per case; `user_id` = owner; all add-case form fields. |
-| `judges`   | Saved judges per user; name + optional `court_room_address`, `court_tier`. |
+| Table | Purpose |
+|-------|---------|
+| `profiles` | One per user; role, contact, subscription (if added), reminders |
+| `cases` | Case records; `user_id` = owner |
+| `clients` | Client directory per owner |
+| `judges` | Saved judges per owner |
+| `court_tiers` | Court tier list per owner |
+| `case_hearings` | Hearing / proceeding history |
+| `case_documents` | Document metadata per case |
+| `subordinate_links` | Supervisor ↔ subordinate permissions (one link per subordinate) |
 
-Both tables use RLS so each user only accesses their own data.
+All user-owned tables use RLS so each account only accesses permitted rows. Subordinates access owner data through `subordinate_links` and `can_access_owner_data()`.

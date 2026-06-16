@@ -238,7 +238,7 @@ function isNetworkError(message: string): boolean {
 export default function HomeScreen() {
   const isOnline = useIsOnline();
   const router = useRouter();
-  const { session, effectiveOwnerId, can } = useAuth();
+  const { session, effectiveOwnerId, can, role } = useAuth();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
   const modalSheet = modalSheetBackground(C, isDark);
@@ -690,6 +690,13 @@ export default function HomeScreen() {
         icon: "delete-outline",
         onPress: () => openFromHome("/trash"),
       },
+      {
+        key: "subordinates",
+        title: "Add subordinate",
+        subtitle: "Manage team members",
+        icon: "group-add",
+        onPress: () => openFromHome("/subordinates"),
+      },
     ];
 
     return list.filter((item) => {
@@ -698,6 +705,9 @@ export default function HomeScreen() {
       if (item.key === "disposed-cases") return can("view_cases");
       if (item.key === "settings" || item.key === "acts" || item.key === "trash") {
         return canManageSettings;
+      }
+      if (item.key === "subordinates") {
+        return canManageSettings && role !== "subordinate";
       }
       return true;
     });
@@ -710,6 +720,7 @@ export default function HomeScreen() {
     canAddCases,
     canManageJudges,
     canManageSettings,
+    role,
     can,
     handleShareCases,
     isExporting,

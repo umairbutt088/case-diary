@@ -19,6 +19,7 @@ import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { supabase } from "@/lib/supabase";
 import type { AccessPermission } from "@/types/access";
@@ -250,6 +251,7 @@ export default function SubordinatesScreen() {
   const C = useThemePalette();
   const s = useMemo(() => createStyles(C), [C]);
   const accessGuard = useAccessGuard("manage_settings");
+  const { goBack } = useHomeBackNavigation();
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [email, setEmail] = useState("");
@@ -341,6 +343,46 @@ export default function SubordinatesScreen() {
     [],
   );
 
+  const removeSubordinate = useCallback(
+    (row: LinkWithProfile) => {
+      const displayName = getDisplayName(row);
+      Alert.alert(
+        "Remove subordinate?",
+        `${displayName} will lose access to your cases and data. You can add them again later if needed.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => {
+              void (async () => {
+                setSavingId(row.id);
+                const { error } = await supabase
+                  .from("subordinate_links")
+                  .delete()
+                  .eq("id", row.id);
+                setSavingId(null);
+                if (error) {
+                  Alert.alert(
+                    "Remove failed",
+                    error.message || "Could not remove subordinate.",
+                  );
+                  return;
+                }
+                setRows((prev) => prev.filter((item) => item.id !== row.id));
+                if (expandedId === row.id) {
+                  setExpandedId(null);
+                }
+                Alert.alert("Removed", `${displayName} is no longer linked to your account.`);
+              })();
+            },
+          },
+        ],
+      );
+    },
+    [expandedId],
+  );
+
   const setLinkActive = useCallback(async (id: string, active: boolean) => {
     const title = active ? "Enable subordinate?" : "Disable subordinate?";
     const message = active
@@ -410,7 +452,7 @@ export default function SubordinatesScreen() {
 
   return (
     <SafeAreaView style={s.safeArea} edges={["top"]}>
-      <ScreenHeader title="Subordinate Access" />
+      <ScreenHeader title="Subordinate Access" onBack={goBack} />
       {loading ? (
         <View style={s.centered}>
           <ActivityIndicator size="large" color={C.black} />
@@ -436,7 +478,8 @@ export default function SubordinatesScreen() {
             {addExpanded ? (
               <>
                 <ThemedText style={s.hintText}>
-                  Add a subordinate with the same email they used to sign up.
+                  Add a subordinate with the same email they used to sign up. Each person can
+                  only be linked to one supervisor at a time.
                 </ThemedText>
                 <View style={s.addRow}>
                   <TextInput
@@ -550,6 +593,17 @@ export default function SubordinatesScreen() {
                           )}
                         </Pressable>
                       )}
+                      <Pressable
+                        style={[s.dangerBtn, { marginTop: 10 }]}
+                        onPress={() => removeSubordinate(row)}
+                        disabled={savingId === row.id}
+                      >
+                        {savingId === row.id ? (
+                          <ActivityIndicator size="small" color={C.themeRed} />
+                        ) : (
+                          <ThemedText style={s.dangerBtnText}>Remove subordinate</ThemedText>
+                        )}
+                      </Pressable>
                     </View>
                   ) : null}
                 </View>
