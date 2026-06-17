@@ -25,7 +25,6 @@ import {
 import { theme } from "@/constants/theme";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
-import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
@@ -188,9 +187,11 @@ export default function SettingsScreen() {
     () => createSettingsStyles(C),
     [C],
   );
-  const { signOut, setOnboardingCompleted, role } = useAuth();
-  const accessGuard = useAccessGuard("manage_settings");
+  const { signOut, setOnboardingCompleted, role, can } = useAuth();
   const isOnline = useIsOnline();
+  const showDisposedCases = role !== "subordinate" || can("dispose_cases");
+  const showTrash = role !== "subordinate" || can("delete_cases");
+  const showManageClients = role !== "subordinate" || can("view_clients");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -279,7 +280,6 @@ export default function SettingsScreen() {
   };
 
   return (
-    accessGuard.blocked ? null : (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader title="Settings" onBack={goBack} />
       <ScrollView
@@ -300,21 +300,25 @@ export default function SettingsScreen() {
             <ThemedText style={styles.rowLabel}>Edit profile</ThemedText>
             <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
           </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={({ pressed }) => [
-              styles.rowButton,
-              pressed && styles.rowButtonPressed,
-            ]}
-            onPress={() => router.push("/clients")}
-            accessibilityRole="button"
-            accessibilityLabel="Clients"
-          >
-            <View style={styles.rowLeading}>
-              <ThemedText style={styles.rowLabel}>Manage Clients</ThemedText>
-            </View>
-            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
-          </Pressable>
+          {showManageClients ? (
+            <>
+              <View style={styles.divider} />
+              <Pressable
+                style={({ pressed }) => [
+                  styles.rowButton,
+                  pressed && styles.rowButtonPressed,
+                ]}
+                onPress={() => router.push("/clients")}
+                accessibilityRole="button"
+                accessibilityLabel="Clients"
+              >
+                <View style={styles.rowLeading}>
+                  <ThemedText style={styles.rowLabel}>Manage Clients</ThemedText>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+              </Pressable>
+            </>
+          ) : null}
           <View style={styles.divider} />
           <Pressable
             style={({ pressed }) => [
@@ -381,36 +385,44 @@ export default function SettingsScreen() {
             </View>
             <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
           </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={({ pressed }) => [
-              styles.rowButton,
-              pressed && styles.rowButtonPressed,
-            ]}
-            onPress={() => router.push("/disposed-cases")}
-            accessibilityRole="button"
-            accessibilityLabel="Disposed cases"
-          >
-            <View style={styles.rowLeading}>
-              <ThemedText style={styles.rowLabel}>Disposed cases</ThemedText>
-            </View>
-            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
-          </Pressable>
-          <View style={styles.divider} />
-          <Pressable
-            style={({ pressed }) => [
-              styles.rowButton,
-              pressed && styles.rowButtonPressed,
-            ]}
-            onPress={() => router.push("/trash")}
-            accessibilityRole="button"
-            accessibilityLabel="Trash"
-          >
-            <View style={styles.rowLeading}>
-              <ThemedText style={styles.rowLabel}>Trash</ThemedText>
-            </View>
-            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
-          </Pressable>
+          {showDisposedCases ? (
+            <>
+              <View style={styles.divider} />
+              <Pressable
+                style={({ pressed }) => [
+                  styles.rowButton,
+                  pressed && styles.rowButtonPressed,
+                ]}
+                onPress={() => router.push("/disposed-cases")}
+                accessibilityRole="button"
+                accessibilityLabel="Disposed cases"
+              >
+                <View style={styles.rowLeading}>
+                  <ThemedText style={styles.rowLabel}>Disposed cases</ThemedText>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+              </Pressable>
+            </>
+          ) : null}
+          {showTrash ? (
+            <>
+              <View style={styles.divider} />
+              <Pressable
+                style={({ pressed }) => [
+                  styles.rowButton,
+                  pressed && styles.rowButtonPressed,
+                ]}
+                onPress={() => router.push("/trash")}
+                accessibilityRole="button"
+                accessibilityLabel="Trash"
+              >
+                <View style={styles.rowLeading}>
+                  <ThemedText style={styles.rowLabel}>Trash</ThemedText>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+              </Pressable>
+            </>
+          ) : null}
           <View style={styles.divider} />
           <Pressable
             style={({ pressed }) => [
@@ -489,6 +501,5 @@ export default function SettingsScreen() {
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
-    )
   );
 }

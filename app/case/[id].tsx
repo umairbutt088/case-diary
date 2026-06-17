@@ -58,6 +58,7 @@ import {
     uploadCaseDocument
 } from "@/lib/case-documents";
 import { formatFeeAmount, getRemainingFee } from "@/lib/case-fees";
+import { useCanViewCaseFees } from "@/lib/case-fee-access";
 import { addCaseHearingEntry, getCaseHearingHistory } from "@/lib/case-hearings";
 import {
     getCachedCaseById,
@@ -597,8 +598,9 @@ function getCaseSummaryText(params: {
   caseData: CaseRow;
   title: string;
   linkedClientName?: string | null;
+  includeFees?: boolean;
 }) {
-  const { caseData, title, linkedClientName } = params;
+  const { caseData, title, linkedClientName, includeFees = true } = params;
   const lines = [
     `Case Summary: ${title}`,
     "",
@@ -613,13 +615,16 @@ function getCaseSummaryText(params: {
     `Next Hearing: ${formatCaseDate(caseData.next_hearing_date)}`,
     `Current Status: ${caseData.current_status?.trim() || "—"}`,
     `Next Status: ${caseData.next_status?.trim() || "—"}`,
-    "",
-    `Total Fee: ${formatFeeAmount(caseData.total_fee)}`,
-    `Fee Received: ${formatFeeAmount(caseData.fee_received)}`,
-    `Remaining Fee: ${formatFeeAmount(getRemainingFee(caseData.total_fee, caseData.fee_received))}`,
-    "",
-    `Generated: ${new Date().toLocaleString()}`,
   ];
+  if (includeFees) {
+    lines.push(
+      "",
+      `Total Fee: ${formatFeeAmount(caseData.total_fee)}`,
+      `Fee Received: ${formatFeeAmount(caseData.fee_received)}`,
+      `Remaining Fee: ${formatFeeAmount(getRemainingFee(caseData.total_fee, caseData.fee_received))}`,
+    );
+  }
+  lines.push("", `Generated: ${new Date().toLocaleString()}`);
   return lines.join("\n");
 }
 
@@ -627,8 +632,9 @@ function buildCaseSummaryHtml(params: {
   caseData: CaseRow;
   title: string;
   linkedClientName?: string | null;
+  includeFees?: boolean;
 }) {
-  const { caseData, title, linkedClientName } = params;
+  const { caseData, title, linkedClientName, includeFees = true } = params;
   const rows = [
     ["Case Number", caseData.case_number?.trim() || "—"],
     ["Case Type", caseData.case_sub_type?.trim() || caseData.case_type?.trim() || "—"],
@@ -640,12 +646,16 @@ function buildCaseSummaryHtml(params: {
     ["Next Hearing", formatCaseDate(caseData.next_hearing_date)],
     ["Current Status", caseData.current_status?.trim() || "—"],
     ["Next Status", caseData.next_status?.trim() || "—"],
-    ["Total Fee", formatFeeAmount(caseData.total_fee)],
-    ["Fee Received", formatFeeAmount(caseData.fee_received)],
-    [
-      "Remaining Fee",
-      formatFeeAmount(getRemainingFee(caseData.total_fee, caseData.fee_received)),
-    ],
+    ...(includeFees
+      ? [
+          ["Total Fee", formatFeeAmount(caseData.total_fee)],
+          ["Fee Received", formatFeeAmount(caseData.fee_received)],
+          [
+            "Remaining Fee",
+            formatFeeAmount(getRemainingFee(caseData.total_fee, caseData.fee_received)),
+          ],
+        ]
+      : []),
   ]
     .map(
       ([label, value]) => `
@@ -774,6 +784,7 @@ export default function CaseDetailScreen() {
     [C, onPrimary, modalSheet],
   );
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
+  const showCaseFees = useCanViewCaseFees(caseData);
   const [linkedClient, setLinkedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -896,7 +907,7 @@ export default function CaseDetailScreen() {
         await upsertCachedCase(session.user.id, row);
       }
       
-      if (isOnline) {
+      if (isOnline && canManageDocuments) {
         setLoadingDocs(true);
         try {
           const docs = await getCaseDocuments(id.toString());
@@ -911,7 +922,14 @@ export default function CaseDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, session?.user?.id, isOnline]);
+  }, [canManageDocuments, id, session?.user?.id, isOnline]);
+
+  useEffect(() => {
+    if (!canManageDocuments) {
+      setDocuments([]);
+      setLoadingDocs(false);
+    }
+  }, [canManageDocuments]);
 
   useEffect(() => {
     const clientId = caseData?.linked_client_id;
@@ -1069,6 +1087,7 @@ export default function CaseDetailScreen() {
         caseData,
         title,
         linkedClientName: linkedClient?.name,
+        includeFees: showCaseFees,
       });
       await Share.share({
         title: `Case Summary - ${title}`,
@@ -1096,6 +1115,7 @@ export default function CaseDetailScreen() {
         caseData,
         title,
         linkedClientName: linkedClient?.name,
+        includeFees: showCaseFees,
       });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, {
@@ -1782,79 +1802,82 @@ export default function CaseDetailScreen() {
             ) : null}
           </SectionCard>
 
-          <CaseFeeDetailCard
-            caseId={caseData.id}
-            userId={effectiveOwnerId ?? caseData.user_id}
-            totalFee={caseData.total_fee}
-            feeReceived={caseData.fee_received}
-            canRecord={canEditCases}
-            isOnline={isOnline}
-            onFeeUpdated={async (feeReceived) => {
-              const patch = { fee_received: feeReceived };
-              setCaseData((prev) => (prev ? { ...prev, ...patch } : prev));
-              if (session?.user?.id) {
-                await patchCachedCase(session.user.id, caseData.id, patch);
-              }
-            }}
-          />
+          {showCaseFees ? (
+            <CaseFeeDetailCard
+              caseId={caseData.id}
+              userId={effectiveOwnerId ?? caseData.user_id}
+              totalFee={caseData.total_fee}
+              feeReceived={caseData.fee_received}
+              canRecord={canEditCases}
+              isOnline={isOnline}
+              onFeeUpdated={async (feeReceived) => {
+                const patch = { fee_received: feeReceived };
+                setCaseData((prev) => (prev ? { ...prev, ...patch } : prev));
+                if (session?.user?.id) {
+                  await patchCachedCase(session.user.id, caseData.id, patch);
+                }
+              }}
+            />
+          ) : null}
 
-          <SectionCard s={styles} title="Documents">
-            <Bounceable
-              style={styles.addProceedingBtn}
-              onPress={handleAddDocument}
-              disabled={uploadingDoc || !canManageDocuments}
-            >
-              {uploadingDoc ? (
+          {canManageDocuments ? (
+            <SectionCard s={styles} title="Documents">
+              <Bounceable
+                style={styles.addProceedingBtn}
+                onPress={handleAddDocument}
+                disabled={uploadingDoc}
+              >
+                {uploadingDoc ? (
+                  <ActivityIndicator size="small" color={C.black} />
+                ) : (
+                  <MaterialIcons name="upload-file" size={18} color={C.black} />
+                )}
+                <ThemedText style={styles.addProceedingText}>
+                  {uploadingDoc ? "Uploading..." : "Add Document"}
+                </ThemedText>
+              </Bounceable>
+
+              {loadingDocs ? (
                 <ActivityIndicator size="small" color={C.black} />
+              ) : documents.length === 0 ? (
+                <DetailRow s={styles} C={C} label="Files" value="No documents attached yet" />
               ) : (
-                <MaterialIcons name="upload-file" size={18} color={C.black} />
-              )}
-              <ThemedText style={styles.addProceedingText}>
-                {uploadingDoc ? "Uploading..." : "Add Document"}
-              </ThemedText>
-            </Bounceable>
-
-            {loadingDocs ? (
-              <ActivityIndicator size="small" color={C.black} />
-            ) : documents.length === 0 ? (
-              <DetailRow s={styles} C={C} label="Files" value="No documents attached yet" />
-            ) : (
-              <>
-                {documents.slice(0, 2).map((doc) => (
-                  <View key={doc.id} style={styles.historyItem}>
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                      <Bounceable style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingRight: 8 }} onPress={() => void handleViewDocument(doc)}>
-                        <DocumentIconPreview filePath={doc.file_path} mimeType={doc.mime_type} C={C} />
-                        <View style={{ flex: 1 }}>
-                          <ThemedText style={styles.historyDate} numberOfLines={1}>{doc.file_name}</ThemedText>
-                          <ThemedText style={styles.historyNext}>
-                            {doc.size_bytes ? (doc.size_bytes / 1024).toFixed(1) + " KB" : "Unknown size"} • {formatCaseDate(doc.created_at)}
-                          </ThemedText>
-                        </View>
-                      </Bounceable>
-                      <View style={{ flexDirection: "row", gap: 12 }}>
-                        <Bounceable
-                          onPress={() => handleDeleteDocument(doc.id, doc.file_path)}
-                          disabled={!canManageDocuments}
-                        >
-                          <MaterialIcons name="delete-outline" size={20} color={C.themeRed} />
+                <>
+                  {documents.slice(0, 2).map((doc) => (
+                    <View key={doc.id} style={styles.historyItem}>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <Bounceable style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingRight: 8 }} onPress={() => void handleViewDocument(doc)}>
+                          <DocumentIconPreview filePath={doc.file_path} mimeType={doc.mime_type} C={C} />
+                          <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.historyDate} numberOfLines={1}>{doc.file_name}</ThemedText>
+                            <ThemedText style={styles.historyNext}>
+                              {doc.size_bytes ? (doc.size_bytes / 1024).toFixed(1) + " KB" : "Unknown size"} • {formatCaseDate(doc.created_at)}
+                            </ThemedText>
+                          </View>
                         </Bounceable>
+                        <View style={{ flexDirection: "row", gap: 12 }}>
+                          <Bounceable
+                            onPress={() => handleDeleteDocument(doc.id, doc.file_path)}
+                          >
+                            <MaterialIcons name="delete-outline" size={20} color={C.themeRed} />
+                          </Bounceable>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))}
-                {documents.length > 2 && (
-                  <Bounceable
-                    style={styles.seeAllBtn}
-                    onPress={() => router.push(`/case/${id}/documents`)}
-                  >
-                    <ThemedText style={styles.seeAllBtnText}>See all documents ({documents.length})</ThemedText>
-                    <MaterialIcons name="chevron-right" size={18} color={C.black} />
-                  </Bounceable>
-                )}
-              </>
-            )}
-          </SectionCard>
+                  ))}
+                  {documents.length > 2 && (
+                    <Bounceable
+                      style={styles.seeAllBtn}
+                      onPress={() => router.push(`/case/${id}/documents`)}
+                    >
+                      <ThemedText style={styles.seeAllBtnText}>See all documents ({documents.length})</ThemedText>
+                      <MaterialIcons name="chevron-right" size={18} color={C.black} />
+                    </Bounceable>
+                  )}
+                </>
+              )}
+            </SectionCard>
+          ) : null}
 
           {canDisposeCase && !isDisposed ? (
             <Bounceable
@@ -2064,13 +2087,15 @@ export default function CaseDetailScreen() {
         onClose={() => setViewerUrl(null)}
       />
 
-      <DocumentNameModal
-        visible={pendingFile !== null}
-        suggestedName={pendingFile?.suggestedName ?? ""}
-        saving={uploadingDoc}
-        onConfirm={(name) => void handleDocumentNameConfirmed(name)}
-        onCancel={handleDocumentNameCancelled}
-      />
+      {canManageDocuments ? (
+        <DocumentNameModal
+          visible={pendingFile !== null}
+          suggestedName={pendingFile?.suggestedName ?? ""}
+          saving={uploadingDoc}
+          onConfirm={(name) => void handleDocumentNameConfirmed(name)}
+          onCancel={handleDocumentNameCancelled}
+        />
+      ) : null}
 
       <DisposeCaseModal
         visible={disposeModalVisible}

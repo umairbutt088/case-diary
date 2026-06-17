@@ -24,6 +24,8 @@ export type CaseRow = {
   notes: string | null;
   total_fee: number | null;
   fee_received: number | null;
+  /** When false, subordinates cannot see fee amounts or payment history. */
+  subordinates_can_view_fees?: boolean;
   created_at: string;
   updated_at: string;
   /** Soft-delete timestamp. NULL = active case. Non-null = moved to Trash. */

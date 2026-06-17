@@ -551,7 +551,7 @@ export default function ProfileScreen() {
     setEditing(false);
   }, [profile]);
 
-  const settingsHeaderButton = can("manage_settings") ? (
+  const settingsHeaderButton = (
     <Pressable
       onPress={() => router.push("/settings")}
       style={({ pressed }) => [styles.headerIconBtn, pressed && styles.headerIconBtnPressed]}
@@ -561,7 +561,7 @@ export default function ProfileScreen() {
     >
       <MaterialIcons name="settings" size={24} color={C.themeBlack} />
     </Pressable>
-  ) : null;
+  );
 
   const displayName = profile ? getDisplayName(profile) : "";
   const initials =

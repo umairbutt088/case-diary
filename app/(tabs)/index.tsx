@@ -262,8 +262,8 @@ export default function HomeScreen() {
   const [selectedWidgetKey, setSelectedWidgetKey] = useState<string>("today-hearings");
 
   const canAddCases = can("add_cases");
-  const canManageSettings = can("manage_settings");
   const canManageJudges = can("add_cases") || can("edit_cases");
+  const isOwner = role !== "subordinate";
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
@@ -591,13 +591,39 @@ export default function HomeScreen() {
         count: hearingsThisWeek.length,
         onPress: () => openFromHome("/cases-overview", { filter: "weekly" }),
       },
+      // {
+      //   key: "all-cases",
+      //   title: "All cases",
+      //   subtitle: "Open full diary",
+      //   icon: "list-alt",
+      //   onPress: () => openFromHome("/(tabs)/diary"),
+      // },
+      // {
+      //   key: "add-case",
+      //   title: "Add case",
+      //   subtitle: "Create a new file",
+      //   icon: "add-circle-outline",
+      //   onPress: () => {
+      //     if (!canAddCases) return;
+      //     openFromHome("/add-case-flow");
+      //   },
+      //   disabled: !canAddCases,
+      // },
       {
-        key: "all-cases",
-        title: "All cases",
-        subtitle: "Open full diary",
-        icon: "list-alt",
-        onPress: () => openFromHome("/(tabs)/diary"),
+        key: "disposed-cases",
+        title: "Disposed cases",
+        subtitle: "Finished matters",
+        icon: "archive",
+        count: disposedCount,
+        onPress: () => openFromHome("/disposed-cases"),
       },
+      // {
+      //   key: "calendar",
+      //   title: "Calendar",
+      //   subtitle: "Date-based view",
+      //   icon: "calendar-month",
+      //   onPress: () => openFromHome("/(tabs)/calendar"),
+      // },
       {
         key: "filed-cases",
         title: "Filed cases",
@@ -607,37 +633,11 @@ export default function HomeScreen() {
         onPress: () => setShowFiledCasesModal(true),
       },
       {
-        key: "calendar",
-        title: "Calendar",
-        subtitle: "Date-based view",
-        icon: "calendar-month",
-        onPress: () => openFromHome("/(tabs)/calendar"),
-      },
-      {
-        key: "notes",
-        title: "Notes",
-        subtitle: "Active today",
-        icon: "sticky-note-2",
-        count: notesCount,
-        onPress: () => openFromHome("/notes"),
-      },
-      {
-        key: "add-case",
-        title: "Add case",
-        subtitle: "Create a new file",
-        icon: "add-circle-outline",
-        onPress: () => {
-          if (!canAddCases) return;
-          openFromHome("/add-case-flow");
-        },
-        disabled: !canAddCases,
-      },
-      {
-        key: "court-links",
-        title: "Court links",
-        subtitle: "Open court portals",
-        icon: "public",
-        onPress: openCourtSearchWebsite,
+        key: "judges",
+        title: "Judges",
+        subtitle: "Manage judge list",
+        icon: "gavel",
+        onPress: () => openFromHome("/judges"),
       },
       {
         key: "clients",
@@ -646,12 +646,20 @@ export default function HomeScreen() {
         icon: "groups-2",
         onPress: () => openFromHome("/clients"),
       },
+      // {
+      //   key: "notes",
+      //   title: "Notes",
+      //   subtitle: "Active today",
+      //   icon: "sticky-note-2",
+      //   count: notesCount,
+      //   onPress: () => openFromHome("/notes"),
+      // },
       {
-        key: "judges",
-        title: "Judges",
-        subtitle: "Manage judge list",
-        icon: "gavel",
-        onPress: () => openFromHome("/judges"),
+        key: "court-links",
+        title: "Court links",
+        subtitle: "Open court portals",
+        icon: "public",
+        onPress: openCourtSearchWebsite,
       },
       {
         key: "share",
@@ -661,27 +669,19 @@ export default function HomeScreen() {
         onPress: handleShareCases,
         disabled: isExporting,
       },
-      {
-        key: "settings",
-        title: "Settings",
-        subtitle: "Open app settings",
-        icon: "settings",
-        onPress: () => openFromHome("/settings"),
-      },
+      // {
+      //   key: "settings",
+      //   title: "Settings",
+      //   subtitle: "Open app settings",
+      //   icon: "settings",
+      //   onPress: () => openFromHome("/settings"),
+      // },
       {
         key: "acts",
         title: "Acts & law books",
         subtitle: "Reference library",
         icon: "menu-book",
         onPress: () => openFromHome("/acts"),
-      },
-      {
-        key: "disposed-cases",
-        title: "Disposed cases",
-        subtitle: "Finished matters",
-        icon: "archive",
-        count: disposedCount,
-        onPress: () => openFromHome("/disposed-cases"),
       },
       {
         key: "trash",
@@ -702,12 +702,17 @@ export default function HomeScreen() {
     return list.filter((item) => {
       if (item.key === "clients") return can("view_clients");
       if (item.key === "judges") return canManageJudges;
-      if (item.key === "disposed-cases") return can("view_cases");
-      if (item.key === "settings" || item.key === "acts" || item.key === "trash") {
-        return canManageSettings;
+      if (item.key === "disposed-cases") {
+        return role !== "subordinate" ? can("view_cases") : can("dispose_cases");
+      }
+      if (item.key === "settings") {
+        return isOwner;
+      }
+      if (item.key === "trash") {
+        return isOwner || can("delete_cases");
       }
       if (item.key === "subordinates") {
-        return canManageSettings && role !== "subordinate";
+        return isOwner;
       }
       return true;
     });
@@ -719,7 +724,7 @@ export default function HomeScreen() {
     disposedCount,
     canAddCases,
     canManageJudges,
-    canManageSettings,
+    isOwner,
     role,
     can,
     handleShareCases,

@@ -51,8 +51,12 @@ Migrations are SQL files in `supabase/migrations/`. They run in **numeric order*
 | 032 | `032_subordinate_single_supervisor.sql` | One subordinate per supervisor; no reassignment |
 | 033 | `033_case_fees.sql` | `total_fee` and `fee_received` on cases |
 | 034 | `034_case_fee_payments.sql` | Fee payment history per case |
+| 035 | `035_case_subordinate_fee_visibility.sql` | Per-case `subordinates_can_view_fees`; fee payment RLS |
+| 036 | `036_subordinate_view_case_fees_permission.sql` | `can_view_case_fees` on subordinate links |
+| 037 | `037_remove_manage_settings_permission.sql` | Drop `manage_settings` from RPC permission checks |
+| 038 | `038_subordinate_links_realtime.sql` | Realtime updates for subordinate permission changes |
 
-**Next migration:** use `035_<name>.sql`.
+**Next migration:** use `039_<name>.sql`.
 
 ---
 

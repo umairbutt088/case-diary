@@ -17,6 +17,7 @@ import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { AddOtherCaseTypeModal } from "@/components/add-case/add-other-case-type-modal";
 import { CaseFeeFields } from "@/components/add-case/case-fee-fields";
 import { ChipGroup } from "@/components/add-case/chip-group";
+import { SubordinateFeeVisibilitySwitch } from "@/components/subordinate-fee-visibility-switch";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
 import { FormField } from "@/components/add-case/form-field";
@@ -43,6 +44,7 @@ import { useCustomCaseTypes } from "@/hooks/use-custom-case-types";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { feeNumberToInput, parseFeeInput } from "@/lib/case-fees";
+import { useCanViewCaseFees } from "@/lib/case-fee-access";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
 import {
   getCachedCaseById,
@@ -84,6 +86,7 @@ function caseRowToFormState(row: CaseRow): AddCaseFormState {
     nextStatus: row.next_status ?? "",
     totalFee: feeNumberToInput(row.total_fee),
     feeReceived: feeNumberToInput(row.fee_received),
+    subordinatesCanViewFees: row.subordinates_can_view_fees ?? true,
   };
 }
 
@@ -181,8 +184,9 @@ function createEditCaseStyles(C: AppColors, onPrimary: string) {
 export default function EditCaseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { session, effectiveOwnerId } = useAuth();
+  const { session, effectiveOwnerId, role } = useAuth();
   const accessGuard = useAccessGuard("edit_cases");
+  const isCaseOwner = role !== "subordinate";
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
@@ -192,6 +196,7 @@ export default function EditCaseScreen() {
     [C, onPrimary],
   );
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
+  const showCaseFees = useCanViewCaseFees(caseData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<AddCaseFormState>(initialAddCaseFormState);
@@ -348,14 +353,16 @@ export default function EditCaseScreen() {
     if (!form.myClientIs) e.myClientIs = "Please select who your client is";
     if (!form.nextHearingDate.trim())
       e.nextHearingDate = "Next hearing date is required";
-    const total = parseFeeInput(form.totalFee);
-    const received = parseFeeInput(form.feeReceived);
-    if (form.totalFee.trim() && total === null)
-      e.totalFee = "Enter a valid amount";
-    if (form.feeReceived.trim() && received === null)
-      e.feeReceived = "Enter a valid amount";
-    if (total != null && received != null && received > total)
-      e.feeReceived = "Received cannot exceed total fee";
+    if (showCaseFees) {
+      const total = parseFeeInput(form.totalFee);
+      const received = parseFeeInput(form.feeReceived);
+      if (form.totalFee.trim() && total === null)
+        e.totalFee = "Enter a valid amount";
+      if (form.feeReceived.trim() && received === null)
+        e.feeReceived = "Enter a valid amount";
+      if (total != null && received != null && received > total)
+        e.feeReceived = "Received cannot exceed total fee";
+    }
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
   }, [
@@ -367,6 +374,7 @@ export default function EditCaseScreen() {
     form.judgeName,
     form.myClientIs,
     form.nextHearingDate,
+    showCaseFees,
     form.totalFee,
     form.feeReceived,
   ]);
@@ -405,8 +413,15 @@ export default function EditCaseScreen() {
       next_hearing_date: form.nextHearingDate.trim() || null,
       current_status: form.caseStatus || null,
       next_status: form.nextStatus || null,
-      total_fee: totalFee,
-      fee_received: feeReceived,
+      ...(showCaseFees
+        ? {
+            total_fee: totalFee,
+            fee_received: feeReceived,
+          }
+        : {}),
+      ...(isCaseOwner
+        ? { subordinates_can_view_fees: form.subordinatesCanViewFees }
+        : {}),
     };
 
     setSaving(true);
@@ -461,6 +476,8 @@ export default function EditCaseScreen() {
     router,
     isOnline,
     caseData?.next_hearing_date,
+    isCaseOwner,
+    showCaseFees,
   ]);
 
   if (loading || (!caseData && !error)) {
@@ -720,15 +737,28 @@ export default function EditCaseScreen() {
             numberOfLines={4}
             inputStyle={styles.statusInput}
           />
-          <CaseFeeFields
-            totalFee={form.totalFee}
-            feeReceived={form.feeReceived}
-            onTotalFeeChange={(v) => update({ totalFee: v })}
-            onFeeReceivedChange={(v) => update({ feeReceived: v })}
-            totalFeeError={errors.totalFee}
-            feeReceivedError={errors.feeReceived}
-            receivedLabel="Fee received to date"
-          />
+          {showCaseFees ? (
+            <>
+              <CaseFeeFields
+                totalFee={form.totalFee}
+                feeReceived={form.feeReceived}
+                onTotalFeeChange={(v) => update({ totalFee: v })}
+                onFeeReceivedChange={(v) => update({ feeReceived: v })}
+                totalFeeError={errors.totalFee}
+                feeReceivedError={errors.feeReceived}
+                receivedLabel="Fee received to date"
+              />
+              {isCaseOwner ? (
+                <SubordinateFeeVisibilitySwitch
+                  value={form.subordinatesCanViewFees}
+                  onValueChange={(subordinatesCanViewFees) =>
+                    update({ subordinatesCanViewFees })
+                  }
+                  disabled={saving}
+                />
+              ) : null}
+            </>
+          ) : null}
 
           {saveError ? (
             <ThemedText style={styles.saveError}>{saveError}</ThemedText>

@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 import { useAuth } from "@/context/auth-context";
 import type { AccessPermission } from "@/types/access";
@@ -13,7 +13,7 @@ export function useAccessGuard(...permissions: AccessPermission[]) {
   const { isAccessLoading, can } = useAuth();
   const allowed = permissions.some((p) => can(p));
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isAccessLoading && !allowed) {
       router.replace("/(tabs)");
     }

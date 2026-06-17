@@ -18,7 +18,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
-import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useOwnerOnlyGuard } from "@/hooks/use-owner-only-guard";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { supabase } from "@/lib/supabase";
@@ -33,8 +33,8 @@ const TOGGLE_KEYS: { key: AccessPermission; label: string }[] = [
   { key: "delete_cases", label: "Delete / trash cases" },
   { key: "dispose_cases", label: "Dispose / restore cases" },
   { key: "view_clients", label: "View clients" },
+  { key: "view_case_fees", label: "View case fees" },
   { key: "manage_documents", label: "Manage documents" },
-  { key: "manage_settings", label: "Manage settings" },
 ];
 
 type LinkWithProfile = SubordinateLinkRow & {
@@ -250,7 +250,7 @@ export default function SubordinatesScreen() {
   const { session } = useAuth();
   const C = useThemePalette();
   const s = useMemo(() => createStyles(C), [C]);
-  const accessGuard = useAccessGuard("manage_settings");
+  const ownerGuard = useOwnerOnlyGuard();
   const { goBack } = useHomeBackNavigation();
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -448,7 +448,7 @@ export default function SubordinatesScreen() {
     );
   }, [email, session?.user?.id, loadRows]);
 
-  if (accessGuard.blocked) return null;
+  if (ownerGuard.blocked) return null;
 
   return (
     <SafeAreaView style={s.safeArea} edges={["top"]}>

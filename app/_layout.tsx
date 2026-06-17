@@ -15,6 +15,7 @@ import "react-native-reanimated";
 
 import { AuthNavigator } from "@/components/auth-navigator";
 import { OfflineSyncProvider } from "@/components/offline-sync-provider";
+import { SubordinateAccessRouteSync } from "@/components/subordinate-access-route-sync";
 import { PushNotificationProvider } from "@/components/push-notification-provider";
 import { AppThemeProvider, useAppTheme } from "@/context/app-theme-context";
 import { AuthProvider } from "@/context/auth-context";
@@ -76,6 +77,7 @@ function RootLayoutInner() {
               verticalOffset={copilotVerticalOffset}
             >
               <AuthNavigator>
+                <SubordinateAccessRouteSync />
                 <Stack>
                   <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

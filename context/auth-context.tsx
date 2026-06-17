@@ -7,11 +7,16 @@ import React, {
     useContext,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
 import { tryApplySupabaseAuthFromUrl } from "@/lib/auth-deeplink";
+import {
+  parseSubordinateLinkRow,
+  permissionsFromSubordinateLink,
+} from "@/lib/subordinate-access";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { AccessPermission, AccessPermissions, AccessRole } from "@/types/access";
 import {
@@ -64,7 +69,7 @@ type AuthContextValue = {
   permissions: AccessPermissions;
   subordinateLink: SubordinateLinkRow | null;
   can: (permission: AccessPermission) => boolean;
-  refreshAccess: () => Promise<void>;
+  refreshAccess: (options?: { silent?: boolean }) => Promise<void>;
   /** True after opening a password-recovery deep link until the user sets a new password or signs out. */
   expectsPasswordChange: boolean;
   clearPasswordRecoveryExpectation: () => Promise<void>;
@@ -84,7 +89,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [effectiveOwnerId, setEffectiveOwnerId] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<AccessPermissions>(FULL_ACCESS_PERMISSIONS);
   const [subordinateLink, setSubordinateLink] = useState<SubordinateLinkRow | null>(null);
-  const [isAccessLoading, setIsAccessLoading] = useState(false);
+  const [isAccessLoading, setIsAccessLoading] = useState(true);
+  const accessHydratedRef = useRef(false);
+  const refreshGenerationRef = useRef(0);
+  const roleRef = useRef<AccessRole>("user");
   const [onboardingCompleted, setOnboardingCompletedState] = useState<
     boolean | null
   >(null);
@@ -116,31 +124,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured) await supabase.auth.signOut();
   }, [clearPasswordRecoveryExpectation]);
 
-  const refreshAccess = useCallback(async () => {
+  const applySubordinateAccess = useCallback(
+    (link: SubordinateLinkRow | null, ownerFallbackId: string) => {
+      setSubordinateLink(link);
+      setEffectiveOwnerId(link?.supervisor_user_id ?? ownerFallbackId);
+      setPermissions(permissionsFromSubordinateLink(link));
+    },
+    [],
+  );
+
+  const refreshAccess = useCallback(async (options?: { silent?: boolean }) => {
     const userId = session?.user?.id;
     if (!isSupabaseConfigured || !userId) {
       setProfile(null);
       setRole("user");
+      roleRef.current = "user";
       setEffectiveOwnerId(null);
       setPermissions(FULL_ACCESS_PERMISSIONS);
       setSubordinateLink(null);
+      accessHydratedRef.current = false;
       setIsAccessLoading(false);
       return;
     }
 
-    setIsAccessLoading(true);
+    const generation = ++refreshGenerationRef.current;
+    const silent = Boolean(options?.silent && accessHydratedRef.current);
+    if (!silent) {
+      setIsAccessLoading(true);
+    }
+
+    const isStale = () => generation !== refreshGenerationRef.current;
+
+    let resolvedRole: AccessRole | null = null;
+
     try {
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .maybeSingle();
 
+      if (isStale()) return;
+      if (profileError) throw profileError;
+
       const nextProfile = (profileData as ProfileRow | null) ?? null;
       setProfile(nextProfile);
 
       const nextRole = normalizeRole(nextProfile?.role);
+      resolvedRole = nextRole;
       setRole(nextRole);
+      roleRef.current = nextRole;
 
       if (nextRole !== "subordinate") {
         setSubordinateLink(null);
@@ -149,40 +182,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const { data: linkData } = await supabase
+      const { data: linkData, error: linkError } = await supabase
         .from("subordinate_links")
         .select("*")
         .eq("subordinate_user_id", userId)
         .eq("is_active", true)
         .maybeSingle();
 
+      if (isStale()) return;
+      if (linkError) throw linkError;
+
       const link = (linkData as SubordinateLinkRow | null) ?? null;
-      setSubordinateLink(link);
-      setEffectiveOwnerId(link?.supervisor_user_id ?? userId);
-      setPermissions(
-        link
-          ? {
-              view_cases: Boolean(link.can_view_cases),
-              add_cases: Boolean(link.can_add_cases),
-              edit_cases: Boolean(link.can_edit_cases),
-              delete_cases: Boolean(link.can_delete_cases),
-              dispose_cases: Boolean(link.can_dispose_cases),
-              view_clients: Boolean(link.can_view_clients),
-              manage_documents: Boolean(link.can_manage_documents),
-              manage_settings: Boolean(link.can_manage_settings),
-            }
-          : SUBORDINATE_FALLBACK_PERMISSIONS,
-      );
-    } catch {
+      applySubordinateAccess(link, userId);
+    } catch (error) {
+      authContextDebug("refreshAccess failed", { silent, error });
+      if (silent || isStale()) return;
+
+      if (resolvedRole === "subordinate") {
+        applySubordinateAccess(null, userId);
+        return;
+      }
+
       setProfile(null);
       setRole("user");
+      roleRef.current = "user";
       setEffectiveOwnerId(userId);
-      setPermissions(FULL_ACCESS_PERMISSIONS);
       setSubordinateLink(null);
+      setPermissions(FULL_ACCESS_PERMISSIONS);
     } finally {
-      setIsAccessLoading(false);
+      if (!isStale()) {
+        accessHydratedRef.current = true;
+        if (!silent) {
+          setIsAccessLoading(false);
+        }
+      }
     }
-  }, [session?.user?.id]);
+  }, [applySubordinateAccess, session?.user?.id]);
 
   useEffect(() => {
     loadOnboardingFlag();
@@ -304,6 +339,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!session?.user?.id) {
       setProfile(null);
       setRole("user");
+      roleRef.current = "user";
+      refreshGenerationRef.current += 1;
       setEffectiveOwnerId(null);
       setPermissions(FULL_ACCESS_PERMISSIONS);
       setSubordinateLink(null);
@@ -312,6 +349,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     void refreshAccess();
   }, [session?.user?.id, refreshAccess]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!isSupabaseConfigured || !userId) return;
+
+    const channel = supabase
+      .channel(`subordinate-access:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "subordinate_links",
+          filter: `subordinate_user_id=eq.${userId}`,
+        },
+        (payload) => {
+          authContextDebug("subordinate link realtime", {
+            eventType: payload.eventType,
+          });
+
+          if (payload.eventType === "DELETE") {
+            applySubordinateAccess(null, userId);
+            return;
+          }
+
+          const link = parseSubordinateLinkRow(
+            payload.new as Record<string, unknown> | undefined,
+          );
+
+          if (!link?.is_active) {
+            applySubordinateAccess(null, userId);
+            return;
+          }
+
+          applySubordinateAccess(link, userId);
+        },
+      )
+      .subscribe((status) => {
+        authContextDebug("subordinate link channel", { status });
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [applySubordinateAccess, session?.user?.id]);
 
   const can = useCallback(
     (permission: AccessPermission) => Boolean(permissions[permission]),
@@ -339,6 +421,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured) return;
     const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
       if (state === "active") {
+        void refreshAccess({ silent: true });
         supabase.auth.getSession().then(({ data: { session: s } }) => {
           if (s?.expires_at && s.expires_at * 1000 < Date.now() + 60_000) {
             supabase.auth
@@ -351,7 +434,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     return () => sub.remove();
-  }, []);
+  }, [refreshAccess]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
