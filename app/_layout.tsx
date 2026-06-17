@@ -116,6 +116,12 @@ function RootLayoutInner() {
                     }}
                   />
                   <Stack.Screen
+                    name="case/[id]/fee-payments"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
                     name="notes"
                     options={{
                       headerShown: false,

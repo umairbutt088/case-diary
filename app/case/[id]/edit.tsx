@@ -1,12 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Keyboard,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { AddOtherCaseTypeModal } from "@/components/add-case/add-other-case-type-modal";
+import { CaseFeeFields } from "@/components/add-case/case-fee-fields";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
@@ -27,25 +28,26 @@ import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
-    CASE_TYPE_OTHER,
-    getDerivedCaseTitle,
-    getPartyTerminology,
-    initialAddCaseFormState,
-    type AddCaseFormState,
+  CASE_TYPE_OTHER,
+  getDerivedCaseTitle,
+  getPartyTerminology,
+  initialAddCaseFormState,
+  type AddCaseFormState,
 } from "@/constants/case-form";
 import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
-import { useCustomCaseTypes } from "@/hooks/use-custom-case-types";
 import { useCustomCaseSubTypes } from "@/hooks/use-custom-case-sub-types";
+import { useCustomCaseTypes } from "@/hooks/use-custom-case-types";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
+import { feeNumberToInput, parseFeeInput } from "@/lib/case-fees";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
 import {
-    getCachedCaseById,
-    patchCachedCase,
-    upsertCachedCase,
+  getCachedCaseById,
+  patchCachedCase,
+  upsertCachedCase,
 } from "@/lib/cases-cache";
 import { addPendingCaseUpdate } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -80,7 +82,8 @@ function caseRowToFormState(row: CaseRow): AddCaseFormState {
     nextHearingDate: row.next_hearing_date ?? "",
     caseStatus: row.current_status ?? "",
     nextStatus: row.next_status ?? "",
-    notes: row.notes ?? "",
+    totalFee: feeNumberToInput(row.total_fee),
+    feeReceived: feeNumberToInput(row.fee_received),
   };
 }
 
@@ -345,6 +348,14 @@ export default function EditCaseScreen() {
     if (!form.myClientIs) e.myClientIs = "Please select who your client is";
     if (!form.nextHearingDate.trim())
       e.nextHearingDate = "Next hearing date is required";
+    const total = parseFeeInput(form.totalFee);
+    const received = parseFeeInput(form.feeReceived);
+    if (form.totalFee.trim() && total === null)
+      e.totalFee = "Enter a valid amount";
+    if (form.feeReceived.trim() && received === null)
+      e.feeReceived = "Enter a valid amount";
+    if (total != null && received != null && received > total)
+      e.feeReceived = "Received cannot exceed total fee";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
   }, [
@@ -356,6 +367,8 @@ export default function EditCaseScreen() {
     form.judgeName,
     form.myClientIs,
     form.nextHearingDate,
+    form.totalFee,
+    form.feeReceived,
   ]);
 
   const onSave = useCallback(async () => {
@@ -371,6 +384,8 @@ export default function EditCaseScreen() {
       form.respondentName,
     );
     const previousHearingDate = caseData?.next_hearing_date ?? null;
+    const totalFee = parseFeeInput(form.totalFee);
+    const feeReceived = parseFeeInput(form.feeReceived);
 
     const row = {
       case_title: caseTitle || null,
@@ -390,7 +405,8 @@ export default function EditCaseScreen() {
       next_hearing_date: form.nextHearingDate.trim() || null,
       current_status: form.caseStatus || null,
       next_status: form.nextStatus || null,
-      notes: form.notes.trim() || null,
+      total_fee: totalFee,
+      fee_received: feeReceived,
     };
 
     setSaving(true);
@@ -704,14 +720,14 @@ export default function EditCaseScreen() {
             numberOfLines={4}
             inputStyle={styles.statusInput}
           />
-          <FormFieldWithHint
-            label="Notes (Optional)"
-            value={form.notes}
-            onChangeText={(v) => update({ notes: v })}
-            placeholder="Brief description..."
-            hint="Additional notes"
-            multiline
-            numberOfLines={4}
+          <CaseFeeFields
+            totalFee={form.totalFee}
+            feeReceived={form.feeReceived}
+            onTotalFeeChange={(v) => update({ totalFee: v })}
+            onFeeReceivedChange={(v) => update({ feeReceived: v })}
+            totalFeeError={errors.totalFee}
+            feeReceivedError={errors.feeReceived}
+            receivedLabel="Fee received to date"
           />
 
           {saveError ? (

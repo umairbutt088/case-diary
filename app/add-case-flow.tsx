@@ -25,6 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { AddOtherCaseTypeModal } from "@/components/add-case/add-other-case-type-modal";
+import { CaseFeeFields } from "@/components/add-case/case-fee-fields";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
@@ -54,6 +55,7 @@ import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
+import { parseFeeInput } from "@/lib/case-fees";
 import { addPendingCase, type PendingCaseRow } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
@@ -398,9 +400,17 @@ export default function AddCaseFlowScreen() {
     const e: typeof errors = {};
     if (!form.nextHearingDate.trim())
       e.nextHearingDate = "Next hearing date is required";
+    const total = parseFeeInput(form.totalFee);
+    const received = parseFeeInput(form.feeReceived);
+    if (form.totalFee.trim() && total === null)
+      e.totalFee = "Enter a valid amount";
+    if (form.feeReceived.trim() && received === null)
+      e.feeReceived = "Enter a valid amount";
+    if (total != null && received != null && received > total)
+      e.feeReceived = "Received cannot exceed total fee";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
-  }, [form.nextHearingDate]);
+  }, [form.nextHearingDate, form.totalFee, form.feeReceived]);
 
   const stepAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: stepTranslateX.value }],
@@ -484,6 +494,9 @@ export default function AddCaseFlowScreen() {
       form.petitionerName,
       form.respondentName,
     );
+    const totalFee = parseFeeInput(form.totalFee);
+    const feeReceived = parseFeeInput(form.feeReceived);
+
     const row: PendingCaseRow = {
       user_id: userId,
       case_title: caseTitle || null,
@@ -503,7 +516,9 @@ export default function AddCaseFlowScreen() {
       next_hearing_date: form.nextHearingDate.trim() || null,
       current_status: form.caseStatus || null,
       next_status: form.nextStatus || null,
-      notes: form.notes.trim() || null,
+      notes: null,
+      total_fee: totalFee,
+      fee_received: feeReceived,
     };
 
     setSaving(true);
@@ -1051,19 +1066,19 @@ export default function AddCaseFlowScreen() {
               </WalkthroughableView>
             </CopilotStep>
             <CopilotStep
-              text="Optionally add internal notes for this case."
+              text="Record the agreed case fee and any amount already received."
               order={5}
-              name="add-case-s3-notes"
+              name="add-case-s3-fees"
               active={isFocused && step === 3}
             >
               <WalkthroughableView collapsable={false}>
-                <FormFieldWithHint
-                  label="Notes (Optional)"
-                  value={form.notes}
-                  onChangeText={(v) => update({ notes: v })}
-                  placeholder="Brief description..."
-                  multiline
-                  numberOfLines={4}
+                <CaseFeeFields
+                  totalFee={form.totalFee}
+                  feeReceived={form.feeReceived}
+                  onTotalFeeChange={(v) => update({ totalFee: v })}
+                  onFeeReceivedChange={(v) => update({ feeReceived: v })}
+                  totalFeeError={errors.totalFee}
+                  feeReceivedError={errors.feeReceived}
                 />
               </WalkthroughableView>
             </CopilotStep>
