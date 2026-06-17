@@ -22,6 +22,8 @@ export type CaseRow = {
   current_status: string | null;
   next_status: string | null;
   notes: string | null;
+  total_fee: number | null;
+  fee_received: number | null;
   created_at: string;
   updated_at: string;
   /** Soft-delete timestamp. NULL = active case. Non-null = moved to Trash. */

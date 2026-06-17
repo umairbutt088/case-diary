@@ -35,6 +35,8 @@ export type PendingCaseRow = {
   current_status: string | null;
   next_status: string | null;
   notes: string | null;
+  total_fee: number | null;
+  fee_received: number | null;
 };
 
 type StoredPendingCase = {
@@ -225,9 +227,13 @@ function buildLocalCaseRow(
     current_status: row.current_status ?? null,
     next_status: row.next_status ?? null,
     notes: row.notes ?? null,
+    total_fee: row.total_fee ?? null,
+    fee_received: row.fee_received ?? null,
     created_at: nowIso,
     updated_at: nowIso,
     deleted_at: null,
+    disposed_at: null,
+    disposal_note: null,
   };
 }
 

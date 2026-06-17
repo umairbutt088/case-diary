@@ -49,8 +49,10 @@ Migrations are SQL files in `supabase/migrations/`. They run in **numeric order*
 | 030 | `030_drop_subordinate_invites.sql` | Drop invite-by-link table/RPCs (safe if never created) |
 | 031 | `031_subordinate_link_delete.sql` | Trigger: reset profile role when link is deleted |
 | 032 | `032_subordinate_single_supervisor.sql` | One subordinate per supervisor; no reassignment |
+| 033 | `033_case_fees.sql` | `total_fee` and `fee_received` on cases |
+| 034 | `034_case_fee_payments.sql` | Fee payment history per case |
 
-**Next migration:** use `033_<name>.sql`.
+**Next migration:** use `035_<name>.sql`.
 
 ---
 

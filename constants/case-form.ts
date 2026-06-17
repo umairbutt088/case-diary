@@ -288,7 +288,8 @@ export type AddCaseFormState = {
   nextHearingDate: string;
   caseStatus: string;
   nextStatus: string;
-  notes: string;
+  totalFee: string;
+  feeReceived: string;
 };
 
 export const initialAddCaseFormState: AddCaseFormState = {
@@ -310,7 +311,8 @@ export const initialAddCaseFormState: AddCaseFormState = {
   nextHearingDate: "",
   caseStatus: "",
   nextStatus: "",
-  notes: "",
+  totalFee: "",
+  feeReceived: "",
 };
 
 /**

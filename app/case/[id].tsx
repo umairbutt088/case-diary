@@ -8,18 +8,18 @@ import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Linking,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Share,
+    StyleSheet,
+    TextInput,
+    View,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,10 +27,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { DateField } from "@/components/add-case/date-field";
 import { JudgeNameSelector } from "@/components/add-case/judge-name-selector";
+import { CaseFeeDetailCard } from "@/components/case-fee-detail-card";
 import { CourtPortalBottomSheet } from "@/components/court-portal-bottom-sheet";
 import {
-  DisposeCaseModal,
-  type DisposeCaseFormValues,
+    DisposeCaseModal,
+    type DisposeCaseFormValues,
 } from "@/components/dispose-case-modal";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
@@ -40,8 +41,8 @@ import { ImageViewerModal } from "@/components/ui/image-viewer-modal";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { getPartyTerminology } from "@/constants/case-form";
 import {
-  type AppColors,
-  modalSheetBackground,
+    modalSheetBackground,
+    type AppColors,
 } from "@/constants/color-palette";
 import { type PakistanCourtPortal } from "@/constants/court-cms";
 import { theme } from "@/constants/theme";
@@ -51,26 +52,27 @@ import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import {
-  deleteCaseDocument,
-  getCaseDocuments,
-  getDocumentDownloadUrl,
-  uploadCaseDocument
+    deleteCaseDocument,
+    getCaseDocuments,
+    getDocumentDownloadUrl,
+    uploadCaseDocument
 } from "@/lib/case-documents";
+import { formatFeeAmount, getRemainingFee } from "@/lib/case-fees";
 import { addCaseHearingEntry, getCaseHearingHistory } from "@/lib/case-hearings";
 import {
-  getCachedCaseById,
-  patchCachedCase,
-  removeCachedCase,
-  upsertCachedCase,
+    getCachedCaseById,
+    patchCachedCase,
+    removeCachedCase,
+    upsertCachedCase,
 } from "@/lib/cases-cache";
 import { addPendingCaseDelete, addPendingProceedingSave } from "@/lib/offline-queue";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import {
-  formatCaseDate,
-  getCaseDisplayTitle,
-  getTodayISO,
-  isIsoDateBefore,
+    formatCaseDate,
+    getCaseDisplayTitle,
+    getTodayISO,
+    isIsoDateBefore,
 } from "@/types/case";
 import type { CaseDocumentRow } from "@/types/case-document";
 import type { CaseHearingRow } from "@/types/case-hearing";
@@ -612,7 +614,9 @@ function getCaseSummaryText(params: {
     `Current Status: ${caseData.current_status?.trim() || "—"}`,
     `Next Status: ${caseData.next_status?.trim() || "—"}`,
     "",
-    `Notes: ${caseData.notes?.trim() || "—"}`,
+    `Total Fee: ${formatFeeAmount(caseData.total_fee)}`,
+    `Fee Received: ${formatFeeAmount(caseData.fee_received)}`,
+    `Remaining Fee: ${formatFeeAmount(getRemainingFee(caseData.total_fee, caseData.fee_received))}`,
     "",
     `Generated: ${new Date().toLocaleString()}`,
   ];
@@ -636,7 +640,12 @@ function buildCaseSummaryHtml(params: {
     ["Next Hearing", formatCaseDate(caseData.next_hearing_date)],
     ["Current Status", caseData.current_status?.trim() || "—"],
     ["Next Status", caseData.next_status?.trim() || "—"],
-    ["Notes", caseData.notes?.trim() || "—"],
+    ["Total Fee", formatFeeAmount(caseData.total_fee)],
+    ["Fee Received", formatFeeAmount(caseData.fee_received)],
+    [
+      "Remaining Fee",
+      formatFeeAmount(getRemainingFee(caseData.total_fee, caseData.fee_received)),
+    ],
   ]
     .map(
       ([label, value]) => `
@@ -1773,9 +1782,21 @@ export default function CaseDetailScreen() {
             ) : null}
           </SectionCard>
 
-          <SectionCard s={styles} title="Notes">
-            <DetailRow s={styles} C={C} label="Notes" value={caseData.notes} />
-          </SectionCard>
+          <CaseFeeDetailCard
+            caseId={caseData.id}
+            userId={effectiveOwnerId ?? caseData.user_id}
+            totalFee={caseData.total_fee}
+            feeReceived={caseData.fee_received}
+            canRecord={canEditCases}
+            isOnline={isOnline}
+            onFeeUpdated={async (feeReceived) => {
+              const patch = { fee_received: feeReceived };
+              setCaseData((prev) => (prev ? { ...prev, ...patch } : prev));
+              if (session?.user?.id) {
+                await patchCachedCase(session.user.id, caseData.id, patch);
+              }
+            }}
+          />
 
           <SectionCard s={styles} title="Documents">
             <Bounceable
