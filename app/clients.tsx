@@ -1,8 +1,9 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -18,6 +19,7 @@ import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { ListPageFooter } from "@/components/ui/list-page-footer";
 import {
   type AppColors,
   modalSheetBackground,
@@ -28,6 +30,11 @@ import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
+import {
+  getPageRange,
+  hasAnotherPage,
+  mergeUniqueById,
+} from "@/lib/pagination";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { ClientRow } from "@/types/client";
 
@@ -267,6 +274,8 @@ export default function ClientsScreen() {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [usageByClientId, setUsageByClientId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -276,37 +285,28 @@ export default function ClientsScreen() {
   const [editingClient, setEditingClient] = useState<ClientRow | null>(null);
   const [form, setForm] = useState<ClientFormState>(initialForm);
 
-  const fetchClients = useCallback(async () => {
+  const loadClientUsage = useCallback(async () => {
     if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
-      setClients([]);
-      setLoading(false);
+      setUsageByClientId({});
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    const [clientsRes, casesRes] = await Promise.all([
-      supabase
-        .from("clients")
-        .select("*")
-        .eq("user_id", effectiveOwnerId)
-        .order("name", { ascending: true }),
-      supabase
-        .from("cases")
-        .select("linked_client_id, linked_client_name")
-        .eq("user_id", effectiveOwnerId),
-    ]);
-    setLoading(false);
+    const { data: casesRes, error: casesError } = await supabase
+      .from("cases")
+      .select("linked_client_id, linked_client_name")
+      .eq("user_id", effectiveOwnerId);
 
-    if (clientsRes.error) {
-      setError(clientsRes.error.message || "Failed to load clients.");
-      setClients([]);
+    if (casesError) {
+      setUsageByClientId({});
       return;
     }
 
-    const clientRows = (clientsRes.data as ClientRow[]) ?? [];
-    setClients(clientRows);
+    const { data: allClientsRes } = await supabase
+      .from("clients")
+      .select("id, name")
+      .eq("user_id", effectiveOwnerId);
 
+    const clientRows = (allClientsRes as { id: string; name: string }[]) ?? [];
     const usage: Record<string, number> = {};
     clientRows.forEach((client) => {
       usage[client.id] = 0;
@@ -320,7 +320,7 @@ export default function ClientsScreen() {
     });
 
     const caseRows =
-      (casesRes.data as { linked_client_id: string | null; linked_client_name: string | null }[]) ??
+      (casesRes as { linked_client_id: string | null; linked_client_name: string | null }[]) ??
       [];
     caseRows.forEach((row) => {
       const linkedId = row.linked_client_id ?? "";
@@ -341,26 +341,89 @@ export default function ClientsScreen() {
     setUsageByClientId(usage);
   }, [session?.user?.id, effectiveOwnerId]);
 
-  useEffect(() => {
-    void fetchClients();
-  }, [fetchClients]);
+  const loadClients = useCallback(
+    async ({
+      reset,
+      offset = 0,
+      searchQuery = search,
+    }: {
+      reset: boolean;
+      offset?: number;
+      searchQuery?: string;
+    }) => {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
+        setClients([]);
+        setHasMore(false);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
 
-  const filteredClients = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((item) => {
-      const haystack = [
-        item.name,
-        item.phone ?? "",
-        item.email ?? "",
-        item.address ?? "",
-        item.care_of ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [clients, search]);
+      const pageOffset = reset ? 0 : Math.max(0, offset);
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      setError(null);
+
+      const { from, to } = getPageRange(pageOffset);
+      let query = supabase
+        .from("clients")
+        .select("*")
+        .eq("user_id", effectiveOwnerId);
+
+      const q = searchQuery.trim();
+      if (q) {
+        const pattern = `%${q}%`;
+        query = query.or(
+          `name.ilike.${pattern},phone.ilike.${pattern},email.ilike.${pattern},address.ilike.${pattern},care_of.ilike.${pattern}`,
+        );
+      }
+
+      const { data, error: clientsError } = await query
+        .order("name", { ascending: true })
+        .range(from, to);
+
+      setLoading(false);
+      setLoadingMore(false);
+
+      if (clientsError) {
+        if (reset) {
+          setError(clientsError.message || "Failed to load clients.");
+          setClients([]);
+        }
+        setHasMore(false);
+        return;
+      }
+
+      const chunk = (data as ClientRow[]) ?? [];
+      setClients((prev) => (reset ? chunk : mergeUniqueById(prev, chunk)));
+      setHasMore(hasAnotherPage(chunk.length));
+    },
+    [session?.user?.id, effectiveOwnerId, search],
+  );
+
+  const refreshClients = useCallback(async () => {
+    await Promise.all([loadClientUsage(), loadClients({ reset: true })]);
+  }, [loadClientUsage, loadClients]);
+
+  const skipSearchEffect = useRef(true);
+
+  useEffect(() => {
+    void refreshClients();
+  }, [session?.user?.id, effectiveOwnerId]);
+
+  useEffect(() => {
+    if (skipSearchEffect.current) {
+      skipSearchEffect.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      void loadClients({ reset: true });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, loadClients]);
 
   const openAddModal = () => {
     setIsAddModalVisible(true);
@@ -423,7 +486,7 @@ export default function ClientsScreen() {
 
       const updated = data as ClientRow;
       setClients((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      await fetchClients();
+      await refreshClients();
       setIsModalVisible(false);
       return;
     }
@@ -449,7 +512,7 @@ export default function ClientsScreen() {
 
     const created = data as ClientRow;
     setClients((prev) => [created, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
-    await fetchClients();
+    await refreshClients();
     setIsModalVisible(false);
   };
 
@@ -477,7 +540,7 @@ export default function ClientsScreen() {
               return;
             }
             setClients((prev) => prev.filter((item) => item.id !== client.id));
-            await fetchClients();
+            await refreshClients();
           },
         },
       ],
@@ -525,24 +588,37 @@ export default function ClientsScreen() {
         ) : error ? (
           <View style={styles.centered}>
             <ThemedText style={styles.errorText}>{error}</ThemedText>
-            <Bounceable style={styles.retryBtn} onPress={() => void fetchClients()}>
+            <Bounceable style={styles.retryBtn} onPress={() => void refreshClients()}>
               <ThemedText style={styles.retryBtnText}>Retry</ThemedText>
             </Bounceable>
           </View>
-        ) : filteredClients.length === 0 ? (
+        ) : clients.length === 0 ? (
           <View style={styles.centered}>
             <ThemedText style={styles.emptyText}>
               {search.trim() ? "No clients match your search." : "No clients saved yet."}
             </ThemedText>
           </View>
         ) : (
-          <ScrollView
+          <FlatList
+            data={clients}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-          >
-            {filteredClients.map((client) => (
-              <View key={client.id} style={styles.card}>
+            onEndReachedThreshold={0.35}
+            onEndReached={() => {
+              if (!hasMore || loadingMore || loading) return;
+              void loadClients({ reset: false, offset: clients.length });
+            }}
+            ListFooterComponent={
+              <ListPageFooter
+                loading={loadingMore}
+                hasMore={hasMore}
+                itemCount={clients.length}
+              />
+            }
+            renderItem={({ item: client }) => (
+              <View style={styles.card}>
                 <View style={styles.cardHeader}>
                   <ThemedText style={styles.nameText}>{client.name}</ThemedText>
                   <View style={styles.cardActions}>
@@ -572,8 +648,8 @@ export default function ClientsScreen() {
                   {(usageByClientId[client.id] ?? 0) === 1 ? "" : "s"}
                 </ThemedText>
               </View>
-            ))}
-          </ScrollView>
+            )}
+          />
         )}
       </View>
 
@@ -671,7 +747,7 @@ export default function ClientsScreen() {
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
         onSaved={() => {
-          void fetchClients();
+          void refreshClients();
           setIsAddModalVisible(false);
         }}
       />

@@ -5,6 +5,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -17,12 +18,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { ListPageFooter } from "@/components/ui/list-page-footer";
 import type { AppColors } from "@/constants/color-palette";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
+import {
+  getPageRange,
+  hasAnotherPage,
+  mergeUniqueById,
+} from "@/lib/pagination";
 import { upsertCachedCase } from "@/lib/cases-cache";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
@@ -113,26 +120,51 @@ export default function DisposedCasesScreen() {
 
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
 
   const canRestore = can("edit_cases") && can("dispose_cases");
 
-  const fetchDisposed = useCallback(async () => {
-    if (!session?.user?.id || !effectiveOwnerId) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("cases")
-      .select("*")
-      .eq("user_id", effectiveOwnerId)
-      .is("deleted_at", null)
-      .not("disposed_at", "is", null)
-      .order("disposed_at", { ascending: false });
-    setLoading(false);
-    if (error) {
-      Alert.alert("Error", error.message);
-      return;
-    }
-    setCases((data as CaseRow[]) ?? []);
-  }, [session?.user?.id, effectiveOwnerId]);
+  const loadDisposed = useCallback(
+    async ({ reset, offset = 0 }: { reset: boolean; offset?: number }) => {
+      if (!session?.user?.id || !effectiveOwnerId) return;
+
+      const pageOffset = reset ? 0 : Math.max(0, offset);
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const { from, to } = getPageRange(pageOffset);
+      const { data, error } = await supabase
+        .from("cases")
+        .select("*")
+        .eq("user_id", effectiveOwnerId)
+        .is("deleted_at", null)
+        .not("disposed_at", "is", null)
+        .order("disposed_at", { ascending: false })
+        .range(from, to);
+
+      setLoading(false);
+      setLoadingMore(false);
+
+      if (error) {
+        Alert.alert("Error", error.message);
+        return;
+      }
+
+      const chunk = (data as CaseRow[]) ?? [];
+      setCases((prev) => (reset ? chunk : mergeUniqueById(prev, chunk)));
+      setHasMore(hasAnotherPage(chunk.length));
+    },
+    [session?.user?.id, effectiveOwnerId],
+  );
+
+  const fetchDisposed = useCallback(
+    () => loadDisposed({ reset: true }),
+    [loadDisposed],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -229,7 +261,11 @@ export default function DisposedCasesScreen() {
         </View>
       ) : null}
 
-      {!loading && cases.length === 0 ? (
+      {loading && cases.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <ActivityIndicator size="large" color={C.black} />
+        </View>
+      ) : !loading && cases.length === 0 ? (
         <View style={styles.emptyWrap}>
           <MaterialIcons name="inventory-2" size={64} color={C.gray50} />
           <Text style={styles.emptyTitle}>No disposed cases</Text>
@@ -246,6 +282,18 @@ export default function DisposedCasesScreen() {
           renderItem={renderItem}
           refreshing={loading}
           onRefresh={() => void fetchDisposed()}
+          onEndReachedThreshold={0.35}
+          onEndReached={() => {
+            if (!hasMore || loadingMore || loading) return;
+            void loadDisposed({ reset: false, offset: cases.length });
+          }}
+          ListFooterComponent={
+            <ListPageFooter
+              loading={loadingMore}
+              hasMore={hasMore}
+              itemCount={cases.length}
+            />
+          }
         />
       )}
     </SafeAreaView>

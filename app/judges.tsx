@@ -1,8 +1,9 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,6 +20,7 @@ import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { ListPageFooter } from "@/components/ui/list-page-footer";
 import {
   type AppColors,
   modalSheetBackground,
@@ -30,6 +32,11 @@ import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { setCachedJudges } from "@/lib/offline-reference-data";
+import {
+  getPageRange,
+  hasAnotherPage,
+  mergeUniqueById,
+} from "@/lib/pagination";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type JudgeRow = {
@@ -266,6 +273,8 @@ export default function JudgesScreen() {
   const [judges, setJudges] = useState<JudgeRow[]>([]);
   const [usageByJudgeId, setUsageByJudgeId] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -275,47 +284,28 @@ export default function JudgesScreen() {
   const [editingJudge, setEditingJudge] = useState<JudgeRow | null>(null);
   const [form, setForm] = useState<JudgeFormState>(initialForm);
 
-  const fetchJudges = useCallback(async () => {
+  const loadJudgeUsage = useCallback(async () => {
     if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
-      setJudges([]);
-      setLoading(false);
+      setUsageByJudgeId({});
       return;
     }
 
-    setLoading(true);
-    setError(null);
     const [judgesRes, casesRes] = await Promise.all([
       supabase
         .from("judges")
-        .select("id, user_id, name, court_tier, court_room_address, created_at")
-        .eq("user_id", effectiveOwnerId)
-        .order("name", { ascending: true }),
+        .select("id, name, court_tier")
+        .eq("user_id", effectiveOwnerId),
       supabase
         .from("cases")
         .select("judge_name, court_tier")
         .eq("user_id", effectiveOwnerId),
     ]);
-    setLoading(false);
 
-    if (judgesRes.error) {
-      setError(judgesRes.error.message || "Failed to load judges.");
-      setJudges([]);
-      return;
-    }
-
-    const rows = ((judgesRes.data as JudgeRow[]) ?? []).map((row) => ({
-      ...row,
-      court_tier: row.court_tier?.trim() || null,
-      court_room_address: row.court_room_address?.trim() || null,
-    }));
-    setJudges(rows);
-    await setCachedJudges(
-      session.user.id,
-      rows.map((row) => ({
-        name: row.name,
-        courtTier: row.court_tier || "",
-        courtRoomAddress: row.court_room_address,
-      })),
+    const rows = ((judgesRes.data as Pick<JudgeRow, "id" | "name" | "court_tier">[]) ?? []).map(
+      (row) => ({
+        ...row,
+        court_tier: row.court_tier?.trim() || null,
+      }),
     );
 
     const usage: Record<string, number> = {};
@@ -343,24 +333,123 @@ export default function JudgesScreen() {
     setUsageByJudgeId(usage);
   }, [session?.user?.id, effectiveOwnerId]);
 
-  useEffect(() => {
-    void fetchJudges();
-  }, [fetchJudges]);
+  const syncJudgeCache = useCallback(async () => {
+    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) return;
 
-  const filteredJudges = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return judges;
-    return judges.filter((item) => {
-      const haystack = [
-        item.name,
-        item.court_tier ?? "",
-        item.court_room_address ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [judges, search]);
+    const { data } = await supabase
+      .from("judges")
+      .select("id, user_id, name, court_tier, court_room_address, created_at")
+      .eq("user_id", effectiveOwnerId)
+      .order("name", { ascending: true });
+
+    const allRows = ((data as JudgeRow[]) ?? []).map((row) => ({
+      ...row,
+      court_tier: row.court_tier?.trim() || null,
+      court_room_address: row.court_room_address?.trim() || null,
+    }));
+
+    await setCachedJudges(
+      session.user.id,
+      allRows.map((row) => ({
+        name: row.name,
+        courtTier: row.court_tier || "",
+        courtRoomAddress: row.court_room_address,
+      })),
+    );
+  }, [session?.user?.id, effectiveOwnerId]);
+
+  const loadJudges = useCallback(
+    async ({
+      reset,
+      offset = 0,
+      searchQuery = search,
+    }: {
+      reset: boolean;
+      offset?: number;
+      searchQuery?: string;
+    }) => {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
+        setJudges([]);
+        setHasMore(false);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      const pageOffset = reset ? 0 : Math.max(0, offset);
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      setError(null);
+
+      const { from, to } = getPageRange(pageOffset);
+      let query = supabase
+        .from("judges")
+        .select("id, user_id, name, court_tier, court_room_address, created_at")
+        .eq("user_id", effectiveOwnerId);
+
+      const q = searchQuery.trim();
+      if (q) {
+        const pattern = `%${q}%`;
+        query = query.or(
+          `name.ilike.${pattern},court_tier.ilike.${pattern},court_room_address.ilike.${pattern}`,
+        );
+      }
+
+      const { data, error: judgesError } = await query
+        .order("name", { ascending: true })
+        .range(from, to);
+
+      setLoading(false);
+      setLoadingMore(false);
+
+      if (judgesError) {
+        if (reset) {
+          setError(judgesError.message || "Failed to load judges.");
+          setJudges([]);
+        }
+        setHasMore(false);
+        return;
+      }
+
+      const chunk = ((data as JudgeRow[]) ?? []).map((row) => ({
+        ...row,
+        court_tier: row.court_tier?.trim() || null,
+        court_room_address: row.court_room_address?.trim() || null,
+      }));
+
+      setJudges((prev) => (reset ? chunk : mergeUniqueById(prev, chunk)));
+      setHasMore(hasAnotherPage(chunk.length));
+    },
+    [session?.user?.id, effectiveOwnerId, search],
+  );
+
+  const refreshJudges = useCallback(async () => {
+    await Promise.all([
+      loadJudgeUsage(),
+      loadJudges({ reset: true }),
+      syncJudgeCache(),
+    ]);
+  }, [loadJudgeUsage, loadJudges, syncJudgeCache]);
+
+  const skipSearchEffect = useRef(true);
+
+  useEffect(() => {
+    void refreshJudges();
+  }, [session?.user?.id, effectiveOwnerId]);
+
+  useEffect(() => {
+    if (skipSearchEffect.current) {
+      skipSearchEffect.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      void loadJudges({ reset: true });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, loadJudges]);
 
   const openAddModal = () => {
     setIsAddModalVisible(true);
@@ -436,7 +525,7 @@ export default function JudgesScreen() {
       const next = judges.map((item) => (item.id === updated.id ? updated : item));
       setJudges(next);
       await refreshJudgeCache(next);
-      await fetchJudges();
+      await refreshJudges();
       setIsModalVisible(false);
       return;
     }
@@ -464,7 +553,7 @@ export default function JudgesScreen() {
     const next = [created, ...judges].sort((a, b) => a.name.localeCompare(b.name));
     setJudges(next);
     await refreshJudgeCache(next);
-    await fetchJudges();
+    await refreshJudges();
     setIsModalVisible(false);
   };
 
@@ -494,7 +583,7 @@ export default function JudgesScreen() {
             const next = judges.filter((item) => item.id !== judge.id);
             setJudges(next);
             await refreshJudgeCache(next);
-            await fetchJudges();
+            await refreshJudges();
           },
         },
       ],
@@ -538,24 +627,37 @@ export default function JudgesScreen() {
         ) : error ? (
           <View style={styles.centered}>
             <ThemedText style={styles.errorText}>{error}</ThemedText>
-            <Bounceable style={styles.retryBtn} onPress={() => void fetchJudges()}>
+            <Bounceable style={styles.retryBtn} onPress={() => void refreshJudges()}>
               <ThemedText style={styles.retryBtnText}>Retry</ThemedText>
             </Bounceable>
           </View>
-        ) : filteredJudges.length === 0 ? (
+        ) : judges.length === 0 ? (
           <View style={styles.centered}>
             <ThemedText style={styles.emptyText}>
               {search.trim() ? "No judges match your search." : "No judges saved yet."}
             </ThemedText>
           </View>
         ) : (
-          <ScrollView
+          <FlatList
+            data={judges}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-          >
-            {filteredJudges.map((judge) => (
-              <View key={judge.id} style={styles.card}>
+            onEndReachedThreshold={0.35}
+            onEndReached={() => {
+              if (!hasMore || loadingMore || loading) return;
+              void loadJudges({ reset: false, offset: judges.length });
+            }}
+            ListFooterComponent={
+              <ListPageFooter
+                loading={loadingMore}
+                hasMore={hasMore}
+                itemCount={judges.length}
+              />
+            }
+            renderItem={({ item: judge }) => (
+              <View style={styles.card}>
                 <View style={styles.cardHeader}>
                   <ThemedText style={styles.nameText}>{judge.name}</ThemedText>
                   <View style={styles.cardActions}>
@@ -584,8 +686,8 @@ export default function JudgesScreen() {
                   {(usageByJudgeId[judge.id] ?? 0) === 1 ? "" : "s"}
                 </ThemedText>
               </View>
-            ))}
-          </ScrollView>
+            )}
+          />
         )}
       </View>
 
@@ -661,7 +763,7 @@ export default function JudgesScreen() {
         defaultCourtTier=""
         onClose={() => setIsAddModalVisible(false)}
         onSaved={() => {
-          void fetchJudges();
+          void refreshJudges();
           setIsAddModalVisible(false);
         }}
       />

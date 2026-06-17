@@ -3,7 +3,7 @@
  */
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { ListPageFooter } from "@/components/ui/list-page-footer";
 import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
@@ -30,6 +31,11 @@ import {
   type CaseFeeStatus,
 } from "@/lib/case-fees-overview";
 import { formatFeeAmount, getRemainingFee } from "@/lib/case-fees";
+import {
+  getPageRange,
+  hasAnotherPage,
+  mergeUniqueById,
+} from "@/lib/pagination";
 import { supabase } from "@/lib/supabase";
 import type { CaseRow } from "@/types/case";
 import { getCaseDisplayTitle } from "@/types/case";
@@ -219,6 +225,8 @@ const FILTERS: { key: FeeFilter; label: string }[] = [
   { key: "disposed", label: "Disposed" },
 ];
 
+type FeeSummaryRow = Pick<CaseRow, "total_fee" | "fee_received" | "disposed_at">;
+
 export default function CaseFeesOverviewScreen() {
   const router = useRouter();
   const { goBack } = useHomeBackNavigation();
@@ -228,51 +236,114 @@ export default function CaseFeesOverviewScreen() {
   const styles = useMemo(() => createStyles(C), [C]);
 
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [cases, setCases] = useState<CaseFeeOverviewItem[]>([]);
+  const [summaryRows, setSummaryRows] = useState<FeeSummaryRow[]>([]);
   const [filter, setFilter] = useState<FeeFilter>("all");
 
-  const fetchCases = useCallback(async () => {
+  const loadSummary = useCallback(async () => {
     if (!session?.user?.id || !effectiveOwnerId) {
-      setCases([]);
-      setLoading(false);
+      setSummaryRows([]);
       return;
     }
 
-    setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("cases")
-      .select("*")
+      .select("total_fee, fee_received, disposed_at")
       .eq("user_id", effectiveOwnerId)
-      .is("deleted_at", null)
-      .order("updated_at", { ascending: false });
+      .is("deleted_at", null);
 
-    setLoading(false);
-    if (error) {
-      setCases([]);
-      return;
+    if (filter === "active") {
+      query = query.is("disposed_at", null);
+    } else if (filter === "disposed") {
+      query = query.not("disposed_at", "is", null);
     }
 
-    const rows = ((data as CaseRow[]) ?? []).map((row) => ({
-      ...row,
-      feeStatus: getCaseFeeStatus(row),
-    }));
-    setCases(rows);
-  }, [effectiveOwnerId, session?.user?.id]);
+    const { data, error } = await query;
+    if (error) {
+      setSummaryRows([]);
+      return;
+    }
+    setSummaryRows((data as FeeSummaryRow[]) ?? []);
+  }, [effectiveOwnerId, filter, session?.user?.id]);
+
+  const loadCases = useCallback(
+    async ({ reset, offset = 0 }: { reset: boolean; offset?: number }) => {
+      if (!session?.user?.id || !effectiveOwnerId) {
+        setCases([]);
+        setHasMore(false);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      const pageOffset = reset ? 0 : Math.max(0, offset);
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const { from, to } = getPageRange(pageOffset);
+      let query = supabase
+        .from("cases")
+        .select("*")
+        .eq("user_id", effectiveOwnerId)
+        .is("deleted_at", null)
+        .order("updated_at", { ascending: false })
+        .range(from, to);
+
+      if (filter === "active") {
+        query = query.is("disposed_at", null);
+      } else if (filter === "disposed") {
+        query = query.not("disposed_at", "is", null);
+      }
+
+      const { data, error } = await query;
+      setLoading(false);
+      setLoadingMore(false);
+
+      if (error) {
+        if (reset) setCases([]);
+        setHasMore(false);
+        return;
+      }
+
+      const chunk = ((data as CaseRow[]) ?? []).map((row) => ({
+        ...row,
+        feeStatus: getCaseFeeStatus(row),
+      }));
+
+      setCases((prev) => (reset ? chunk : mergeUniqueById(prev, chunk)));
+      setHasMore(hasAnotherPage(chunk.length));
+    },
+    [effectiveOwnerId, filter, session?.user?.id],
+  );
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadSummary(), loadCases({ reset: true })]);
+  }, [loadCases, loadSummary]);
+
+  const skipFilterEffect = useRef(true);
 
   useFocusEffect(
     useCallback(() => {
-      void fetchCases();
-    }, [fetchCases]),
+      void refreshAll();
+    }, [refreshAll]),
   );
 
-  const filteredCases = useMemo(() => {
-    if (filter === "all") return cases;
-    return cases.filter((row) => row.feeStatus === filter);
-  }, [cases, filter]);
+  useEffect(() => {
+    if (skipFilterEffect.current) {
+      skipFilterEffect.current = false;
+      return;
+    }
+    void refreshAll();
+  }, [filter, refreshAll]);
 
   const summary = useMemo(
-    () => summarizeCaseFees(filteredCases),
-    [filteredCases],
+    () => summarizeCaseFees(summaryRows),
+    [summaryRows],
   );
 
   const renderCase = ({ item }: { item: CaseFeeOverviewItem }) => {
@@ -405,7 +476,7 @@ export default function CaseFeesOverviewScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={C.black} />
         </View>
-      ) : filteredCases.length === 0 ? (
+      ) : cases.length === 0 ? (
         <View style={styles.centered}>
           <MaterialIcons name="payments" size={40} color={C.gray50} />
           <ThemedText style={styles.emptyTitle}>No cases found</ThemedText>
@@ -415,11 +486,23 @@ export default function CaseFeesOverviewScreen() {
         </View>
       ) : (
         <FlatList
-          data={filteredCases}
+          data={cases}
           keyExtractor={(item) => item.id}
           renderItem={renderCase}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onEndReachedThreshold={0.35}
+          onEndReached={() => {
+            if (!hasMore || loadingMore || loading) return;
+            void loadCases({ reset: false, offset: cases.length });
+          }}
+          ListFooterComponent={
+            <ListPageFooter
+              loading={loadingMore}
+              hasMore={hasMore}
+              itemCount={cases.length}
+            />
+          }
         />
       )}
     </SafeAreaView>

@@ -26,13 +26,20 @@ import {
 } from "@/components/case-search-selector";
 import { ThemedText } from "@/components/themed-text";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { ListPageFooter } from "@/components/ui/list-page-footer";
 import type { AppColors } from "@/constants/color-palette";
+import { LIST_PAGE_SIZE } from "@/constants/pagination";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
-import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
+import { getCachedCases, removeCachedCase } from "@/lib/cases-cache";
+import {
+  getPageRange,
+  hasAnotherPage,
+  mergeUniqueById,
+} from "@/lib/pagination";
 import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { formatCaseDate, getCaseDisplayTitle, type CaseRow } from "@/types/case";
@@ -307,6 +314,8 @@ export default function DiaryScreen() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkExporting, setBulkExporting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blockDiaryScrollForCopilot, setBlockDiaryScrollForCopilot] =
     useState(false);
@@ -338,49 +347,87 @@ export default function DiaryScreen() {
     );
   }, []);
 
-  const fetchCases = useCallback(async (isSilent = false) => {
-    if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
-      setCases([]);
-      setLoading(false);
-      return;
-    }
-
-    if (!isOnline) {
-      const cached = await getCachedCases(session.user.id);
-      setCases(cached);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    // Only show loading if not silent
-    if (!isSilent) {
-      setLoading(true);
-    }
-    setError(null);
-    const { data, error: e } = await supabase
-      .from("cases")
-      .select("*")
-      .eq("user_id", effectiveOwnerId)
-      .is("deleted_at", null)
-      .is("disposed_at", null)
-      .order("created_at", { ascending: false });
-    setLoading(false);
-    if (e) {
-      if (isNetworkError(e.message)) {
-        const cached = await getCachedCases(session.user.id);
-        setCases(cached);
-        setError(null);
-      } else {
-        setError(e.message);
+  const loadCases = useCallback(
+    async ({
+      reset,
+      offset = 0,
+      isSilent = false,
+    }: {
+      reset: boolean;
+      offset?: number;
+      isSilent?: boolean;
+    }) => {
+      if (!session?.user?.id || !effectiveOwnerId || !isSupabaseConfigured) {
         setCases([]);
+        setHasMore(false);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
       }
-      return;
-    }
-    const nextCases = (data as CaseRow[]) ?? [];
-    setCases(nextCases);
-    await setCachedCases(session.user.id, nextCases);
-  }, [session?.user?.id, effectiveOwnerId, isOnline, isNetworkError]);
+
+      const pageOffset = reset ? 0 : Math.max(0, offset);
+      if (reset) {
+        if (!isSilent) setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      setError(null);
+
+      if (!isOnline) {
+        const cached = await getCachedCases(session.user.id);
+        const active = cached
+          .filter((row) => !row.deleted_at && !row.disposed_at)
+          .sort((a, b) => b.created_at.localeCompare(a.created_at));
+        const chunk = active.slice(pageOffset, pageOffset + LIST_PAGE_SIZE);
+        setCases((prev) => (reset ? chunk : mergeUniqueById(prev, chunk)));
+        setHasMore(pageOffset + chunk.length < active.length);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      const { from, to } = getPageRange(pageOffset);
+      const { data, error: e } = await supabase
+        .from("cases")
+        .select("*")
+        .eq("user_id", effectiveOwnerId)
+        .is("deleted_at", null)
+        .is("disposed_at", null)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      setLoading(false);
+      setLoadingMore(false);
+
+      if (e) {
+        if (reset && isNetworkError(e.message)) {
+          const cached = await getCachedCases(session.user.id);
+          const active = cached
+            .filter((row) => !row.deleted_at && !row.disposed_at)
+            .sort((a, b) => b.created_at.localeCompare(a.created_at));
+          const chunk = active.slice(0, LIST_PAGE_SIZE);
+          setCases(chunk);
+          setHasMore(active.length > LIST_PAGE_SIZE);
+          setError(null);
+        } else if (reset) {
+          setError(e.message);
+          setCases([]);
+          setHasMore(false);
+        }
+        return;
+      }
+
+      const chunk = (data as CaseRow[]) ?? [];
+      setCases((prev) => (reset ? chunk : mergeUniqueById(prev, chunk)));
+      setHasMore(hasAnotherPage(chunk.length));
+    },
+    [session?.user?.id, effectiveOwnerId, isOnline, isNetworkError],
+  );
+
+  const fetchCases = useCallback(
+    (isSilent = false) => loadCases({ reset: true, isSilent }),
+    [loadCases],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -760,9 +807,21 @@ export default function DiaryScreen() {
             refreshControl={
               <RefreshControl
                 refreshing={loading}
-                onRefresh={fetchCases}
+                onRefresh={() => fetchCases()}
                 colors={[C.black]}
                 tintColor={C.black}
+              />
+            }
+            onEndReachedThreshold={0.35}
+            onEndReached={() => {
+              if (!hasMore || loadingMore || loading) return;
+              void loadCases({ reset: false, offset: cases.length });
+            }}
+            ListFooterComponent={
+              <ListPageFooter
+                loading={loadingMore}
+                hasMore={hasMore}
+                itemCount={filteredCases.length}
               />
             }
             renderItem={({ item }) =>
