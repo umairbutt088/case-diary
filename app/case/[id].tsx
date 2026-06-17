@@ -3,7 +3,7 @@ import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -871,58 +871,73 @@ export default function CaseDetailScreen() {
     }, 1400);
   };
 
-  useEffect(() => {
-    if (!id) {
-      setError("Invalid case");
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      if (session?.user?.id && !isOnline) {
-        const cached = await getCachedCaseById(session.user.id, id);
-        if (cancelled) return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) {
+        setError("Invalid case");
         setLoading(false);
-        if (!cached) {
-          setError("Case not available offline");
+        return;
+      }
+
+      let cancelled = false;
+
+      (async () => {
+        if (session?.user?.id && !isOnline) {
+          const cached = await getCachedCaseById(session.user.id, id);
+          if (cancelled) return;
+          setLoading(false);
+          if (!cached) {
+            setError("Case not available offline");
+            setCaseData(null);
+            return;
+          }
+          setError(null);
+          setCaseData(cached);
           return;
         }
-        setCaseData(cached);
-        return;
-      }
-      const { data, error: e } = await supabase
-        .from("cases")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (cancelled) return;
-      setLoading(false);
-      if (e) {
-        setError(e.message || "Failed to load case");
-        return;
-      }
-      const row = data as CaseRow;
-      setCaseData(row);
-      if (session?.user?.id) {
-        await upsertCachedCase(session.user.id, row);
-      }
-      
-      if (isOnline && canManageDocuments) {
-        setLoadingDocs(true);
-        try {
-          const docs = await getCaseDocuments(id.toString());
-          if (!cancelled) setDocuments(docs);
-        } catch (err) {
-          console.error("Failed to load documents", err);
-        } finally {
-          if (!cancelled) setLoadingDocs(false);
+
+        setLoading(true);
+        setError(null);
+
+        const { data, error: e } = await supabase
+          .from("cases")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (cancelled) return;
+        setLoading(false);
+
+        if (e) {
+          setError(e.message || "Failed to load case");
+          setCaseData(null);
+          return;
         }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [canManageDocuments, id, session?.user?.id, isOnline]);
+
+        const row = data as CaseRow;
+        setCaseData(row);
+        if (session?.user?.id) {
+          await upsertCachedCase(session.user.id, row);
+        }
+
+        if (isOnline && canManageDocuments) {
+          setLoadingDocs(true);
+          try {
+            const docs = await getCaseDocuments(id.toString());
+            if (!cancelled) setDocuments(docs);
+          } catch (err) {
+            console.error("Failed to load documents", err);
+          } finally {
+            if (!cancelled) setLoadingDocs(false);
+          }
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [canManageDocuments, id, isOnline, session?.user?.id]),
+  );
 
   useEffect(() => {
     if (!canManageDocuments) {

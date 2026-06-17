@@ -48,7 +48,6 @@ import { useCanViewCaseFees } from "@/lib/case-fee-access";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
 import {
   getCachedCaseById,
-  patchCachedCase,
   upsertCachedCase,
 } from "@/lib/cases-cache";
 import { addPendingCaseUpdate } from "@/lib/offline-queue";
@@ -196,7 +195,8 @@ export default function EditCaseScreen() {
     [C, onPrimary],
   );
   const [caseData, setCaseData] = useState<CaseRow | null>(null);
-  const showCaseFees = useCanViewCaseFees(caseData);
+  const canViewCaseFees = useCanViewCaseFees(caseData);
+  const showCaseFeeFields = isCaseOwner || canViewCaseFees;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<AddCaseFormState>(initialAddCaseFormState);
@@ -353,7 +353,7 @@ export default function EditCaseScreen() {
     if (!form.myClientIs) e.myClientIs = "Please select who your client is";
     if (!form.nextHearingDate.trim())
       e.nextHearingDate = "Next hearing date is required";
-    if (showCaseFees) {
+    if (showCaseFeeFields) {
       const total = parseFeeInput(form.totalFee);
       const received = parseFeeInput(form.feeReceived);
       if (form.totalFee.trim() && total === null)
@@ -374,7 +374,7 @@ export default function EditCaseScreen() {
     form.judgeName,
     form.myClientIs,
     form.nextHearingDate,
-    showCaseFees,
+    showCaseFeeFields,
     form.totalFee,
     form.feeReceived,
   ]);
@@ -413,7 +413,7 @@ export default function EditCaseScreen() {
       next_hearing_date: form.nextHearingDate.trim() || null,
       current_status: form.caseStatus || null,
       next_status: form.nextStatus || null,
-      ...(showCaseFees
+      ...(showCaseFeeFields
         ? {
             total_fee: totalFee,
             fee_received: feeReceived,
@@ -426,13 +426,20 @@ export default function EditCaseScreen() {
 
     setSaving(true);
     setSaveError(null);
+    const updatedAt = new Date().toISOString();
     if (!isOnline) {
       const patch = {
         ...row,
-        updated_at: new Date().toISOString(),
+        updated_at: updatedAt,
       };
       await addPendingCaseUpdate(session.user.id, id, patch);
-      await patchCachedCase(session.user.id, id, patch);
+      if (caseData) {
+        await upsertCachedCase(session.user.id, {
+          ...caseData,
+          ...patch,
+          id,
+        });
+      }
       setSaving(false);
       router.replace(`/case/${id}`);
       return;
@@ -462,10 +469,24 @@ export default function EditCaseScreen() {
       setSaveError(hearingResult.message);
       return;
     }
-    await patchCachedCase(session.user.id, id, {
-      ...row,
-      updated_at: new Date().toISOString(),
-    });
+
+    const { data: updatedRow } = await supabase
+      .from("cases")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (updatedRow && session?.user?.id) {
+      await upsertCachedCase(session.user.id, updatedRow as CaseRow);
+    } else if (caseData && session?.user?.id) {
+      await upsertCachedCase(session.user.id, {
+        ...caseData,
+        ...row,
+        id,
+        updated_at: updatedAt,
+      });
+    }
+
     router.replace(`/case/${id}`);
   }, [
     id,
@@ -475,9 +496,9 @@ export default function EditCaseScreen() {
     validate,
     router,
     isOnline,
-    caseData?.next_hearing_date,
+    caseData,
     isCaseOwner,
-    showCaseFees,
+    showCaseFeeFields,
   ]);
 
   if (loading || (!caseData && !error)) {
@@ -737,7 +758,7 @@ export default function EditCaseScreen() {
             numberOfLines={4}
             inputStyle={styles.statusInput}
           />
-          {showCaseFees ? (
+          {showCaseFeeFields ? (
             <>
               <CaseFeeFields
                 totalFee={form.totalFee}

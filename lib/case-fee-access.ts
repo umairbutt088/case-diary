@@ -27,16 +27,14 @@ export function stripCaseFeeFields<T extends CaseRow>(row: T): T {
 export function useCanViewCaseFees(
   caseRow?: Pick<CaseRow, "subordinates_can_view_fees"> | null,
 ): boolean {
-  const { role, permissions, isAccessLoading, subordinateLink } = useAuth();
+  const { role, permissions, isAccessLoading } = useAuth();
 
   return useMemo(() => {
+    if (role !== "subordinate") return true;
     if (isAccessLoading) return false;
-
-    const isDelegated = role === "subordinate" || Boolean(subordinateLink);
-    if (!isDelegated) return true;
     if (!permissions.view_case_fees) return false;
     if (!caseRow) return false;
 
     return caseRow.subordinates_can_view_fees !== false;
-  }, [caseRow, isAccessLoading, permissions.view_case_fees, role, subordinateLink]);
+  }, [caseRow, isAccessLoading, permissions.view_case_fees, role]);
 }
