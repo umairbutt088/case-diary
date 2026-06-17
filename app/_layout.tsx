@@ -166,6 +166,12 @@ function RootLayoutInner() {
                     }}
                   />
                   <Stack.Screen
+                    name="case-fees-overview"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
                     name="share-app"
                     options={{
                       headerShown: false,

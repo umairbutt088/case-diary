@@ -256,6 +256,7 @@ export default function HomeScreen() {
   const [shareExportFilter, setShareExportFilter] = useState<HomeFilter | null>(null);
   const [notesCount, setNotesCount] = useState(0);
   const [disposedCount, setDisposedCount] = useState(0);
+  const [feeCasesCount, setFeeCasesCount] = useState(0);
   const [showCourtPortalModal, setShowCourtPortalModal] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
@@ -360,12 +361,29 @@ export default function HomeScreen() {
     setDisposedCount(countError ? 0 : (count ?? 0));
   }, [effectiveOwnerId, isOnline]);
 
+  const loadFeeCasesCount = useCallback(async () => {
+    if (!isOwner || !effectiveOwnerId || !isSupabaseConfigured || !isOnline) {
+      setFeeCasesCount(0);
+      return;
+    }
+
+    const { count, error: countError } = await supabase
+      .from("cases")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", effectiveOwnerId)
+      .is("deleted_at", null)
+      .or("total_fee.not.is.null,fee_received.not.is.null");
+
+    setFeeCasesCount(countError ? 0 : (count ?? 0));
+  }, [effectiveOwnerId, isOnline, isOwner]);
+
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
         await loadNotesCount();
         await loadDisposedCount();
+        await loadFeeCasesCount();
         if (!isOnline && session?.user?.id && isSupabaseConfigured) {
           const cached = await getCachedCases(session.user.id);
           setLoading(false);
@@ -384,7 +402,7 @@ export default function HomeScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchCases, loadNotesCount, loadDisposedCount, session?.user?.id, isOnline]),
+    }, [fetchCases, loadFeeCasesCount, loadNotesCount, loadDisposedCount, session?.user?.id, isOnline]),
   );
 
   useFocusEffect(
@@ -617,6 +635,14 @@ export default function HomeScreen() {
         count: disposedCount,
         onPress: () => openFromHome("/disposed-cases"),
       },
+      {
+        key: "case-fees",
+        title: "Case fees",
+        subtitle: "Active & disposed",
+        icon: "payments",
+        count: feeCasesCount,
+        onPress: () => openFromHome("/case-fees-overview"),
+      },
       // {
       //   key: "calendar",
       //   title: "Calendar",
@@ -705,6 +731,9 @@ export default function HomeScreen() {
       if (item.key === "disposed-cases") {
         return role !== "subordinate" ? can("view_cases") : can("dispose_cases");
       }
+      if (item.key === "case-fees") {
+        return isOwner;
+      }
       if (item.key === "settings") {
         return isOwner;
       }
@@ -722,6 +751,7 @@ export default function HomeScreen() {
     filedToday.length,
     notesCount,
     disposedCount,
+    feeCasesCount,
     canAddCases,
     canManageJudges,
     isOwner,
