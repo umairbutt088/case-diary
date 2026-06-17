@@ -5,8 +5,8 @@ export const ACCESS_PERMISSIONS = [
   "delete_cases",
   "dispose_cases",
   "view_clients",
+  "view_case_fees",
   "manage_documents",
-  "manage_settings",
 ] as const;
 
 export type AccessPermission = (typeof ACCESS_PERMISSIONS)[number];
@@ -22,8 +22,8 @@ export const FULL_ACCESS_PERMISSIONS: AccessPermissions = {
   delete_cases: true,
   dispose_cases: true,
   view_clients: true,
+  view_case_fees: true,
   manage_documents: true,
-  manage_settings: true,
 };
 
 export const SUBORDINATE_FALLBACK_PERMISSIONS: AccessPermissions = {
@@ -33,6 +33,6 @@ export const SUBORDINATE_FALLBACK_PERMISSIONS: AccessPermissions = {
   delete_cases: false,
   dispose_cases: false,
   view_clients: false,
+  view_case_fees: false,
   manage_documents: false,
-  manage_settings: false,
 };

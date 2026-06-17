@@ -21,7 +21,6 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { ACTS_LIBRARY, type ActLibraryItem } from "@/constants/acts-library";
 import { theme } from "@/constants/theme";
-import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 
@@ -122,7 +121,6 @@ function createActsStyles(C: AppColors) {
 
 export default function ActsScreen() {
   const { goBack } = useHomeBackNavigation();
-  const accessGuard = useAccessGuard("manage_settings");
   const C = useThemePalette();
   const styles = useMemo(() => createActsStyles(C), [C]);
   const [query, setQuery] = useState("");
@@ -193,8 +191,6 @@ export default function ActsScreen() {
       setOpeningActId((prev) => (prev === act.id ? null : prev));
     }
   };
-
-  if (accessGuard.blocked) return null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>

@@ -12,6 +12,7 @@ import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { formatFeeAmount, getRemainingFee } from "@/lib/case-fees";
+import { useCanViewCaseFees } from "@/lib/case-fee-access";
 import { getCaseFeePayments } from "@/lib/case-fee-payments";
 import { supabase } from "@/lib/supabase";
 import { formatCaseDate, getCaseDisplayTitle, type CaseRow } from "@/types/case";
@@ -84,8 +85,10 @@ function createFeePaymentsStyles(C: AppColors) {
 
 export default function CaseFeePaymentsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session, effectiveOwnerId } = useAuth();
+  const { session, effectiveOwnerId, role, can, isAccessLoading } = useAuth();
   const accessGuard = useAccessGuard("view_cases");
+  const canViewFees = useCanViewCaseFees(caseData);
+  const globalFeeAccess = role !== "subordinate" || can("view_case_fees");
   const C = useThemePalette();
   const styles = useMemo(() => createFeePaymentsStyles(C), [C]);
   const [loading, setLoading] = useState(true);
@@ -171,6 +174,36 @@ export default function CaseFeePaymentsScreen() {
 
   if (accessGuard.blocked) {
     return null;
+  }
+
+  if (
+    !isAccessLoading &&
+    !globalFeeAccess &&
+    (!loading || !caseData)
+  ) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title="Payment history" />
+        <View style={styles.centered}>
+          <ThemedText style={styles.emptyText}>
+            Fee details are hidden for this account.
+          </ThemedText>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!loading && caseData && !canViewFees) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScreenHeader title="Payment history" />
+        <View style={styles.centered}>
+          <ThemedText style={styles.emptyText}>
+            Fee details are hidden for this case.
+          </ThemedText>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (loading) {

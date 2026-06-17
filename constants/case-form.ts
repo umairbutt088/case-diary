@@ -290,6 +290,7 @@ export type AddCaseFormState = {
   nextStatus: string;
   totalFee: string;
   feeReceived: string;
+  subordinatesCanViewFees: boolean;
 };
 
 export const initialAddCaseFormState: AddCaseFormState = {
@@ -313,6 +314,7 @@ export const initialAddCaseFormState: AddCaseFormState = {
   nextStatus: "",
   totalFee: "",
   feeReceived: "",
+  subordinatesCanViewFees: true,
 };
 
 /**

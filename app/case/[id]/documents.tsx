@@ -13,6 +13,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import type { AppColors } from "@/constants/color-palette";
 import { theme } from "@/constants/theme";
 import { useAuth } from "@/context/auth-context";
+import { useAccessGuard } from "@/hooks/use-access-guard";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { deleteCaseDocument, getCaseDocuments, getDocumentDownloadUrl } from "@/lib/case-documents";
@@ -77,7 +78,9 @@ function createDocumentsStyles(C: AppColors) {
 
 export default function CaseDocumentsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuth();
+  const { session, can } = useAuth();
+  const accessGuard = useAccessGuard("manage_documents");
+  const canManageDocuments = can("manage_documents");
   const C = useThemePalette();
   const styles = useMemo(() => createDocumentsStyles(C), [C]);
   const isOnline = useIsOnline();
@@ -127,6 +130,10 @@ export default function CaseDocumentsScreen() {
   }, [id, session?.user?.id, isOnline]);
 
   const handleDeleteDocument = (docId: string, filePath: string) => {
+    if (!canManageDocuments) {
+      Alert.alert("Restricted", "You do not have permission to manage documents.");
+      return;
+    }
     if (!isOnline) {
       Alert.alert("Offline", "You need to be online to delete documents.");
       return;
@@ -165,6 +172,10 @@ export default function CaseDocumentsScreen() {
       Alert.alert("Error", "Could not open document.");
     }
   };
+
+  if (accessGuard.blocked) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -209,11 +220,9 @@ export default function CaseDocumentsScreen() {
                   </ThemedText>
                 </View>
               </Bounceable>
-              <View style={{ flexDirection: "row", gap: 16 }}>
-                <Bounceable onPress={() => handleDeleteDocument(doc.id, doc.file_path)}>
-                  <MaterialIcons name="delete-outline" size={24} color={C.themeRed} />
-                </Bounceable>
-              </View>
+              <Bounceable onPress={() => handleDeleteDocument(doc.id, doc.file_path)}>
+                <MaterialIcons name="delete-outline" size={24} color={C.themeRed} />
+              </Bounceable>
             </View>
           </View>
         )}

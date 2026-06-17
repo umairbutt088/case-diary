@@ -9,8 +9,8 @@ export type SubordinateLinkRow = {
   can_delete_cases: boolean;
   can_dispose_cases: boolean;
   can_view_clients: boolean;
+  can_view_case_fees: boolean;
   can_manage_documents: boolean;
-  can_manage_settings: boolean;
   created_at: string;
   updated_at: string;
 };

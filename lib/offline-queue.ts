@@ -37,6 +37,7 @@ export type PendingCaseRow = {
   notes: string | null;
   total_fee: number | null;
   fee_received: number | null;
+  subordinates_can_view_fees?: boolean;
 };
 
 type StoredPendingCase = {
@@ -229,6 +230,7 @@ function buildLocalCaseRow(
     notes: row.notes ?? null,
     total_fee: row.total_fee ?? null,
     fee_received: row.fee_received ?? null,
+    subordinates_can_view_fees: row.subordinates_can_view_fees ?? true,
     created_at: nowIso,
     updated_at: nowIso,
     deleted_at: null,

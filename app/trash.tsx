@@ -161,7 +161,7 @@ function createStyles(C: AppColors) {
 export default function TrashScreen() {
   const { goBack } = useHomeBackNavigation();
   const { session, effectiveOwnerId } = useAuth();
-  const accessGuard = useAccessGuard("manage_settings");
+  const accessGuard = useAccessGuard("delete_cases");
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const styles = createStyles(C);
