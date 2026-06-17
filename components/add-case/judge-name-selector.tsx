@@ -14,6 +14,7 @@ import { Swipeable } from "react-native-gesture-handler";
 import { FormField } from "@/components/add-case/form-field";
 import { ThemedText } from "@/components/themed-text";
 import type { AppColors } from "@/constants/color-palette";
+import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
@@ -47,7 +48,7 @@ type Props = {
   error?: string | null;
 };
 
-function createJudgeNameSelectorStyles(C: AppColors) {
+function createJudgeNameSelectorStyles(C: AppColors, onPrimary: string) {
   return StyleSheet.create({
     dropdownWrap: {
       borderWidth: 1,
@@ -169,20 +170,18 @@ function createJudgeNameSelectorStyles(C: AppColors) {
     },
     addJudgeBtn: {
       marginTop: 10,
-      borderRadius: 10,
       borderWidth: 1,
-      borderColor: C.borderGray,
-      backgroundColor: C.pureWhite,
-      paddingVertical: 11,
+      borderColor: C.themeBlack,
+      borderRadius: 10,
+      backgroundColor: C.themeBlack,
+      paddingVertical: 14,
       paddingHorizontal: 12,
-      flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: 8,
     },
     addJudgeBtnText: {
-      fontSize: 15,
-      color: C.black,
+      fontSize: 16,
+      color: onPrimary,
       fontWeight: "600",
     },
     fetchErrorRow: {
@@ -225,7 +224,12 @@ export function JudgeNameSelector({
   const { session, effectiveOwnerId } = useAuth();
   const isOnline = useIsOnline();
   const C = useThemePalette();
-  const styles = useMemo(() => createJudgeNameSelectorStyles(C), [C]);
+  const { isDark } = useAppTheme();
+  const onPrimary = isDark ? C.black : C.pureWhite;
+  const styles = useMemo(
+    () => createJudgeNameSelectorStyles(C, onPrimary),
+    [C, onPrimary],
+  );
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [judges, setJudges] = useState<JudgeRecord[]>([]);
@@ -544,8 +548,7 @@ export function JudgeNameSelector({
 
       {onPressAddJudge ? (
         <Pressable style={styles.addJudgeBtn} onPress={handlePressAddJudge}>
-          <MaterialIcons name="person-add-alt-1" size={18} color={C.black} />
-          <ThemedText style={styles.addJudgeBtnText}>Add Judge</ThemedText>
+          <ThemedText style={styles.addJudgeBtnText}>+ Add Judge</ThemedText>
         </Pressable>
       ) : null}
 

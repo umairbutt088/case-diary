@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,6 +24,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
+import { AddOtherCaseTypeModal } from "@/components/add-case/add-other-case-type-modal";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
@@ -37,18 +38,18 @@ import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
-  CASE_TYPES,
-  getCaseSubTypesForType,
+  CASE_TYPE_OTHER,
   getDerivedCaseTitle,
   getPartyTerminology,
   initialAddCaseFormState,
   type AddCaseFormState,
-  type CaseType,
 } from "@/constants/case-form";
 import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useCustomCaseTypes } from "@/hooks/use-custom-case-types";
+import { useCustomCaseSubTypes } from "@/hooks/use-custom-case-sub-types";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
@@ -56,21 +57,19 @@ import { addCaseHearingEntry } from "@/lib/case-hearings";
 import { addPendingCase, type PendingCaseRow } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
-const STEPS = 4;
+const STEPS = 3;
 const WalkthroughableView = walkthroughable(View);
 
-const STEP_TOUR_STORAGE_KEYS: Record<1 | 2 | 3 | 4, string> = {
+const STEP_TOUR_STORAGE_KEYS: Record<1 | 2 | 3, string> = {
   1: "hasSeenAddCaseStep1TourCopilot",
   2: "hasSeenAddCaseStep2TourCopilot",
-  3: "hasSeenAddCaseStep3TourCopilot",
-  4: "hasSeenAddCaseStep4TourCopilot",
+  3: "hasSeenAddCaseStep4TourCopilot",
 };
 
-const STEP_TOUR_FIRST_STEP_NAME: Record<1 | 2 | 3 | 4, string> = {
+const STEP_TOUR_FIRST_STEP_NAME: Record<1 | 2 | 3, string> = {
   1: "add-case-s1-petitioner",
   2: "add-case-s2-court-tier",
-  3: "add-case-s3-my-client-is",
-  4: "add-case-s4-filing-date",
+  3: "add-case-s3-filing-date",
 };
 
 function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
@@ -200,7 +199,6 @@ function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
 }
 
 export default function AddCaseFlowScreen() {
-  const router = useRouter();
   const { goBack } = useHomeBackNavigation();
   const isFocused = useIsFocused();
   const { effectiveOwnerId } = useAuth();
@@ -227,7 +225,14 @@ export default function AddCaseFlowScreen() {
   const [pendingSuggestedClientName, setPendingSuggestedClientName] = useState("");
   const [clientListRefreshKey, setClientListRefreshKey] = useState(0);
   const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
+  const [showOtherCaseTypeModal, setShowOtherCaseTypeModal] = useState(false);
+  const [showOtherCaseSubTypeModal, setShowOtherCaseSubTypeModal] = useState(false);
   const [blockScrollForCopilot, setBlockScrollForCopilot] = useState(false);
+  const { caseTypeOptions, saveCustomCaseType } = useCustomCaseTypes(form.caseType);
+  const { caseSubTypeOptions, saveCustomCaseSubType } = useCustomCaseSubTypes(
+    form.caseType,
+    form.caseSubType,
+  );
   const stepTranslateX = useSharedValue(0);
   const stepOpacity = useSharedValue(1);
   const partyTerms = useMemo(
@@ -245,6 +250,70 @@ export default function AddCaseFlowScreen() {
       return next;
     });
   }, []);
+
+  const handleCaseTypeChange = useCallback(
+    (value: string) => {
+      if (value === CASE_TYPE_OTHER) {
+        setShowOtherCaseTypeModal(true);
+        return;
+      }
+      update({ caseType: value, caseSubType: "" });
+    },
+    [update],
+  );
+
+  const handleOtherCaseTypeSave = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      const exists = caseTypeOptions.some(
+        (opt) =>
+          opt !== CASE_TYPE_OTHER &&
+          opt.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (exists) {
+        Alert.alert("Case type exists", "Choose it from the list instead.");
+        return;
+      }
+      const saved = await saveCustomCaseType(trimmed);
+      if (saved) {
+        update({ caseType: saved, caseSubType: "" });
+        setShowOtherCaseTypeModal(false);
+      }
+    },
+    [caseTypeOptions, saveCustomCaseType, update],
+  );
+
+  const handleCaseSubTypeChange = useCallback(
+    (value: string) => {
+      if (value === CASE_TYPE_OTHER) {
+        setShowOtherCaseSubTypeModal(true);
+        return;
+      }
+      update({ caseSubType: value });
+    },
+    [update],
+  );
+
+  const handleOtherCaseSubTypeSave = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      const exists = caseSubTypeOptions.some(
+        (opt) =>
+          opt !== CASE_TYPE_OTHER &&
+          opt.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (exists) {
+        Alert.alert("Type exists", "Choose it from the list instead.");
+        return;
+      }
+      const saved = await saveCustomCaseSubType(trimmed);
+      if (saved) {
+        update({ caseSubType: saved });
+        setShowOtherCaseSubTypeModal(false);
+      }
+    },
+    [caseSubTypeOptions, saveCustomCaseSubType, update],
+  );
 
   const getClientNameForRole = useCallback(
     (role: "petitioner" | "respondent"): string => {
@@ -320,18 +389,12 @@ export default function AddCaseFlowScreen() {
     const e: typeof errors = {};
     if (!form.courtTier) e.courtTier = "Please select court tier";
     if (!form.judgeName.trim()) e.judgeName = "Judge name is required";
-    setErrors((prev) => ({ ...prev, ...e }));
-    return Object.keys(e).length === 0;
-  }, [form.courtTier, form.judgeName]);
-
-  const validateStep3 = useCallback((): boolean => {
-    const e: typeof errors = {};
     if (!form.myClientIs) e.myClientIs = "Please select who your client is";
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
-  }, [form.myClientIs]);
+  }, [form.courtTier, form.judgeName, form.myClientIs]);
 
-  const validateStep4 = useCallback((): boolean => {
+  const validateStep3 = useCallback((): boolean => {
     const e: typeof errors = {};
     if (!form.nextHearingDate.trim())
       e.nextHearingDate = "Next hearing date is required";
@@ -391,9 +454,8 @@ export default function AddCaseFlowScreen() {
     Keyboard.dismiss();
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
-    if (step === 3 && !validateStep3()) return;
     if (step < STEPS) animateToStep(step + 1, 1);
-  }, [animateToStep, isStepAnimating, step, validateStep1, validateStep2, validateStep3]);
+  }, [animateToStep, isStepAnimating, step, validateStep1, validateStep2]);
 
   const onBack = useCallback(() => {
     if (isStepAnimating) return;
@@ -405,7 +467,7 @@ export default function AddCaseFlowScreen() {
   }, [animateToStep, isStepAnimating, step, goBack]);
 
   const onSave = useCallback(async () => {
-    if (!validateStep4()) return;
+    if (!validateStep3()) return;
     setSaveError(null);
 
     const userId = effectiveOwnerId;
@@ -487,7 +549,7 @@ export default function AddCaseFlowScreen() {
         [{ text: "OK", onPress: () => goBack() }]
       );
     }
-  }, [form, effectiveOwnerId, validateStep4, goBack, isOnline]);
+  }, [form, effectiveOwnerId, validateStep3, goBack, isOnline]);
 
   useFocusEffect(
     useCallback(() => {
@@ -496,7 +558,7 @@ export default function AddCaseFlowScreen() {
       let raf1 = 0;
       let raf2 = 0;
       let interactionTask: { cancel?: () => void } | null = null;
-      const currentStep = step as 1 | 2 | 3 | 4;
+      const currentStep = step as 1 | 2 | 3;
 
       setBlockScrollForCopilot(true);
 
@@ -583,7 +645,7 @@ export default function AddCaseFlowScreen() {
         }}
       >
         <Animated.View style={stepAnimatedStyle}>
-          {/* Step 1 of 4 */}
+          {/* Step 1 of 3 */}
           {step === 1 && (
             <View>
             <CopilotStep
@@ -599,7 +661,6 @@ export default function AddCaseFlowScreen() {
                   value={form.petitionerName}
                   onChangeText={(v) => update({ petitionerName: v })}
                   placeholder="Enter First and Last Name"
-                  hint="Add First Party's full name"
                   error={errors.petitionerName}
                   autoCapitalize="words"
                 />
@@ -618,7 +679,6 @@ export default function AddCaseFlowScreen() {
                   value={form.respondentName}
                   onChangeText={(v) => update({ respondentName: v })}
                   placeholder="Enter First and Last Name"
-                  hint="Add Second Party's full name"
                   error={errors.respondentName}
                   autoCapitalize="words"
                 />
@@ -636,7 +696,7 @@ export default function AddCaseFlowScreen() {
                   value={form.caseNumber}
                   onChangeText={(v) => update({ caseNumber: v })}
                   placeholder="12345/2025"
-                  hint="Enter Case Number"
+                  keyboardType="number-pad"
                 />
               </WalkthroughableView>
             </CopilotStep>
@@ -649,11 +709,9 @@ export default function AddCaseFlowScreen() {
               <WalkthroughableView collapsable={false}>
                 <FormField label="Case Type" required>
                   <ChipGroup
-                    options={[...CASE_TYPES]}
+                    options={caseTypeOptions}
                     value={form.caseType}
-                    onChange={(v) =>
-                      update({ caseType: v as CaseType, caseSubType: "" })
-                    }
+                    onChange={handleCaseTypeChange}
                   />
                   {errors.caseType ? (
                     <ThemedText style={styles.fieldError}>
@@ -663,6 +721,20 @@ export default function AddCaseFlowScreen() {
                 </FormField>
               </WalkthroughableView>
             </CopilotStep>
+            <AddOtherCaseTypeModal
+              visible={showOtherCaseTypeModal}
+              onClose={() => setShowOtherCaseTypeModal(false)}
+              onSave={(name) => void handleOtherCaseTypeSave(name)}
+            />
+            <AddOtherCaseTypeModal
+              visible={showOtherCaseSubTypeModal}
+              onClose={() => setShowOtherCaseSubTypeModal(false)}
+              onSave={(name) => void handleOtherCaseSubTypeSave(name)}
+              title="Add type of case"
+              fieldLabel="Type of case"
+              placeholder="Enter type of case"
+              emptyError="Please enter a type of case."
+            />
             {form.caseType ? (
               <CopilotStep
                 text="Choose the specific type of case."
@@ -673,9 +745,9 @@ export default function AddCaseFlowScreen() {
                 <WalkthroughableView style={styles.tourButtonWrap} collapsable={false}>
                   <FormField label="Type of case" required>
                     <ChipGroup
-                      options={getCaseSubTypesForType(form.caseType)}
+                      options={caseSubTypeOptions}
                       value={form.caseSubType}
-                      onChange={(v) => update({ caseSubType: v })}
+                      onChange={handleCaseSubTypeChange}
                     />
                     {errors.caseSubType ? (
                       <ThemedText style={styles.fieldError}>
@@ -701,7 +773,7 @@ export default function AddCaseFlowScreen() {
             </View>
           )}
 
-          {/* Step 2 of 4 */}
+          {/* Step 2 of 3 */}
           {step === 2 && (
             <View>
             <CopilotStep
@@ -723,7 +795,6 @@ export default function AddCaseFlowScreen() {
                       courtRoom: "",
                     })
                   }
-                  hint="Select from saved tiers, or add a new one."
                   error={errors.courtTier || null}
                 />
               </WalkthroughableView>
@@ -746,29 +817,13 @@ export default function AddCaseFlowScreen() {
                   }}
                   onPressAddJudge={() => setShowAddJudgeSheet(true)}
                   placeholder="Select judge"
-                  hint="Judges are filtered by selected court tier."
                   error={errors.judgeName}
                 />
               </WalkthroughableView>
             </CopilotStep>
             <CopilotStep
-              text="Open this to manage your saved judges list."
-              order={3}
-              name="add-case-s2-manage-judges"
-              active={isFocused && step === 2}
-            >
-              <WalkthroughableView collapsable={false}>
-                <Bounceable
-                  style={styles.manageRefBtn}
-                  onPress={() => router.push("/judges")}
-                >
-                  <ThemedText style={styles.manageRefBtnText}>Manage judges list</ThemedText>
-                </Bounceable>
-              </WalkthroughableView>
-            </CopilotStep>
-            <CopilotStep
               text="Confirm or edit the court room location."
-              order={4}
+              order={3}
               name="add-case-s2-court-room"
               active={isFocused && step === 2}
             >
@@ -778,7 +833,6 @@ export default function AddCaseFlowScreen() {
                   value={form.courtRoom}
                   onChangeText={(v) => update({ courtRoom: v })}
                   placeholder="e.g. Building A, 2nd Floor"
-                  hint="Auto-filled from selected judge when available, and always editable."
                 />
               </WalkthroughableView>
             </CopilotStep>
@@ -795,51 +849,11 @@ export default function AddCaseFlowScreen() {
                 setShowAddJudgeSheet(false);
               }}
             />
-            <View style={styles.buttons}>
-              <CopilotStep
-                text="Go back to the previous step."
-                order={5}
-                name="add-case-s2-back"
-                active={isFocused && step === 2}
-              >
-                <WalkthroughableView style={styles.tourButtonWrap} collapsable={false}>
-                  <Bounceable
-                    style={[styles.btn, styles.btnSecondary]}
-                    onPress={onBack}
-                    disabled={isStepAnimating}
-                  >
-                    <ThemedText style={styles.btnSecondaryText}>← Back</ThemedText>
-                  </Bounceable>
-                </WalkthroughableView>
-              </CopilotStep>
-              <CopilotStep
-                text="Tap Next to continue to client details."
-                order={6}
-                name="add-case-s2-next"
-                active={isFocused && step === 2}
-              >
-                <WalkthroughableView style={styles.tourButtonWrap} collapsable={false}>
-                  <Bounceable
-                    style={[styles.btn, styles.btnPrimary]}
-                    onPress={onNext}
-                    disabled={isStepAnimating}
-                  >
-                    <ThemedText style={styles.btnPrimaryText}>Next →</ThemedText>
-                  </Bounceable>
-                </WalkthroughableView>
-              </CopilotStep>
-            </View>
-            </View>
-          )}
-
-          {/* Step 3 of 4 */}
-          {step === 3 && (
-            <View>
             <CopilotStep
               text="Choose whether your client is the first or second party."
-              order={1}
-              name="add-case-s3-my-client-is"
-              active={isFocused && step === 3}
+              order={4}
+              name="add-case-s2-my-client-is"
+              active={isFocused && step === 2}
             >
               <WalkthroughableView collapsable={false}>
                 <FormField label="My Client is" required>
@@ -863,9 +877,9 @@ export default function AddCaseFlowScreen() {
             </CopilotStep>
             <CopilotStep
               text="Link this case to an existing saved client."
-              order={2}
-              name="add-case-s3-link-existing-client"
-              active={isFocused && step === 3}
+              order={5}
+              name="add-case-s2-link-existing-client"
+              active={isFocused && step === 2}
             >
               <WalkthroughableView collapsable={false}>
                 <LinkExistingClientField
@@ -879,30 +893,14 @@ export default function AddCaseFlowScreen() {
                     })
                   }
                   placeholder="Select from your saved clients"
-                  hint="Only clients you added in Manage clients are shown here"
                 />
               </WalkthroughableView>
             </CopilotStep>
             <CopilotStep
-              text="Open this to manage your saved clients list."
-              order={3}
-              name="add-case-s3-manage-clients"
-              active={isFocused && step === 3}
-            >
-              <WalkthroughableView collapsable={false}>
-                <Bounceable
-                  style={styles.manageRefBtn}
-                  onPress={() => router.push("/clients")}
-                >
-                  <ThemedText style={styles.manageRefBtnText}>Manage clients list</ThemedText>
-                </Bounceable>
-              </WalkthroughableView>
-            </CopilotStep>
-            <CopilotStep
               text="Or add a brand-new client from here."
-              order={4}
-              name="add-case-s3-add-new-client"
-              active={isFocused && step === 3}
+              order={6}
+              name="add-case-s2-add-new-client"
+              active={isFocused && step === 2}
             >
               <WalkthroughableView collapsable={false}>
                 <FormField label="OR Add New Client">
@@ -946,10 +944,10 @@ export default function AddCaseFlowScreen() {
             />
             <View style={styles.buttons}>
               <CopilotStep
-                text="Go back to court details."
-                order={5}
-                name="add-case-s3-back"
-                active={isFocused && step === 3}
+                text="Go back to the previous step."
+                order={7}
+                name="add-case-s2-back"
+                active={isFocused && step === 2}
               >
                 <WalkthroughableView style={styles.tourButtonWrap} collapsable={false}>
                   <Bounceable
@@ -963,9 +961,9 @@ export default function AddCaseFlowScreen() {
               </CopilotStep>
               <CopilotStep
                 text="Tap Next to add filing and hearing details."
-                order={6}
-                name="add-case-s3-next"
-                active={isFocused && step === 3}
+                order={8}
+                name="add-case-s2-next"
+                active={isFocused && step === 2}
               >
                 <WalkthroughableView style={styles.tourButtonWrap} collapsable={false}>
                   <Bounceable
@@ -981,14 +979,14 @@ export default function AddCaseFlowScreen() {
             </View>
           )}
 
-          {/* Step 4 of 4 */}
-          {step === 4 && (
+          {/* Step 3 of 3 */}
+          {step === 3 && (
             <View>
             <CopilotStep
               text="Set the date when the case was filed."
               order={1}
-              name="add-case-s4-filing-date"
-              active={isFocused && step === 4}
+              name="add-case-s3-filing-date"
+              active={isFocused && step === 3}
             >
               <WalkthroughableView collapsable={false}>
                 <DateField
@@ -996,15 +994,14 @@ export default function AddCaseFlowScreen() {
                   value={form.dateOfFiling}
                   onChange={(v) => update({ dateOfFiling: v })}
                   placeholder="e.g. 08/09/2025"
-                  hint="Enter date of filing"
                 />
               </WalkthroughableView>
             </CopilotStep>
             <CopilotStep
               text="Add the current status of the case."
               order={2}
-              name="add-case-s4-current-status"
-              active={isFocused && step === 4}
+              name="add-case-s3-current-status"
+              active={isFocused && step === 3}
             >
               <WalkthroughableView collapsable={false}>
                 <FormFieldWithHint
@@ -1012,7 +1009,6 @@ export default function AddCaseFlowScreen() {
                   value={form.caseStatus}
                   onChangeText={(v) => update({ caseStatus: v })}
                   placeholder="e.g. Listed, Heard, Adjourned"
-                  hint="Status of the case as of today or from the last hearing"
                   multiline
                   numberOfLines={4}
                   inputStyle={styles.statusInput}
@@ -1022,8 +1018,8 @@ export default function AddCaseFlowScreen() {
             <CopilotStep
               text="This next hearing date is required before saving."
               order={3}
-              name="add-case-s4-next-hearing-date"
-              active={isFocused && step === 4}
+              name="add-case-s3-next-hearing-date"
+              active={isFocused && step === 3}
             >
               <WalkthroughableView collapsable={false}>
                 <DateField
@@ -1032,7 +1028,6 @@ export default function AddCaseFlowScreen() {
                   value={form.nextHearingDate}
                   onChange={(v) => update({ nextHearingDate: v })}
                   placeholder="e.g. 08/09/2025"
-                  hint="Enter next hearing date"
                   error={errors.nextHearingDate}
                 />
               </WalkthroughableView>
@@ -1040,8 +1035,8 @@ export default function AddCaseFlowScreen() {
             <CopilotStep
               text="Add what is expected in the next status."
               order={4}
-              name="add-case-s4-next-status"
-              active={isFocused && step === 4}
+              name="add-case-s3-next-status"
+              active={isFocused && step === 3}
             >
               <WalkthroughableView collapsable={false}>
                 <FormFieldWithHint
@@ -1049,7 +1044,6 @@ export default function AddCaseFlowScreen() {
                   value={form.nextStatus}
                   onChangeText={(v) => update({ nextStatus: v })}
                   placeholder="e.g. Arguments, Judgment, Next hearing"
-                  hint="What is coming up next in this case"
                   multiline
                   numberOfLines={4}
                   inputStyle={styles.statusInput}
@@ -1059,8 +1053,8 @@ export default function AddCaseFlowScreen() {
             <CopilotStep
               text="Optionally add internal notes for this case."
               order={5}
-              name="add-case-s4-notes"
-              active={isFocused && step === 4}
+              name="add-case-s3-notes"
+              active={isFocused && step === 3}
             >
               <WalkthroughableView collapsable={false}>
                 <FormFieldWithHint
@@ -1068,7 +1062,6 @@ export default function AddCaseFlowScreen() {
                   value={form.notes}
                   onChangeText={(v) => update({ notes: v })}
                   placeholder="Brief description..."
-                  hint="Add any additional notes"
                   multiline
                   numberOfLines={4}
                 />
@@ -1081,8 +1074,8 @@ export default function AddCaseFlowScreen() {
               <CopilotStep
                 text="Go back to the previous step."
                 order={6}
-                name="add-case-s4-back"
-                active={isFocused && step === 4}
+                name="add-case-s3-back"
+                active={isFocused && step === 3}
               >
                 <WalkthroughableView style={styles.tourButtonWrap} collapsable={false}>
                   <Bounceable
@@ -1097,8 +1090,8 @@ export default function AddCaseFlowScreen() {
               <CopilotStep
                 text="Tap Save to create this case."
                 order={7}
-                name="add-case-s4-save"
-                active={isFocused && step === 4}
+                name="add-case-s3-save"
+                active={isFocused && step === 3}
               >
                 <WalkthroughableView style={styles.tourButtonWrap} collapsable={false}>
                   <Bounceable

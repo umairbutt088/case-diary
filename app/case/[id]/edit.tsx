@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Keyboard,
     StyleSheet,
     Text,
@@ -13,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-sheet";
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
+import { AddOtherCaseTypeModal } from "@/components/add-case/add-other-case-type-modal";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
@@ -25,18 +27,18 @@ import { ThemedText } from "@/components/themed-text";
 import { Bounceable } from "@/components/ui/bounceable";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
-    CASE_TYPES,
-    getCaseSubTypesForType,
+    CASE_TYPE_OTHER,
     getDerivedCaseTitle,
     getPartyTerminology,
     initialAddCaseFormState,
     type AddCaseFormState,
-    type CaseType,
 } from "@/constants/case-form";
 import type { AppColors } from "@/constants/color-palette";
 import { useAppTheme } from "@/context/app-theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useAccessGuard } from "@/hooks/use-access-guard";
+import { useCustomCaseTypes } from "@/hooks/use-custom-case-types";
+import { useCustomCaseSubTypes } from "@/hooks/use-custom-case-sub-types";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 import { addCaseHearingEntry } from "@/lib/case-hearings";
@@ -52,7 +54,7 @@ import type { CaseRow } from "@/types/case";
 function caseRowToFormState(row: CaseRow): AddCaseFormState {
   return {
     caseNumber: row.case_number ?? "",
-    caseType: (row.case_type as CaseType) ?? "",
+    caseType: row.case_type?.trim() ?? "",
     caseSubType: row.case_sub_type ?? "",
     courtTier: row.court_tier ?? "",
     courtName: row.court_name ?? "",
@@ -198,6 +200,13 @@ export default function EditCaseScreen() {
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [clientListRefreshKey, setClientListRefreshKey] = useState(0);
   const [showAddJudgeSheet, setShowAddJudgeSheet] = useState(false);
+  const [showOtherCaseTypeModal, setShowOtherCaseTypeModal] = useState(false);
+  const [showOtherCaseSubTypeModal, setShowOtherCaseSubTypeModal] = useState(false);
+  const { caseTypeOptions, saveCustomCaseType } = useCustomCaseTypes(form.caseType);
+  const { caseSubTypeOptions, saveCustomCaseSubType } = useCustomCaseSubTypes(
+    form.caseType,
+    form.caseSubType,
+  );
   const partyTerms = useMemo(
     () => getPartyTerminology(form.courtTier, form.caseSubType),
     [form.courtTier, form.caseSubType],
@@ -257,6 +266,70 @@ export default function EditCaseScreen() {
     });
     setSaveError(null);
   }, []);
+
+  const handleCaseTypeChange = useCallback(
+    (value: string) => {
+      if (value === CASE_TYPE_OTHER) {
+        setShowOtherCaseTypeModal(true);
+        return;
+      }
+      update({ caseType: value, caseSubType: "" });
+    },
+    [update],
+  );
+
+  const handleOtherCaseTypeSave = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      const exists = caseTypeOptions.some(
+        (opt) =>
+          opt !== CASE_TYPE_OTHER &&
+          opt.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (exists) {
+        Alert.alert("Case type exists", "Choose it from the list instead.");
+        return;
+      }
+      const saved = await saveCustomCaseType(trimmed);
+      if (saved) {
+        update({ caseType: saved, caseSubType: "" });
+        setShowOtherCaseTypeModal(false);
+      }
+    },
+    [caseTypeOptions, saveCustomCaseType, update],
+  );
+
+  const handleCaseSubTypeChange = useCallback(
+    (value: string) => {
+      if (value === CASE_TYPE_OTHER) {
+        setShowOtherCaseSubTypeModal(true);
+        return;
+      }
+      update({ caseSubType: value });
+    },
+    [update],
+  );
+
+  const handleOtherCaseSubTypeSave = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      const exists = caseSubTypeOptions.some(
+        (opt) =>
+          opt !== CASE_TYPE_OTHER &&
+          opt.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (exists) {
+        Alert.alert("Type exists", "Choose it from the list instead.");
+        return;
+      }
+      const saved = await saveCustomCaseSubType(trimmed);
+      if (saved) {
+        update({ caseSubType: saved });
+        setShowOtherCaseSubTypeModal(false);
+      }
+    },
+    [caseSubTypeOptions, saveCustomCaseSubType, update],
+  );
 
   const validate = useCallback((): boolean => {
     const e: typeof errors = {};
@@ -439,25 +512,38 @@ export default function EditCaseScreen() {
             onChangeText={(v) => update({ caseNumber: v })}
             placeholder="12345/2025"
             hint="Enter Case Number"
+            keyboardType="number-pad"
           />
           <FormField label="Case Type" required>
             <ChipGroup
-              options={[...CASE_TYPES]}
+              options={caseTypeOptions}
               value={form.caseType}
-              onChange={(v) =>
-                update({ caseType: v as CaseType, caseSubType: "" })
-              }
+              onChange={handleCaseTypeChange}
             />
             {errors.caseType ? (
               <ThemedText style={styles.fieldError}>{errors.caseType}</ThemedText>
             ) : null}
           </FormField>
+          <AddOtherCaseTypeModal
+            visible={showOtherCaseTypeModal}
+            onClose={() => setShowOtherCaseTypeModal(false)}
+            onSave={(name) => void handleOtherCaseTypeSave(name)}
+          />
+          <AddOtherCaseTypeModal
+            visible={showOtherCaseSubTypeModal}
+            onClose={() => setShowOtherCaseSubTypeModal(false)}
+            onSave={(name) => void handleOtherCaseSubTypeSave(name)}
+            title="Add type of case"
+            fieldLabel="Type of case"
+            placeholder="Enter type of case"
+            emptyError="Please enter a type of case."
+          />
           {form.caseType ? (
             <FormField label="Type of case" required>
               <ChipGroup
-                options={getCaseSubTypesForType(form.caseType)}
+                options={caseSubTypeOptions}
                 value={form.caseSubType}
-                onChange={(v) => update({ caseSubType: v })}
+                onChange={handleCaseSubTypeChange}
               />
               {errors.caseSubType ? (
                 <ThemedText style={styles.fieldError}>

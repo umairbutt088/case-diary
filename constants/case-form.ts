@@ -12,6 +12,52 @@ export const CASE_TYPES = [
 
 export type CaseType = (typeof CASE_TYPES)[number];
 
+export const CASE_TYPE_OTHER = "Other";
+
+const CUSTOM_CASE_SUB_TYPES = ["Appeal", "Writ", "Other"] as const;
+
+export function buildCaseTypeOptions(
+  customTypes: string[],
+  selectedType = "",
+): string[] {
+  const defaults = new Set(CASE_TYPES.map((type) => type.toLowerCase()));
+  const seen = new Set<string>();
+  const extras: string[] = [];
+
+  for (const type of [...customTypes, selectedType]) {
+    const trimmed = type.trim();
+    if (!trimmed || trimmed === CASE_TYPE_OTHER) continue;
+    const key = trimmed.toLowerCase();
+    if (defaults.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    extras.push(trimmed);
+  }
+
+  return [...CASE_TYPES, ...extras, CASE_TYPE_OTHER];
+}
+
+export function buildCaseSubTypeOptions(
+  baseSubTypes: string[],
+  customSubTypes: string[],
+  selectedSubType = "",
+): string[] {
+  const withoutOther = baseSubTypes.filter((type) => type !== CASE_TYPE_OTHER);
+  const defaults = new Set(withoutOther.map((type) => type.toLowerCase()));
+  const seen = new Set<string>();
+  const extras: string[] = [];
+
+  for (const type of [...customSubTypes, selectedSubType]) {
+    const trimmed = type.trim();
+    if (!trimmed || trimmed === CASE_TYPE_OTHER) continue;
+    const key = trimmed.toLowerCase();
+    if (defaults.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    extras.push(trimmed);
+  }
+
+  return [...withoutOther, ...extras, CASE_TYPE_OTHER];
+}
+
 /**
  * Case sub-types / categories shown after user selects a case type.
  */
@@ -57,9 +103,12 @@ export const CASE_SUB_TYPES: Record<CaseType, readonly string[]> = {
   ],
 };
 
-export function getCaseSubTypesForType(caseType: CaseType | ""): string[] {
+export function getCaseSubTypesForType(caseType: string): string[] {
   if (!caseType) return [];
-  return [...CASE_SUB_TYPES[caseType as CaseType]];
+  if (caseType in CASE_SUB_TYPES) {
+    return [...CASE_SUB_TYPES[caseType as CaseType]];
+  }
+  return [...CUSTOM_CASE_SUB_TYPES];
 }
 
 /**
@@ -222,7 +271,7 @@ export type ClientOption = "link" | "new" | "";
 
 export type AddCaseFormState = {
   caseNumber: string;
-  caseType: CaseType | "";
+  caseType: string;
   caseSubType: string;
   courtTier: string;
   courtName: string;

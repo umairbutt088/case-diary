@@ -44,11 +44,11 @@ Migrations are SQL files in `supabase/migrations/`. They run in **numeric order*
 | 025 | `025_subordinate_cannot_delete_cases.sql` | Only owners may hard-delete cases |
 | 026 | `026_subordinate_delete_cases_permission.sql` | `can_delete_cases` permission |
 | 027 | `027_add_disposed_to_cases.sql` | Disposed case flag |
-| 028 | `028_subordinate_dispose_cases_permission.sql` | `can_dispose_cases` + latest add-subordinate RPC |
-| — | *(029 unused)* | Number skipped; invite feature was never committed as a create migration |
+| 028 | `028_subordinate_dispose_cases_permission.sql` | `can_dispose_cases`; updates add-subordinate RPC |
+| — | *(029 unused)* | Invite feature was never committed as a create migration |
 | 030 | `030_drop_subordinate_invites.sql` | Drop invite-by-link table/RPCs (safe if never created) |
 | 031 | `031_subordinate_link_delete.sql` | Trigger: reset profile role when link is deleted |
-| 032 | `032_subordinate_single_supervisor.sql` | Block linking a subordinate who already belongs to another supervisor |
+| 032 | `032_subordinate_single_supervisor.sql` | One subordinate per supervisor; no reassignment |
 
 **Next migration:** use `033_<name>.sql`.
 
@@ -56,32 +56,30 @@ Migrations are SQL files in `supabase/migrations/`. They run in **numeric order*
 
 ## Intentional numbering gaps
 
-These numbers have **no file** in the repo. That is normal — Supabase only requires unique, sortable names, not a contiguous sequence. Do **not** insert retroactive files for 012, 013, 019, or 029 on a database that already ran later migrations.
+These numbers have **no file** in the repo. Supabase only requires unique, sortable names — not a contiguous sequence. Do **not** insert retroactive files for 012, 013, 019, or 029 on a database that already ran later migrations.
 
 | Gap | Notes |
 |-----|-------|
 | 012, 013 | Early court-tier work shipped as `014` |
 | 019 | Soft delete shipped as `020` |
-| 029 | Invite-by-link was removed in `030` without a matching create migration in this repo |
+| 029 | Invite-by-link was removed in `030` without a matching create migration |
 
 ---
 
-## Subordinate migrations (022–031)
+## Subordinate migrations (022–032)
 
-Applied in sequence:
-
-1. **022** – Core model: one supervisor per subordinate (`unique (subordinate_user_id)`), permission flags, `can_access_owner_data()`.
+1. **022** – Core model: one supervisor per subordinate, permission flags, `can_access_owner_data()`.
 2. **023** – Add subordinate by email RPC.
 3. **024** – `can_add_cases` column; updates RLS and RPC.
 4. **025** – Subordinates cannot trash/delete cases unless owner.
 5. **026** – Optional `can_delete_cases` for subordinates.
 6. **027** – `disposed` on cases.
-7. **028** – Optional `can_dispose_cases`; canonical `create_subordinate_link_by_email`.
+7. **028** – Optional `can_dispose_cases`; updates `create_subordinate_link_by_email`.
 8. **030** – Removes experimental invite flow (`subordinate_invites`).
 9. **031** – On link delete, set `profiles.role` back to `'user'`.
-10. **032** – One subordinate per supervisor; no reassignment via add RPC or direct insert/update.
+10. **032** – One subordinate per supervisor; trigger blocks reassignment.
 
-Later migrations **replace** `create_subordinate_link_by_email` and `can_access_owner_data` — always run the full chain on fresh databases.
+Later migrations **replace** `create_subordinate_link_by_email` — always run the full chain on fresh databases.
 
 ---
 
@@ -118,7 +116,7 @@ This applies only migrations not yet recorded in `supabase_migrations.schema_mig
 
 | Table | Purpose |
 |-------|---------|
-| `profiles` | One per user; role, contact, subscription (if added), reminders |
+| `profiles` | One per user; role, contact, reminders |
 | `cases` | Case records; `user_id` = owner |
 | `clients` | Client directory per owner |
 | `judges` | Saved judges per owner |

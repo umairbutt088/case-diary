@@ -275,7 +275,6 @@ export function AddJudgeBottomSheet({
             value={form.courtRoomAddress}
             onChangeText={(v) => update({ courtRoomAddress: v })}
             placeholder="e.g. Building A, 2nd Floor"
-            hint="Optional. Auto-fills case court room when this judge is selected."
           />
           <CourtTierPicker
             label="Court tier"
@@ -285,7 +284,6 @@ export function AddJudgeBottomSheet({
               setError(null);
             }}
             required
-            hint="Use the same tier list as case creation."
           />
           {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
           <View style={styles.buttons}>

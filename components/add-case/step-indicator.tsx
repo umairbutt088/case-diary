@@ -5,7 +5,7 @@ import { ThemedText } from "@/components/themed-text";
 import type { AppColors } from "@/constants/color-palette";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 type Props = {
   currentStep: number;

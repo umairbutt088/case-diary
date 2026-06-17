@@ -17,7 +17,7 @@ function buildDateFieldCalendarTheme(C: AppColors, modalSheet: string) {
     textSectionTitleColor: C.black,
     selectedDayBackgroundColor: C.black,
     selectedDayTextColor: C.pureWhite,
-    todayTextColor: C.black,
+    todayTextColor: C.themeRed,
     dayTextColor: C.black,
     textDisabledColor: C.gray40,
     textInactiveColor: C.gray40,
@@ -132,11 +132,6 @@ function createDateFieldStyles(C: AppColors, modalSheet: string) {
       fontSize: 17,
       color: C.gray50,
     },
-    modalDone: {
-      fontSize: 17,
-      fontWeight: "600",
-      color: C.btnBlue,
-    },
     pickerContainer: {
       paddingVertical: 8,
       paddingHorizontal: 12,
@@ -176,22 +171,30 @@ export function DateField({
   );
 
   const [showPicker, setShowPicker] = useState(false);
-  const [tempDate, setTempDate] = useState(() => parseToDate(value));
 
   const displayText = value ? formatDateForDisplay(value) : "";
-  const pickerDate = parseToDate(value);
+  const todayIso = formatDateToValue(new Date());
+  const highlightedIso = value?.slice(0, 10) || todayIso;
 
-  const openPicker = () => {
-    setTempDate(pickerDate);
-    setShowPicker(true);
-  };
+  const markedDates = useMemo(
+    () => ({
+      [highlightedIso]: {
+        selected: true,
+        selectedColor: C.black,
+        selectedTextColor: C.pureWhite,
+      },
+    }),
+    [highlightedIso, C.black, C.pureWhite],
+  );
 
-  const handleConfirm = () => {
-    onChange(formatDateToValue(tempDate));
-    setShowPicker(false);
-  };
+  const openPicker = () => setShowPicker(true);
 
   const handleDismiss = () => setShowPicker(false);
+
+  const handleDayPress = (dateString: string) => {
+    onChange(dateString);
+    setShowPicker(false);
+  };
 
   return (
     <View style={styles.wrap}>
@@ -244,23 +247,12 @@ export function DateField({
               <Pressable onPress={handleDismiss} hitSlop={12}>
                 <ThemedText style={styles.modalCancel}>Cancel</ThemedText>
               </Pressable>
-              <Pressable onPress={handleConfirm} hitSlop={12}>
-                <ThemedText style={styles.modalDone}>Done</ThemedText>
-              </Pressable>
             </View>
             <View style={styles.pickerContainer}>
               <Calendar
-                current={formatDateToValue(tempDate)}
-                onDayPress={({ dateString }) =>
-                  setTempDate(parseToDate(dateString))
-                }
-                markedDates={{
-                  [formatDateToValue(tempDate)]: {
-                    selected: true,
-                    selectedColor: C.black,
-                    selectedTextColor: C.pureWhite,
-                  },
-                }}
+                current={highlightedIso}
+                onDayPress={({ dateString }) => handleDayPress(dateString)}
+                markedDates={markedDates}
                 theme={calendarTheme}
                 minDate="1900-01-01"
                 maxDate="2100-12-31"

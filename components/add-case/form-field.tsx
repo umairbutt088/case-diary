@@ -18,10 +18,10 @@ function createFormFieldStyles(C: AppColors) {
       marginBottom: 20,
     },
     label: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: C.black90,
-      marginBottom: 4,
+      fontSize: 15,
+      fontWeight: "700",
+      color: C.black,
+      marginBottom: 8,
     },
     hint: {
       fontSize: 13,
