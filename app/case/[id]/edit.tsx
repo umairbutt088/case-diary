@@ -17,7 +17,6 @@ import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { AddOtherCaseTypeModal } from "@/components/add-case/add-other-case-type-modal";
 import { CaseFeeFields } from "@/components/add-case/case-fee-fields";
 import { ChipGroup } from "@/components/add-case/chip-group";
-import { SubordinateFeeVisibilitySwitch } from "@/components/subordinate-fee-visibility-switch";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
 import { FormField } from "@/components/add-case/form-field";
@@ -769,15 +768,6 @@ export default function EditCaseScreen() {
                 feeReceivedError={errors.feeReceived}
                 receivedLabel="Fee received to date"
               />
-              {isCaseOwner ? (
-                <SubordinateFeeVisibilitySwitch
-                  value={form.subordinatesCanViewFees}
-                  onValueChange={(subordinatesCanViewFees) =>
-                    update({ subordinatesCanViewFees })
-                  }
-                  disabled={saving}
-                />
-              ) : null}
             </>
           ) : null}
 

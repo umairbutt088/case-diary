@@ -95,13 +95,18 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
     inputCol: {
       flex: 1,
     },
+    fieldLabelWrap: {
+      minHeight: 32,
+      marginBottom: 6,
+      justifyContent: "flex-end",
+    },
     fieldLabel: {
       fontSize: 12,
       fontWeight: "600",
       color: C.gray50,
-      marginBottom: 6,
       textTransform: "uppercase",
       letterSpacing: 0.4,
+      lineHeight: 16,
     },
     inputBox: {
       flexDirection: "row",
@@ -243,7 +248,9 @@ function FeeInputField({
 
   return (
     <View style={styles.inputCol}>
-      <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
+      <View style={styles.fieldLabelWrap}>
+        <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
+      </View>
       <View style={[styles.inputBox, error ? styles.inputBoxError : null]}>
         <ThemedText style={styles.currencyPrefix}>Rs</ThemedText>
         {readOnly ? (
@@ -301,7 +308,7 @@ export function CaseFeeFields(props: Props) {
 
   const receivedLabel = isReadOnly
     ? "Received"
-    : (props.receivedLabel ?? "Fee received in advance");
+    : (props.receivedLabel ?? "Advance received");
 
   const formatInputDisplay = (amount: number | null) => {
     if (amount == null) return "—";

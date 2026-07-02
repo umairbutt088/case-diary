@@ -26,7 +26,6 @@ import { AddJudgeBottomSheet } from "@/components/add-case/add-judge-bottom-shee
 import { AddNewClientModal } from "@/components/add-case/add-new-client-modal";
 import { AddOtherCaseTypeModal } from "@/components/add-case/add-other-case-type-modal";
 import { CaseFeeFields } from "@/components/add-case/case-fee-fields";
-import { SubordinateFeeVisibilitySwitch } from "@/components/subordinate-fee-visibility-switch";
 import { ChipGroup } from "@/components/add-case/chip-group";
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
 import { DateField } from "@/components/add-case/date-field";
@@ -204,8 +203,7 @@ function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
 export default function AddCaseFlowScreen() {
   const { goBack } = useHomeBackNavigation();
   const isFocused = useIsFocused();
-  const { effectiveOwnerId, role } = useAuth();
-  const isCaseOwner = role !== "subordinate";
+  const { effectiveOwnerId } = useAuth();
   const accessGuard = useAccessGuard("add_cases");
   const { start, visible: copilotVisible, copilotEvents } = useCopilot();
   const scrollRef = useRef<KeyboardAwareScrollView | null>(null);
@@ -1083,15 +1081,6 @@ export default function AddCaseFlowScreen() {
                   totalFeeError={errors.totalFee}
                   feeReceivedError={errors.feeReceived}
                 />
-                {isCaseOwner ? (
-                  <SubordinateFeeVisibilitySwitch
-                    value={form.subordinatesCanViewFees}
-                    onValueChange={(subordinatesCanViewFees) =>
-                      update({ subordinatesCanViewFees })
-                    }
-                    disabled={saving}
-                  />
-                ) : null}
               </WalkthroughableView>
             </CopilotStep>
             {saveError ? (
