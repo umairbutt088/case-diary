@@ -1,5 +1,8 @@
 {
-  "cli": { "version": ">= 13.0.0" },
+  "cli": {
+    "version": ">= 13.0.0",
+    "appVersionSource": "local"
+  },
   "build": {
     "development": {
       "developmentClient": true,
@@ -15,6 +18,10 @@
       "node": "20.20.0",
       "distribution": "store",
       "android": { "buildType": "app-bundle" },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
+      },
       "environment": "production"
     },
     "production-verify": {
@@ -22,7 +29,20 @@
       "distribution": "store",
       "android": { "buildType": "apk" },
       "environment": "production"
+    },
+    "production-ios-preview": {
+      "extends": "production",
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
     }
   },
-  "submit": { "production": {} }
+  "submit": {
+    "production": {
+      "ios": {
+        "language": "en-US"
+      }
+    }
+  }
 }

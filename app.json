@@ -11,8 +11,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.umairbutt.legaldiary",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Case Diary for Lawyers uses your photo library to set your profile picture."
+        "NSPhotoLibraryUsageDescription": "Case Diary for Lawyers uses your photo library to set your profile picture.",
+        "NSCameraUsageDescription": "Case Diary for Lawyers uses the camera to take your profile picture.",
+        "CFBundleDisplayName": "Case Diary",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -77,7 +84,14 @@
           "cameraPermission": "Case Diary for Lawyers uses the camera to take your profile picture."
         }
       ],
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "color": "#1A1A1A",
+          "defaultChannel": "default",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -87,6 +101,9 @@
       "router": {},
       "androidPlayStoreUrl": "https://play.google.com/store/apps/details?id=com.umairbutt.legaldiary",
       "iosAppStoreUrl": "",
+      "supportUrl": "https://umairbutt088.github.io/case-diary/",
+      "privacyPolicyUrl": "https://umairbutt088.github.io/case-diary/privacy.html",
+      "termsUrl": "https://umairbutt088.github.io/case-diary/terms.html",
       "eas": {
         "projectId": "4d913b2c-450d-48f9-a614-94ac21ba45b1"
       }

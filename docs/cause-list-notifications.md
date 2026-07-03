@@ -30,6 +30,24 @@ For EAS to *send* push notifications, also upload a Google Service Account Key:
 - Run `eas credentials` → Android → production → Google Service Account.
 - Follow [Expo FCM guide](https://docs.expo.dev/push-notifications/fcm-credentials/).
 
+## iOS APNs setup (required for push on iPhone)
+
+1. **Create an APNs key** at [Apple Developer → Keys](https://developer.apple.com/account/resources/authkeys/list).
+   - Enable **Apple Push Notifications service (APNs)**.
+   - Download the `.p8` file (only available once).
+2. Note your **Key ID** and **Team ID** (Apple Developer → Membership).
+3. **Upload to EAS**:
+   ```bash
+   eas credentials --platform ios
+   ```
+   Select **production** → **Push Notifications** → upload the `.p8` key.
+4. **Rebuild the iOS app** after adding APNs:
+   ```bash
+   npm run build:ios:appstore
+   ```
+
+Full App Store checklist: **[APP_STORE_SETUP.md](APP_STORE_SETUP.md)**.
+
 ## Deploy checklist
 
 1. Run Supabase migration `010_add_cause_list_notifications.sql`.

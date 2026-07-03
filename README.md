@@ -48,7 +48,7 @@ All setup and reference docs are in the **[docs/](docs/)** folder:
 
 - **[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)** – Supabase project setup, env vars, and running migrations.
 - **[docs/MIGRATIONS.md](docs/MIGRATIONS.md)** – Database migrations (profiles, cases) and how to run or add new ones.
-- **[docs/AUTH_TABLES_AND_FLOW.md](docs/AUTH_TABLES_AND_FLOW.md)** – Auth tables and login/signup flow.
+- **[docs/APP_STORE_SETUP.md](docs/APP_STORE_SETUP.md)** – iOS App Store build, TestFlight, and submission.
 
 For **EAS Build** (e.g. Android APK), add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in Expo environment variables; see [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
 
