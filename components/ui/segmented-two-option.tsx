@@ -35,10 +35,9 @@ function createSegmentedStyles(C: AppColors) {
     text: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.gray50,
     },
     textActive: {
-      color: C.pureWhite,
+      color: C.textInverse,
     },
   });
 }

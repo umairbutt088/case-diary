@@ -45,13 +45,12 @@ export function FormInput({
         style={[
           styles.input,
           {
-            color: C.black,
             borderColor: C.borderGray,
             backgroundColor: lightBackground ? C.pureWhite : "transparent",
           },
           style,
         ]}
-        placeholderTextColor={C.gray50}
+        placeholderTextColor={C.textMuted}
         onChangeText={handleChange}
         autoCorrect={false}
         spellCheck={false}

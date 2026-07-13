@@ -5,7 +5,6 @@ import {
   Alert,
   Keyboard,
   StyleSheet,
-  Text,
   View
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -104,7 +103,6 @@ function createEditCaseStyles(C: AppColors, onPrimary: string) {
     sectionTitle: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 12,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -188,7 +186,7 @@ export default function EditCaseScreen() {
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createEditCaseStyles(C, onPrimary),
     [C, onPrimary],
@@ -504,7 +502,7 @@ export default function EditCaseScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );
@@ -538,7 +536,7 @@ export default function EditCaseScreen() {
         extraScrollHeight={24}
       >
         <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
-          <ThemedText style={styles.sectionTitle}>Parties & type</ThemedText>
+          <ThemedText type="accent" style={styles.sectionTitle}>Parties & type</ThemedText>
           <FormFieldWithHint
             label="First Party Name"
             required
@@ -606,7 +604,7 @@ export default function EditCaseScreen() {
             </FormField>
           ) : null}
 
-          <ThemedText style={styles.sectionTitle}>Court</ThemedText>
+          <ThemedText type="accent" style={styles.sectionTitle}>Court</ThemedText>
           <CourtTierPicker
             label="Court Tier"
             required
@@ -657,7 +655,7 @@ export default function EditCaseScreen() {
             }}
           />
 
-          <ThemedText style={styles.sectionTitle}>Client</ThemedText>
+          <ThemedText type="accent" style={styles.sectionTitle}>Client</ThemedText>
           <FormField label="My Client is" required>
             {errors.myClientIs ? (
               <ThemedText style={styles.fieldError}>
@@ -696,7 +694,7 @@ export default function EditCaseScreen() {
                 setShowAddClientModal(true);
               }}
             >
-              <Text style={styles.addClientText}>+ Add New Client</Text>
+              <ThemedText type="default" style={styles.addClientText}>+ Add New Client</ThemedText>
             </Bounceable>
           </FormField>
           <AddNewClientModal
@@ -720,7 +718,7 @@ export default function EditCaseScreen() {
             }}
           />
 
-          <ThemedText style={styles.sectionTitle}>Dates & status</ThemedText>
+          <ThemedText type="accent" style={styles.sectionTitle}>Dates & status</ThemedText>
           <DateField
             label="Date of Filing"
             value={form.dateOfFiling}

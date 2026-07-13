@@ -28,7 +28,6 @@ function createAuthLayoutStyles(C: AppColors) {
       marginBottom: 100,
       textAlign: "center",
       fontWeight: "900",
-      color: C.black,
     },
     footer: {
       marginTop: 24,
@@ -38,7 +37,6 @@ function createAuthLayoutStyles(C: AppColors) {
       flexWrap: "wrap",
     },
     footerLinkHeader: {
-      color: C.black,
       fontSize: 16,
     },
   });
@@ -66,7 +64,7 @@ export function AuthScreenLayout({
         {children}
         {footerLink ? (
           <View style={styles.footer}>
-            <ThemedText style={styles.footerLinkHeader}>
+            <ThemedText type="accent" style={styles.footerLinkHeader}>
               {footerLink.linkHeader}{" "}
             </ThemedText>
             <Link href={footerLink.href as any} asChild>

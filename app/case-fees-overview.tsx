@@ -62,7 +62,6 @@ function createStyles(C: AppColors) {
     summaryTitle: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.4,
       marginBottom: 12,
@@ -85,7 +84,6 @@ function createStyles(C: AppColors) {
     summaryLabel: {
       fontSize: 11,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
@@ -93,7 +91,6 @@ function createStyles(C: AppColors) {
       marginTop: 4,
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
     },
     filterRow: {
       flexDirection: "row",
@@ -116,10 +113,9 @@ function createStyles(C: AppColors) {
     filterBtnText: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.black,
     },
     filterBtnTextActive: {
-      color: C.pureWhite,
+      color: C.textInverse,
     },
     listContent: {
       paddingHorizontal: 16,
@@ -144,7 +140,6 @@ function createStyles(C: AppColors) {
       flex: 1,
       fontSize: 15,
       fontWeight: "600",
-      color: C.black,
     },
     statusPill: {
       paddingHorizontal: 8,
@@ -158,7 +153,6 @@ function createStyles(C: AppColors) {
     statusPillText: {
       fontSize: 10,
       fontWeight: "700",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
@@ -176,14 +170,12 @@ function createStyles(C: AppColors) {
     },
     feeLabel: {
       fontSize: 11,
-      color: C.gray50,
       fontWeight: "600",
     },
     feeValue: {
       marginTop: 2,
       fontSize: 14,
       fontWeight: "700",
-      color: C.black,
     },
     feeValueRemaining: {
       color: C.themeRed,
@@ -194,7 +186,6 @@ function createStyles(C: AppColors) {
     noFeeText: {
       marginTop: 8,
       fontSize: 13,
-      color: C.gray50,
       fontStyle: "italic",
     },
     centered: {
@@ -206,13 +197,11 @@ function createStyles(C: AppColors) {
     emptyTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.themeBlack,
       textAlign: "center",
     },
     emptySubtitle: {
       marginTop: 8,
       fontSize: 14,
-      color: C.gray50,
       textAlign: "center",
       lineHeight: 20,
     },
@@ -359,13 +348,13 @@ export default function CaseFeesOverviewScreen() {
         accessibilityLabel={`${title}, fee record`}
       >
         <View style={styles.cardTop}>
-          <ThemedText style={styles.cardTitle} numberOfLines={2}>
+          <ThemedText type="accent" style={styles.cardTitle} numberOfLines={2}>
             {title}
           </ThemedText>
           <View
             style={[styles.statusPill, isDisposed && styles.statusPillDisposed]}
           >
-            <ThemedText
+            <ThemedText type="default"
               style={[
                 styles.statusPillText,
                 isDisposed && styles.statusPillTextDisposed,
@@ -379,19 +368,19 @@ export default function CaseFeesOverviewScreen() {
         {hasFees ? (
           <View style={styles.feeRow}>
             <View style={styles.feeStat}>
-              <ThemedText style={styles.feeLabel}>Total</ThemedText>
-              <ThemedText style={styles.feeValue}>
+              <ThemedText type="label" style={styles.feeLabel}>Total</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.feeValue}>
                 {formatFeeAmount(item.total_fee)}
               </ThemedText>
             </View>
             <View style={styles.feeStat}>
-              <ThemedText style={styles.feeLabel}>Received</ThemedText>
-              <ThemedText style={styles.feeValue}>
+              <ThemedText type="label" style={styles.feeLabel}>Received</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.feeValue}>
                 {formatFeeAmount(item.fee_received)}
               </ThemedText>
             </View>
             <View style={styles.feeStat}>
-              <ThemedText style={styles.feeLabel}>Remaining</ThemedText>
+              <ThemedText type="label" style={styles.feeLabel}>Remaining</ThemedText>
               <ThemedText
                 style={[
                   styles.feeValue,
@@ -407,7 +396,7 @@ export default function CaseFeesOverviewScreen() {
             </View>
           </View>
         ) : (
-          <ThemedText style={styles.noFeeText}>No fee recorded yet</ThemedText>
+          <ThemedText type="default" style={styles.noFeeText}>No fee recorded yet</ThemedText>
         )}
       </Bounceable>
     );
@@ -420,33 +409,33 @@ export default function CaseFeesOverviewScreen() {
       <ScreenHeader title="Case fees" onBack={goBack} />
 
       <View style={styles.summaryCard}>
-        <ThemedText style={styles.summaryTitle}>Fee summary</ThemedText>
+        <ThemedText type="accent" style={styles.summaryTitle}>Fee summary</ThemedText>
         <View style={styles.summaryGrid}>
           <View style={styles.summaryStat}>
-            <ThemedText style={styles.summaryLabel}>Cases</ThemedText>
-            <ThemedText style={styles.summaryValue}>{summary.caseCount}</ThemedText>
+            <ThemedText type="label" style={styles.summaryLabel}>Cases</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>{summary.caseCount}</ThemedText>
           </View>
           <View style={styles.summaryStat}>
-            <ThemedText style={styles.summaryLabel}>With fees</ThemedText>
-            <ThemedText style={styles.summaryValue}>
+            <ThemedText type="label" style={styles.summaryLabel}>With fees</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
               {summary.casesWithFees}
             </ThemedText>
           </View>
           <View style={styles.summaryStat}>
-            <ThemedText style={styles.summaryLabel}>Billed</ThemedText>
-            <ThemedText style={styles.summaryValue}>
+            <ThemedText type="label" style={styles.summaryLabel}>Billed</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
               {formatFeeAmount(summary.totalBilled)}
             </ThemedText>
           </View>
           <View style={styles.summaryStat}>
-            <ThemedText style={styles.summaryLabel}>Received</ThemedText>
-            <ThemedText style={styles.summaryValue}>
+            <ThemedText type="label" style={styles.summaryLabel}>Received</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
               {formatFeeAmount(summary.totalReceived)}
             </ThemedText>
           </View>
           <View style={styles.summaryStat}>
-            <ThemedText style={styles.summaryLabel}>Remaining</ThemedText>
-            <ThemedText style={styles.summaryValue}>
+            <ThemedText type="label" style={styles.summaryLabel}>Remaining</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
               {formatFeeAmount(summary.totalRemaining)}
             </ThemedText>
           </View>
@@ -474,13 +463,13 @@ export default function CaseFeesOverviewScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       ) : cases.length === 0 ? (
         <View style={styles.centered}>
-          <MaterialIcons name="payments" size={40} color={C.gray50} />
-          <ThemedText style={styles.emptyTitle}>No cases found</ThemedText>
-          <ThemedText style={styles.emptySubtitle}>
+          <MaterialIcons name="payments" size={40} color={C.textSecondary} />
+          <ThemedText type="accent" style={styles.emptyTitle}>No cases found</ThemedText>
+          <ThemedText type="accent" style={styles.emptySubtitle}>
             Active and disposed cases with fee records appear here.
           </ThemedText>
         </View>

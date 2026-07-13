@@ -5,7 +5,6 @@ import { Bounceable } from "./bounceable";
 
 import { ThemedText } from "@/components/themed-text";
 import type { AppColors } from "@/constants/color-palette";
-import { useAppTheme } from "@/context/app-theme-context";
 import { useThemePalette } from "@/hooks/use-theme-palette";
 
 type AuthButtonProps = {
@@ -41,8 +40,7 @@ export function AuthButton({
   disabled = false,
 }: AuthButtonProps) {
   const C = useThemePalette();
-  const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createAuthButtonStyles(C, onPrimary),
     [C, onPrimary],
@@ -59,7 +57,7 @@ export function AuthButton({
       {loading ? (
         <ActivityIndicator color={onPrimary} />
       ) : (
-        <ThemedText style={styles.label}>{label}</ThemedText>
+        <ThemedText type="label" style={styles.label}>{label}</ThemedText>
       )}
     </Bounceable>
   );

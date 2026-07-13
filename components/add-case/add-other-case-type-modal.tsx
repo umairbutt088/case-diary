@@ -53,7 +53,6 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
     title: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     cancel: {
       fontSize: 16,
@@ -95,7 +94,7 @@ export function AddOtherCaseTypeModal({
 }: Props) {
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createStyles(C, onPrimary, modalSheet),
@@ -134,9 +133,9 @@ export function AddOtherCaseTypeModal({
         <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <ThemedText style={styles.title}>{title}</ThemedText>
+            <ThemedText type="accent" style={styles.title}>{title}</ThemedText>
             <Pressable onPress={handleClose} hitSlop={12}>
-              <ThemedText style={styles.cancel}>Cancel</ThemedText>
+              <ThemedText type="default" style={styles.cancel}>Cancel</ThemedText>
             </Pressable>
           </View>
           <View style={styles.body}>

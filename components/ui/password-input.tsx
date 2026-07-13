@@ -48,13 +48,12 @@ export function PasswordInput({
           style={[
             styles.input,
             {
-              color: C.black,
               borderColor: C.borderGray,
               backgroundColor: lightBackground ? C.pureWhite : "transparent",
             },
             style,
           ]}
-          placeholderTextColor={C.gray50}
+          placeholderTextColor={C.textMuted}
           secureTextEntry={!show}
           onChangeText={handleChange}
           autoCorrect={false}
@@ -69,7 +68,7 @@ export function PasswordInput({
           <MaterialIcons
             name={show ? "visibility-off" : "visibility"}
             size={24}
-            color={C.gray50}
+            color={C.textSecondary}
           />
         </Pressable>
       </View>

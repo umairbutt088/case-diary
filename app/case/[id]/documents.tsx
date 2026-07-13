@@ -39,7 +39,6 @@ function createDocumentsStyles(C: AppColors) {
     caseTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 14,
     },
     card: {
@@ -57,16 +56,13 @@ function createDocumentsStyles(C: AppColors) {
     historyDate: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 6,
     },
     historyNext: {
       fontSize: 13,
-      color: C.gray50,
     },
     emptyText: {
       fontSize: 15,
-      color: C.gray50,
     },
     errorText: {
       marginBottom: 10,
@@ -183,7 +179,7 @@ export default function CaseDocumentsScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <ScreenHeader title="All documents" />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );
@@ -201,12 +197,12 @@ export default function CaseDocumentsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <ThemedText style={styles.caseTitle}>{title}</ThemedText>
+            <ThemedText type="accent" style={styles.caseTitle}>{title}</ThemedText>
             {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
           </>
         }
         ListEmptyComponent={
-          <ThemedText style={styles.emptyText}>No documents recorded yet.</ThemedText>
+          <ThemedText type="muted" style={styles.emptyText}>No documents recorded yet.</ThemedText>
         }
         renderItem={({ item: doc }) => (
           <View style={styles.card}>
@@ -214,8 +210,8 @@ export default function CaseDocumentsScreen() {
               <Bounceable style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingRight: 8 }} onPress={() => void handleViewDocument(doc)}>
                 <DocumentIconPreview filePath={doc.file_path} mimeType={doc.mime_type} C={C} />
                 <View style={{ flex: 1 }}>
-                  <ThemedText style={styles.historyDate} numberOfLines={1}>{doc.file_name}</ThemedText>
-                  <ThemedText style={styles.historyNext}>
+                  <ThemedText type="secondary" style={styles.historyDate} numberOfLines={1}>{doc.file_name}</ThemedText>
+                  <ThemedText type="secondary" style={styles.historyNext}>
                     {doc.size_bytes ? (doc.size_bytes / 1024).toFixed(1) + " KB" : "Unknown size"} • {formatCaseDate(doc.created_at)}
                   </ThemedText>
                 </View>

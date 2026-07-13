@@ -74,10 +74,8 @@ function createJudgeNameSelectorStyles(C: AppColors, onPrimary: string) {
     triggerText: {
       fontSize: 16,
       flex: 1,
-      color: C.black,
     },
     placeholder: {
-      color: C.gray50,
     },
     triggerRowError: {
       borderColor: C.themeRed,
@@ -95,13 +93,11 @@ function createJudgeNameSelectorStyles(C: AppColors, onPrimary: string) {
       paddingHorizontal: 14,
       paddingVertical: 12,
       fontSize: 16,
-      color: C.black,
       backgroundColor: C.pureWhite,
     },
     listLabel: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       marginTop: 12,
       marginBottom: 6,
     },
@@ -111,7 +107,6 @@ function createJudgeNameSelectorStyles(C: AppColors, onPrimary: string) {
     },
     emptyHint: {
       fontSize: 14,
-      color: C.gray50,
     },
     list: {
       maxHeight: 220,
@@ -141,7 +136,7 @@ function createJudgeNameSelectorStyles(C: AppColors, onPrimary: string) {
       opacity: 0.8,
     },
     deleteActionText: {
-      color: C.pureWhite,
+      color: C.textInverse,
       fontSize: 12,
       fontWeight: "600",
     },
@@ -151,20 +146,16 @@ function createJudgeNameSelectorStyles(C: AppColors, onPrimary: string) {
     },
     optionText: {
       fontSize: 16,
-      color: C.black,
     },
     optionTextSelected: {
       fontWeight: "600",
-      color: C.black,
     },
     optionSubText: {
       fontSize: 12,
-      color: C.gray50,
       marginTop: 2,
     },
     optionSubTextMuted: {
       fontSize: 12,
-      color: C.gray50,
       marginTop: 2,
       opacity: 0.8,
     },
@@ -225,7 +216,7 @@ export function JudgeNameSelector({
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createJudgeNameSelectorStyles(C, onPrimary),
     [C, onPrimary],
@@ -425,7 +416,7 @@ export function JudgeNameSelector({
             }}
             disabled={!courtTier}
           >
-            <ThemedText
+            <ThemedText type="defaultSemiBold"
               style={[
                 styles.triggerText,
                 (!value || !courtTier) && styles.placeholder,
@@ -438,7 +429,7 @@ export function JudgeNameSelector({
             <MaterialIcons
               name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
               size={24}
-              color={C.gray50}
+              color={C.textSecondary}
             />
           </Pressable>
         </View>
@@ -450,7 +441,7 @@ export function JudgeNameSelector({
               value={query}
               onChangeText={setQuery}
               placeholder="Search judges..."
-              placeholderTextColor={C.gray50}
+              placeholderTextColor={C.textMuted}
               autoCorrect={false}
               spellCheck={false}
             />
@@ -464,16 +455,16 @@ export function JudgeNameSelector({
               </View>
             ) : null}
 
-            <ThemedText style={styles.listLabel}>
+            <ThemedText type="label" style={styles.listLabel}>
               Saved judges ({filteredJudges.length})
             </ThemedText>
 
             {loading ? (
               <View style={styles.loadingWrap}>
-                <ActivityIndicator size="small" color={C.black} />
+                <ActivityIndicator size="small" color={C.textPrimary} />
               </View>
             ) : filteredJudges.length === 0 ? (
-              <ThemedText style={styles.emptyHint}>
+              <ThemedText type="muted" style={styles.emptyHint}>
                 No judges found for this court tier.
               </ThemedText>
             ) : (
@@ -516,7 +507,7 @@ export function JudgeNameSelector({
                       onPress={() => onSelect(judge)}
                     >
                       <View style={styles.optionTextWrap}>
-                        <ThemedText
+                        <ThemedText type="defaultSemiBold"
                           style={[
                             styles.optionText,
                             value === judge.name && styles.optionTextSelected,
@@ -525,17 +516,17 @@ export function JudgeNameSelector({
                           {judge.name}
                         </ThemedText>
                         {judge.courtRoomAddress ? (
-                          <ThemedText style={styles.optionSubText}>
+                          <ThemedText type="default" style={styles.optionSubText}>
                             {judge.courtRoomAddress}
                           </ThemedText>
                         ) : (
-                          <ThemedText style={styles.optionSubTextMuted}>
+                          <ThemedText type="default" style={styles.optionSubTextMuted}>
                             No saved court room address
                           </ThemedText>
                         )}
                       </View>
                       {value === judge.name ? (
-                        <MaterialIcons name="check" size={22} color={C.themeBlack} />
+                        <MaterialIcons name="check" size={22} color={C.textAccent} />
                       ) : null}
                     </Pressable>
                   </Swipeable>

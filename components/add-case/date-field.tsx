@@ -68,7 +68,6 @@ function createDateFieldStyles(C: AppColors, modalSheet: string) {
     label: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 8,
     },
     inputRow: {
@@ -130,7 +129,6 @@ function createDateFieldStyles(C: AppColors, modalSheet: string) {
     },
     modalCancel: {
       fontSize: 17,
-      color: C.gray50,
     },
     pickerContainer: {
       paddingVertical: 8,
@@ -199,7 +197,7 @@ export function DateField({
   return (
     <View style={styles.wrap}>
       {label ? (
-        <ThemedText style={styles.label}>
+        <ThemedText type="label" style={styles.label}>
           {label}
           {required ? " *" : ""}
         </ThemedText>
@@ -212,17 +210,17 @@ export function DateField({
         }`}
         accessibilityRole="button"
       >
-        <ThemedText
+        <ThemedText type="muted"
           style={[styles.inputText, !displayText && styles.placeholder]}
           lightColor={displayText ? C.black : C.gray50}
           darkColor={displayText ? C.black : C.gray50}
         >
           {displayText || placeholder}
         </ThemedText>
-        <MaterialIcons name="event" size={22} color={C.gray50} style={styles.icon} />
+        <MaterialIcons name="event" size={22} color={C.textSecondary} style={styles.icon} />
       </Pressable>
       {hint ? (
-        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
+        <ThemedText type="muted" style={styles.hint}>
           {hint}
         </ThemedText>
       ) : null}
@@ -245,7 +243,7 @@ export function DateField({
           >
             <View style={styles.modalHeader}>
               <Pressable onPress={handleDismiss} hitSlop={12}>
-                <ThemedText style={styles.modalCancel}>Cancel</ThemedText>
+                <ThemedText type="default" style={styles.modalCancel}>Cancel</ThemedText>
               </Pressable>
             </View>
             <View style={styles.pickerContainer}>

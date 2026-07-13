@@ -185,7 +185,6 @@ function createCalendarDayStyles(C: AppColors) {
     },
     text: {
       fontSize: 15,
-      color: C.black,
     },
     selectedText: {
       fontWeight: "600",
@@ -205,7 +204,7 @@ function createCalendarDayStyles(C: AppColors) {
     badgeText: {
       fontSize: 10,
       fontWeight: "700",
-      color: C.pureWhite,
+      color: C.textInverse,
     },
   });
 }
@@ -325,7 +324,7 @@ function createCalendarScreenStyles(C: AppColors) {
       alignItems: "center",
     },
     addDateButtonText: {
-      color: C.pureWhite,
+      color: C.textInverse,
       fontSize: 15,
       fontWeight: "600",
     },
@@ -342,19 +341,16 @@ function createCalendarScreenStyles(C: AppColors) {
     addDateSectionTitle: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 12,
       textAlign: "center",
     },
     caseListTitle: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 12,
     },
     noCases: {
       fontSize: 14,
-      color: C.gray50,
     },
     errorWrap: {
       marginTop: 4,
@@ -374,7 +370,7 @@ function createCalendarScreenStyles(C: AppColors) {
     retryButtonText: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.pureWhite,
+      color: C.textInverse,
     },
   });
 }
@@ -603,9 +599,9 @@ export default function CalendarScreen() {
         </View>
         <Spacer.Column numberOfSpaces={5} />
         <View style={styles.addDateSection}>
-          <Text style={styles.addDateSectionTitle}>
+          <ThemedText type="defaultSemiBold" style={styles.addDateSectionTitle}>
             Add this date {`"${selectedDate}"`} as next hearing date to a case
-          </Text>
+          </ThemedText>
           <Spacer.Column numberOfSpaces={5} />
           <CopilotStep
             text="Click here to add this selected date as the next hearing date to a case."
@@ -632,8 +628,7 @@ export default function CalendarScreen() {
           </CopilotStep>
           <ThemedText
             style={styles.addDateHint}
-            lightColor={C.gray50}
-            darkColor={C.gray50}
+            type="secondary"
           >
             Pick a case from the list.{"\n"}Its next hearing date will be set to
             this day.
@@ -641,7 +636,7 @@ export default function CalendarScreen() {
         </View>
 
         <View style={styles.caseList}>
-          <ThemedText style={styles.caseListTitle}>
+          <ThemedText type="accent" style={styles.caseListTitle}>
             Cases on {selectedDate}
           </ThemedText>
           {error ? (
@@ -658,9 +653,9 @@ export default function CalendarScreen() {
               </Pressable>
             </View>
           ) : loading && !refreshing ? (
-            <ThemedText style={styles.noCases}>Loading…</ThemedText>
+            <ThemedText type="default" style={styles.noCases}>Loading…</ThemedText>
           ) : casesForSelectedDate.length === 0 ? (
-            <ThemedText style={styles.noCases}>
+            <ThemedText type="default" style={styles.noCases}>
               No cases on this date.
             </ThemedText>
           ) : (

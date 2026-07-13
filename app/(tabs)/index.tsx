@@ -774,9 +774,9 @@ export default function HomeScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowFiledCasesModal(false)} />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
-            <ThemedText style={styles.modalTitle}>Filed cases</ThemedText>
+            <ThemedText type="accent" style={styles.modalTitle}>Filed cases</ThemedText>
             <Bounceable style={styles.modalClose} onPress={() => setShowFiledCasesModal(false)}>
-              <MaterialIcons name="close" size={20} color={C.black} />
+              <MaterialIcons name="close" size={20} color={C.textPrimary} />
             </Bounceable>
           </View>
           <ScrollView
@@ -805,7 +805,7 @@ export default function HomeScreen() {
           </ScrollView>
           <ScrollView style={styles.filedListScroll} showsVerticalScrollIndicator={false}>
             {filedCases.length === 0 ? (
-              <ThemedText style={styles.filedEmptyText}>
+              <ThemedText type="muted" style={styles.filedEmptyText}>
                 No filed cases in {filedRangeLabel.toLowerCase()}.
               </ThemedText>
             ) : (
@@ -818,10 +818,10 @@ export default function HomeScreen() {
                     router.push(`/case/${caseItem.id}`);
                   }}
                 >
-                  <ThemedText style={styles.filedCaseTitle}>
+                  <ThemedText type="accent" style={styles.filedCaseTitle}>
                     {getCaseDisplayTitle(caseItem)}
                   </ThemedText>
-                  <ThemedText style={styles.filedCaseMeta}>
+                  <ThemedText type="secondary" style={styles.filedCaseMeta}>
                     Filed: {formatCaseDate(caseItem.date_of_filing)}
                   </ThemedText>
                 </Bounceable>
@@ -872,7 +872,7 @@ export default function HomeScreen() {
           <MaterialIcons
             name={widget.icon}
             size={20}
-            color={isSelectedWidget ? C.zodiacColour : C.black}
+            color={isSelectedWidget ? C.textAccent : C.textSecondary}
           />
         </View>
         {typeof widget.count === "number" && widget.count > 0 ? (
@@ -883,10 +883,14 @@ export default function HomeScreen() {
           </View>
         ) : null}
       </View>
-      <ThemedText style={styles.widgetTitle} numberOfLines={2}>
+      <ThemedText
+        type={isSelectedWidget ? "accent" : "defaultSemiBold"}
+        style={styles.widgetTitle}
+        numberOfLines={2}
+      >
         {widget.title}
       </ThemedText>
-      <ThemedText style={styles.widgetSubtitle} numberOfLines={2}>
+      <ThemedText type="secondary" style={styles.widgetSubtitle} numberOfLines={2}>
         {widget.subtitle}
       </ThemedText>
         </View>
@@ -923,7 +927,7 @@ export default function HomeScreen() {
       {pendingCount > 0 ? (
         <View style={styles.pendingBanner}>
           <MaterialIcons name="cloud-upload" size={18} color={C.zodiacColour} />
-          <ThemedText style={styles.pendingBannerText}>
+          <ThemedText type="default" style={styles.pendingBannerText}>
             {pendingCount} case{pendingCount !== 1 ? "s" : ""} waiting to sync
           </ThemedText>
         </View>
@@ -946,7 +950,7 @@ export default function HomeScreen() {
           {isOffline ? (
             <View style={styles.offlineBadge}>
               <MaterialIcons name="cloud-off" size={15} color={C.themeRed} />
-              <ThemedText style={styles.offlineText}>Offline mode: showing cached data</ThemedText>
+              <ThemedText type="default" style={styles.offlineText}>Offline mode: showing cached data</ThemedText>
             </View>
           ) : null}
           {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
@@ -967,22 +971,22 @@ export default function HomeScreen() {
         >
           {exportCapturePayload ? (
             <>
-              <ThemedText style={styles.exportCaptureHeading}>{exportCapturePayload.title}</ThemedText>
+              <ThemedText type="accent" style={styles.exportCaptureHeading}>{exportCapturePayload.title}</ThemedText>
               {exportCapturePayload.sections.map((section) => (
                 <View key={`export-${section.title}`} style={styles.exportSection}>
-                  <ThemedText style={styles.exportSectionTitle}>{section.title}</ThemedText>
+                  <ThemedText type="accent" style={styles.exportSectionTitle}>{section.title}</ThemedText>
                   {section.data.map((caseItem) => (
                     <View key={`export-row-${caseItem.id}`} style={styles.exportRow}>
-                      <ThemedText style={styles.exportRowTitle}>
+                      <ThemedText type="accent" style={styles.exportRowTitle}>
                         {getCaseDisplayTitle(caseItem)}
                       </ThemedText>
-                      <ThemedText style={styles.exportRowMeta}>
+                      <ThemedText type="secondary" style={styles.exportRowMeta}>
                         Case no: {caseItem.case_number?.trim() || "—"}
                       </ThemedText>
-                      <ThemedText style={styles.exportRowMeta}>
+                      <ThemedText type="secondary" style={styles.exportRowMeta}>
                         Court: {caseItem.court_name?.trim() || "—"}
                       </ThemedText>
-                      <ThemedText style={styles.exportRowMeta}>
+                      <ThemedText type="secondary" style={styles.exportRowMeta}>
                         Next: {formatCaseDate(caseItem.next_hearing_date)}
                       </ThemedText>
                     </View>
@@ -1120,7 +1124,7 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     },
     widgetCountText: {
       fontSize: 11,
-      color: C.pureWhite,
+      color: C.textInverse,
       fontWeight: "700",
       lineHeight: 14,
       includeFontPadding: false,
@@ -1128,13 +1132,11 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     widgetTitle: {
       fontSize: 14,
       fontWeight: "700",
-      color: C.black,
       flexShrink: 1,
     },
     widgetSubtitle: {
       marginTop: 4,
       fontSize: 12,
-      color: C.gray50,
       lineHeight: 16,
       flexShrink: 1,
     },
@@ -1162,7 +1164,7 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
       ...theme.shadow,
     },
     notesHeaderButtonText: {
-      color: C.pureWhite,
+      color: C.textInverse,
       fontSize: 12,
       fontWeight: "700",
     },
@@ -1183,7 +1185,7 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
       lineHeight: 10,
       textAlign: "center",
       includeFontPadding: false,
-      color: C.pureWhite,
+      color: C.textInverse,
       fontWeight: "700",
     },
     modalRoot: {
@@ -1212,7 +1214,6 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     modalTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     modalClose: {
       width: 34,
@@ -1243,11 +1244,10 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     filedRangeBtnText: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       paddingHorizontal: 10,
     },
     filedRangeBtnTextActive: {
-      color: C.pureWhite,
+      color: C.textInverse,
     },
     filedListScroll: {
       maxHeight: 300,
@@ -1264,16 +1264,13 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     filedCaseTitle: {
       fontSize: 14,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 4,
     },
     filedCaseMeta: {
       fontSize: 12,
-      color: C.gray50,
     },
     filedEmptyText: {
       fontSize: 13,
-      color: C.gray50,
       paddingVertical: 8,
     },
     exportCaptureRoot: {
@@ -1290,7 +1287,6 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     exportCaptureHeading: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 12,
     },
     exportSection: {
@@ -1299,7 +1295,6 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     exportSectionTitle: {
       fontSize: 13,
       fontWeight: "700",
-      color: C.gray50,
       marginBottom: 8,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -1313,12 +1308,10 @@ function createHomeStyles(C: AppColors, modalSheet: string) {
     exportRowTitle: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 2,
     },
     exportRowMeta: {
       fontSize: 12,
-      color: C.gray50,
     },
   });
 }

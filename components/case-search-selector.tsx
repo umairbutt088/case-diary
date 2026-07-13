@@ -43,7 +43,6 @@ function createCaseSearchStyles(C: AppColors, modalSheet: string) {
     pickModeText: {
       flex: 1,
       fontSize: 14,
-      color: C.gray50,
     },
     searchRow: {
       borderWidth: 1,
@@ -68,12 +67,10 @@ function createCaseSearchStyles(C: AppColors, modalSheet: string) {
     },
     modePillText: {
       fontSize: 12,
-      color: C.gray50,
       fontWeight: "600",
     },
     searchInput: {
       flex: 1,
-      color: C.black,
       fontSize: 14,
       paddingVertical: 10,
     },
@@ -94,7 +91,6 @@ function createCaseSearchStyles(C: AppColors, modalSheet: string) {
     modalTitle: {
       fontSize: 16,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 8,
     },
     modalOption: {
@@ -104,7 +100,6 @@ function createCaseSearchStyles(C: AppColors, modalSheet: string) {
     },
     modalOptionText: {
       fontSize: 15,
-      color: C.black,
     },
   });
 }
@@ -132,12 +127,12 @@ export function CaseSearchSelector({
     return (
       <>
         <Pressable style={styles.pickModeView} onPress={() => setOpen(true)}>
-          <MaterialIcons name="search" size={18} color={C.gray50} />
-          <ThemedText style={styles.pickModeText}>Choose search type</ThemedText>
+          <MaterialIcons name="search" size={18} color={C.textSecondary} />
+          <ThemedText type="default" style={styles.pickModeText}>Choose search type</ThemedText>
           <MaterialIcons
             name="keyboard-arrow-down"
             size={22}
-            color={C.gray50}
+            color={C.textSecondary}
           />
         </Pressable>
         <SearchModeModal
@@ -157,11 +152,11 @@ export function CaseSearchSelector({
     <>
       <View style={styles.searchRow}>
         <Pressable style={styles.modePill} onPress={() => setOpen(true)}>
-          <ThemedText style={styles.modePillText}>{modeLabel}</ThemedText>
+          <ThemedText type="default" style={styles.modePillText}>{modeLabel}</ThemedText>
           <MaterialIcons
             name="keyboard-arrow-down"
             size={16}
-            color={C.gray50}
+            color={C.textSecondary}
           />
         </Pressable>
         <TextInput
@@ -172,7 +167,7 @@ export function CaseSearchSelector({
             onModeChange(null);
           }}
           placeholder={placeholder}
-          placeholderTextColor={C.gray50}
+          placeholderTextColor={C.textMuted}
           style={styles.searchInput}
           autoCorrect={false}
           spellCheck={false}
@@ -210,12 +205,12 @@ function SearchModeModal({
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-          <ThemedText style={styles.modalTitle}>Search cases by</ThemedText>
+          <ThemedText type="accent" style={styles.modalTitle}>Search cases by</ThemedText>
           <Pressable style={styles.modalOption} onPress={() => onSelect("name")}>
-            <ThemedText style={styles.modalOptionText}>Case name</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.modalOptionText}>Case name</ThemedText>
           </Pressable>
           <Pressable style={styles.modalOption} onPress={() => onSelect("number")}>
-            <ThemedText style={styles.modalOptionText}>Case number</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.modalOptionText}>Case number</ThemedText>
           </Pressable>
         </Pressable>
       </Pressable>

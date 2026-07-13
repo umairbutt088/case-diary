@@ -17,7 +17,7 @@ export default function OnboardingScreen() {
       <ThemedText type="title" style={styles.title}>
         Welcome to Case Diary for Lawyers
       </ThemedText>
-      <ThemedText style={styles.subtitle}>
+      <ThemedText type="accent" style={styles.subtitle}>
         Track your legal matters and notes in one place.
       </ThemedText>
       <ThemedText

@@ -39,7 +39,6 @@ function createFormFieldWithHintStyles(C: AppColors) {
     label: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 8,
     },
     inputRow: {
@@ -62,7 +61,6 @@ function createFormFieldWithHintStyles(C: AppColors) {
     input: {
       flex: 1,
       fontSize: 16,
-      color: C.black,
       paddingVertical: 12,
       minHeight: 44,
       maxHeight: 120,
@@ -111,7 +109,7 @@ export function FormFieldWithHint({
   return (
     <View style={styles.wrap}>
       {label ? (
-        <ThemedText style={styles.label}>
+        <ThemedText type="label" style={styles.label}>
           {label}
           {required ? " *" : ""}
         </ThemedText>
@@ -143,7 +141,7 @@ export function FormFieldWithHint({
         />
       </View>
       {hint ? (
-        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
+        <ThemedText type="muted" style={styles.hint}>
           {hint}
         </ThemedText>
       ) : null}

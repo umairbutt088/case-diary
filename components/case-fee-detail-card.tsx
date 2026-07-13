@@ -51,7 +51,6 @@ function createStyles(C: AppColors) {
     recordBtnText: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.black,
     },
     historyCard: {
       marginTop: 12,
@@ -66,14 +65,12 @@ function createStyles(C: AppColors) {
     historyTitle: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
     },
     emptyText: {
       fontSize: 13,
-      color: C.gray50,
       lineHeight: 18,
     },
     loading: {
@@ -94,7 +91,6 @@ function createStyles(C: AppColors) {
     seeAllBtnText: {
       fontSize: 14,
       fontWeight: "600",
-      color: C.black,
     },
   });
 }
@@ -188,19 +184,19 @@ export function CaseFeeDetailCard({
 
       {canRecord ? (
         <Bounceable style={styles.recordBtn} onPress={handleOpenPayment}>
-          <MaterialIcons name="add-circle-outline" size={20} color={C.black} />
+          <MaterialIcons name="add-circle-outline" size={20} color={C.textPrimary} />
           <ThemedText style={styles.recordBtnText}>Record fee payment</ThemedText>
         </Bounceable>
       ) : null}
 
       <View style={styles.historyCard}>
-        <ThemedText style={styles.historyTitle}>Payment history</ThemedText>
+        <ThemedText type="accent" style={styles.historyTitle}>Payment history</ThemedText>
         {loadingPayments ? (
           <View style={styles.loading}>
-            <ActivityIndicator size="small" color={C.black} />
+            <ActivityIndicator size="small" color={C.textPrimary} />
           </View>
         ) : payments.length === 0 ? (
-          <ThemedText style={styles.emptyText}>
+          <ThemedText type="muted" style={styles.emptyText}>
             {hasTotalFee
               ? "No payments recorded yet. Tap Record fee payment when the client pays."
               : "Set a total case fee in Edit case, then record payments here during trial."}
@@ -223,7 +219,7 @@ export function CaseFeeDetailCard({
             onPress={() => router.push(`/case/${caseId}/fee-payments`)}
           >
             <ThemedText style={styles.seeAllBtnText}>See all payments</ThemedText>
-            <MaterialIcons name="chevron-right" size={18} color={C.black} />
+            <MaterialIcons name="chevron-right" size={18} color={C.textPrimary} />
           </Bounceable>
         ) : null}
       </View>
@@ -238,7 +234,7 @@ export function CaseFeeDetailCard({
       />
 
       {paymentError && !showPaymentModal ? (
-        <ThemedText style={[styles.emptyText, { marginHorizontal: 16 }]}>
+        <ThemedText type="muted" style={[styles.emptyText, { marginHorizontal: 16 }]}>
           {paymentError}
         </ThemedText>
       ) : null}

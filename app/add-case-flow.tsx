@@ -8,7 +8,6 @@ import {
   InteractionManager,
   Keyboard,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -130,7 +129,6 @@ function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
     manageRefBtnText: {
       fontSize: 14,
       fontWeight: "600",
-      color: C.black,
     },
     clientOptionRow: {
       borderRadius: 10,
@@ -210,7 +208,7 @@ export default function AddCaseFlowScreen() {
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createAddCaseFlowStyles(C, onPrimary),
     [C, onPrimary],
@@ -928,7 +926,7 @@ export default function AddCaseFlowScreen() {
                       setShowAddClientModal(true);
                     }}
                   >
-                    <Text style={styles.addClientText}>+ Add New Client</Text>
+                    <ThemedText type="default" style={styles.addClientText}>+ Add New Client</ThemedText>
                   </Bounceable>
                 </FormField>
               </WalkthroughableView>

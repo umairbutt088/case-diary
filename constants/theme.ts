@@ -59,6 +59,14 @@ const colors = {
   cream80: "#FFF7EF",
   zodiacColour: "#C09442",
   green: "#4CAF50",
+  /** Semantic text (light defaults; dark overrides in color-palette) */
+  textPrimary: "#101828",
+  textSecondary: "#475467",
+  textMuted: "#8B95A8",
+  textAccent: "#A67C2D",
+  textLink: "#2563EB",
+  /** Always light — text on dark/colored buttons, badges, toasts */
+  textInverse: "#FFFFFF",
 };
 
 const spacesFrom1 = Array.from({ length: 64 }, (_, i) => i + 1);
@@ -177,7 +185,7 @@ export const theme = {
     textLato: "System",
   },
   colors: {
-    text: colors.black,
+    text: colors.textPrimary,
     ...colors,
   },
   space: spacesMultiplier,
@@ -192,22 +200,22 @@ export const theme = {
 // Light/dark palettes for useColorScheme and useThemeColor (uses theme colors)
 export const Colors = {
   light: {
-    text: colors.black,
+    text: colors.textPrimary,
     background: colors.background,
     tint: colors.primary,
-    icon: colors.themeGray,
-    tabIconDefault: colors.gray50,
-    tabIconSelected: colors.primary,
-    black: colors.black,
+    icon: colors.textSecondary,
+    tabIconDefault: colors.textSecondary,
+    tabIconSelected: colors.textAccent,
+    black: colors.textPrimary,
   },
   dark: {
-    text: "#FFFFFF",
-    background: "#000000",
-    tint: colors.themeWhite,
-    icon: colors.gray70,
-    tabIconDefault: colors.gray70,
-    tabIconSelected: colors.themeWhite,
-    black: "#FFFFFF",
+    text: "#F5F5F7",
+    background: "#0F1118",
+    tint: "#E8C872",
+    icon: "#8E8E93",
+    tabIconDefault: "#8E8E93",
+    tabIconSelected: "#E8C872",
+    black: "#F5F5F7",
   },
 };
 

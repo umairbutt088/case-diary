@@ -94,20 +94,17 @@ function createCaseCardStyles(C: AppColors) {
     },
     compactDateLabel: {
       fontSize: 11,
-      color: C.gray50,
       marginBottom: 2,
       textTransform: "uppercase",
       letterSpacing: 0.4,
     },
     compactDateValue: {
       fontSize: 13,
-      color: C.black,
       fontWeight: "600",
     },
     compactTitle: {
       fontSize: 16,
       fontWeight: "700",
-      color: C.black,
       textAlign: "center",
     },
     compactChevron: {
@@ -131,7 +128,6 @@ function createCaseCardStyles(C: AppColors) {
     title: {
       fontSize: 17,
       fontWeight: "700",
-      color: C.black,
     },
     detailsButton: {
       flexDirection: "row",
@@ -151,7 +147,6 @@ function createCaseCardStyles(C: AppColors) {
     },
     detailsButtonText: {
       fontSize: 15,
-      color: C.gray50,
       marginRight: 2,
     },
     snippet: {
@@ -165,7 +160,6 @@ function createCaseCardStyles(C: AppColors) {
     },
     detailText: {
       fontSize: 13,
-      color: C.gray50,
     },
     footer: {
       flexDirection: "row",
@@ -229,8 +223,8 @@ function createCaseCardStyles(C: AppColors) {
       paddingHorizontal: 14,
       borderRadius: 10,
       fontSize: 14,
-      color: C.pureWhite,
-      backgroundColor: C.black + "CC",
+      color: C.textInverse,
+      backgroundColor: "rgba(16, 24, 40, 0.85)",
       overflow: "hidden",
     },
   });
@@ -306,25 +300,25 @@ export function CaseCard({
         {!expanded ? (
           <View style={styles.compactRow}>
             <View style={styles.compactCell}>
-              <ThemedText style={styles.compactDateLabel}>Previous</ThemedText>
-              <ThemedText style={styles.compactDateValue} numberOfLines={1}>
+              <ThemedText type="caption" style={styles.compactDateLabel}>Previous</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.compactDateValue} numberOfLines={1}>
                 {previousDate}
               </ThemedText>
             </View>
             <View style={[styles.compactCell, styles.compactCellCenter]}>
-              <ThemedText style={styles.compactTitle} numberOfLines={1}>
+              <ThemedText type="accent" style={styles.compactTitle} numberOfLines={1}>
                 {title}
               </ThemedText>
               <MaterialIcons
                 name="keyboard-arrow-down"
                 size={20}
-                color={C.gray50}
+                color={C.textSecondary}
                 style={styles.compactChevron}
               />
             </View>
             <View style={[styles.compactCell, styles.compactCellRight]}>
-              <ThemedText style={styles.compactDateLabel}>Next</ThemedText>
-              <ThemedText
+              <ThemedText type="caption" style={styles.compactDateLabel}>Next</ThemedText>
+              <ThemedText type="defaultSemiBold"
                 style={[styles.compactDateValue, isOverdue && styles.nextDateTextOverdue]}
                 numberOfLines={1}
                 lightColor={isOverdue ? C.themeRed : C.black}
@@ -346,7 +340,7 @@ export function CaseCard({
               }}
               accessibilityLabel="Collapse case card"
             >
-              <MaterialIcons name="keyboard-arrow-up" size={20} color={C.gray50} />
+              <MaterialIcons name="keyboard-arrow-up" size={20} color={C.textSecondary} />
             </Bounceable>
             <View style={styles.cardTop}>
               <Bounceable
@@ -356,7 +350,7 @@ export function CaseCard({
                 accessibilityHint="Long press to show full title"
                 onPress={(event) => event.stopPropagation()}
               >
-                <ThemedText
+                <ThemedText type="accent"
                   style={styles.title}
                   numberOfLines={1}
                   adjustsFontSizeToFit
@@ -380,11 +374,11 @@ export function CaseCard({
                         openDetails();
                       }}
                     >
-                      <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
+                      <ThemedText type="link" style={styles.detailsButtonText}>Details</ThemedText>
                       <MaterialIcons
                         name="chevron-right"
                         size={20}
-                        color={C.gray50}
+                        color={C.textSecondary}
                       />
                     </Bounceable>
                   </WalkthroughableView>
@@ -397,11 +391,11 @@ export function CaseCard({
                     openDetails();
                   }}
                 >
-                  <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
+                  <ThemedText type="link" style={styles.detailsButtonText}>Details</ThemedText>
                   <MaterialIcons
                     name="chevron-right"
                     size={20}
-                    color={C.gray50}
+                    color={C.textSecondary}
                   />
                 </Bounceable>
               )}
@@ -409,8 +403,7 @@ export function CaseCard({
             <ThemedText
               style={styles.snippet}
               numberOfLines={2}
-              lightColor={C.gray50}
-              darkColor={C.gray50}
+              type="muted"
             >
               {snippet}
             </ThemedText>
@@ -422,14 +415,14 @@ export function CaseCard({
                 accessibilityLabel="Case number. Press and hold to copy"
                 accessibilityHint="Long press to copy the case number to clipboard"
               >
-                <ThemedText style={styles.detailText} numberOfLines={1}>
+                <ThemedText type="secondary" style={styles.detailText} numberOfLines={1}>
                   Case no: {caseNumber}
                 </ThemedText>
               </Pressable>
-              <ThemedText style={styles.detailText} numberOfLines={1}>
+              <ThemedText type="secondary" style={styles.detailText} numberOfLines={1}>
                 Court: {courtName}
               </ThemedText>
-              <ThemedText style={styles.detailText} numberOfLines={1}>
+              <ThemedText type="secondary" style={styles.detailText} numberOfLines={1}>
                 Proceeding: {proceeding}
               </ThemedText>
             </View>
@@ -441,7 +434,7 @@ export function CaseCard({
                   color={isOverdue ? C.themeRed : C.gray50}
                   style={styles.nextDateIcon}
                 />
-                <ThemedText
+                <ThemedText type="default"
                   style={[styles.nextDateText, isOverdue && styles.nextDateTextOverdue]}
                   lightColor={isOverdue ? C.themeRed : C.gray50}
                   darkColor={isOverdue ? C.themeRed : C.gray50}
@@ -459,7 +452,7 @@ export function CaseCard({
                     accessibilityRole="button"
                     accessibilityLabel="Add proceeding to update next hearing"
                   >
-                    <ThemedText style={styles.overdueBadgeText}>OVERDUE</ThemedText>
+                    <ThemedText type="default" style={styles.overdueBadgeText}>OVERDUE</ThemedText>
                   </Bounceable>
                 ) : null}
               </View>
@@ -517,7 +510,7 @@ export function CaseCard({
                   hitSlop={8}
                   accessibilityLabel="View next date / calendar"
                 >
-                  <MaterialIcons name="event" size={22} color={C.gray50} />
+                  <MaterialIcons name="event" size={22} color={C.textSecondary} />
                 </Bounceable>
                 {onEdit ? (
                   walkthroughEnabled ? (
@@ -540,7 +533,7 @@ export function CaseCard({
                           <MaterialIcons
                             name="edit"
                             size={22}
-                            color={C.gray50}
+                            color={C.textSecondary}
                           />
                         </Bounceable>
                       </WalkthroughableView>
@@ -558,7 +551,7 @@ export function CaseCard({
                       <MaterialIcons
                         name="edit"
                         size={22}
-                        color={C.gray50}
+                        color={C.textSecondary}
                       />
                     </Bounceable>
                   )
@@ -569,7 +562,7 @@ export function CaseCard({
         ) : null}
         {copyNotice ? (
           <View pointerEvents="none" style={styles.copyToastWrap}>
-            <ThemedText style={styles.copyToastText}>{copyNotice}</ThemedText>
+            <ThemedText type="default" style={styles.copyToastText}>{copyNotice}</ThemedText>
           </View>
         ) : null}
       </Bounceable>

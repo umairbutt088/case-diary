@@ -35,7 +35,6 @@ function createHearingsStyles(C: AppColors) {
     caseTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 14,
     },
     card: {
@@ -48,26 +47,21 @@ function createHearingsStyles(C: AppColors) {
     dateText: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 6,
     },
     judgeText: {
       fontSize: 14,
-      color: C.gray50,
       marginBottom: 6,
     },
     proceedingText: {
       fontSize: 16,
-      color: C.black,
       marginBottom: 6,
     },
     nextText: {
       fontSize: 13,
-      color: C.gray50,
     },
     emptyText: {
       fontSize: 15,
-      color: C.gray50,
     },
     errorText: {
       marginBottom: 10,
@@ -82,7 +76,6 @@ function createHearingsStyles(C: AppColors) {
     },
     loadingMoreText: {
       fontSize: 13,
-      color: C.gray50,
     },
   });
 }
@@ -180,7 +173,7 @@ export default function CaseHearingsScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="All hearings" />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );
@@ -202,27 +195,27 @@ export default function CaseHearingsScreen() {
         }}
         ListHeaderComponent={
           <>
-            <ThemedText style={styles.caseTitle}>{title}</ThemedText>
+            <ThemedText type="accent" style={styles.caseTitle}>{title}</ThemedText>
             {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
           </>
         }
         ListEmptyComponent={
-          <ThemedText style={styles.emptyText}>No hearings recorded yet.</ThemedText>
+          <ThemedText type="muted" style={styles.emptyText}>No hearings recorded yet.</ThemedText>
         }
         renderItem={({ item: entry }) => (
           <View style={styles.card}>
-            <ThemedText style={styles.dateText}>
+            <ThemedText type="default" style={styles.dateText}>
               {formatCaseDate(entry.hearing_date)}
             </ThemedText>
             {entry.judge_name?.trim() ? (
-              <ThemedText style={styles.judgeText}>
+              <ThemedText type="default" style={styles.judgeText}>
                 Judge: {entry.judge_name.trim()}
               </ThemedText>
             ) : null}
-            <ThemedText style={styles.proceedingText}>
+            <ThemedText type="secondary" style={styles.proceedingText}>
               {(entry.proceeding || entry.current_status || "Proceeding updated").trim()}
             </ThemedText>
-            <ThemedText style={styles.nextText}>
+            <ThemedText type="default" style={styles.nextText}>
               Next: {entry.next_status?.trim() || "—"} •{" "}
               {entry.next_hearing_date
                 ? formatCaseDate(entry.next_hearing_date)
@@ -234,9 +227,9 @@ export default function CaseHearingsScreen() {
           hasMore ? (
             <View style={styles.loadingMoreWrap}>
               {loadingMore ? (
-                <ActivityIndicator size="small" color={C.black} />
+                <ActivityIndicator size="small" color={C.textPrimary} />
               ) : (
-                <ThemedText style={styles.loadingMoreText}>Scroll for more hearings</ThemedText>
+                <ThemedText type="default" style={styles.loadingMoreText}>Scroll for more hearings</ThemedText>
               )}
             </View>
           ) : null

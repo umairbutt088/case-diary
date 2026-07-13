@@ -73,7 +73,6 @@ function createAddNewClientModalStyles(
     title: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     cancel: {
       fontSize: 16,
@@ -110,7 +109,6 @@ function createAddNewClientModalStyles(
     btnSecondaryText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
     },
     btnPrimary: {
       backgroundColor: C.themeBlack,
@@ -132,7 +130,7 @@ export function AddNewClientModal({
   const { session, effectiveOwnerId } = useAuth();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createAddNewClientModalStyles(C, onPrimary, modalSheet),
@@ -217,9 +215,9 @@ export function AddNewClientModal({
         <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <ThemedText style={styles.title}>Add New Client</ThemedText>
+            <ThemedText type="accent" style={styles.title}>Add New Client</ThemedText>
             <Pressable onPress={handleClose} hitSlop={12}>
-              <ThemedText style={styles.cancel}>Cancel</ThemedText>
+              <ThemedText type="default" style={styles.cancel}>Cancel</ThemedText>
             </Pressable>
           </View>
           <ScrollView

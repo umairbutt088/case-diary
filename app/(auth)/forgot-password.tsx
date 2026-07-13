@@ -77,7 +77,7 @@ export default function ForgotPasswordScreen() {
         href: "/(auth)/login",
       }}
     >
-      <ThemedText style={{ textAlign: "center", marginBottom: 16 }}>
+      <ThemedText type="default" style={{ textAlign: "center", marginBottom: 16 }}>
         Enter your email and we will send you a reset link.
       </ThemedText>
       <FormInput

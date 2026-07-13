@@ -15,7 +15,7 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    Text,
+    
     TextInput,
     View,
 } from "react-native";
@@ -71,7 +71,6 @@ function createProfileStyles(C: AppColors) {
     },
     title: {
       marginBottom: 20,
-      color: C.black,
     },
     card: {
       backgroundColor: C.pureWhite,
@@ -130,19 +129,16 @@ function createProfileStyles(C: AppColors) {
       fontSize: 36,
       lineHeight: 44,
       fontWeight: "700",
-      color: C.gray50,
       includeFontPadding: false,
     },
     displayName: {
       fontSize: 20,
       fontWeight: "700",
-      color: C.black,
       marginTop: 12,
     },
     sectionTitle: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 12,
       marginTop: 20,
       textTransform: "uppercase",
@@ -153,17 +149,14 @@ function createProfileStyles(C: AppColors) {
     },
     fieldLabel: {
       fontSize: 13,
-      color: C.gray50,
       marginBottom: 4,
     },
     fieldValue: {
       fontSize: 16,
-      color: C.black,
     },
     inputLabel: {
       fontSize: 14,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 6,
       marginTop: 4,
     },
@@ -174,7 +167,6 @@ function createProfileStyles(C: AppColors) {
       paddingHorizontal: 14,
       paddingVertical: 12,
       fontSize: 16,
-      color: C.black,
       marginBottom: 4,
     },
     inputMultiline: {
@@ -204,7 +196,6 @@ function createProfileStyles(C: AppColors) {
     btnSecondaryText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
     },
     btnPrimary: {
       backgroundColor: C.themeBlack,
@@ -212,7 +203,7 @@ function createProfileStyles(C: AppColors) {
     btnPrimaryText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.pureWhite,
+      color: C.textInverse,
     },
     errorText: {
       fontSize: 15,
@@ -221,17 +212,14 @@ function createProfileStyles(C: AppColors) {
     },
     reminderHint: {
       fontSize: 14,
-      color: C.gray50,
       marginBottom: 12,
     },
     reminderSchedule: {
       fontSize: 14,
-      color: C.black,
     },
     timezoneText: {
       marginTop: 8,
       fontSize: 13,
-      color: C.gray50,
     },
     notifStatusRow: {
       flexDirection: "row",
@@ -247,7 +235,6 @@ function createProfileStyles(C: AppColors) {
     tokenStatusMuted: {
       flex: 1,
       fontSize: 14,
-      color: C.gray50,
     },
     tokenSyncSuccess: {
       marginTop: 8,
@@ -273,13 +260,12 @@ function createProfileStyles(C: AppColors) {
     signOutText: {
       fontWeight: "600",
       fontSize: 16,
-      color: C.pureWhite,
+      color: C.textInverse,
     },
     versionText: {
       marginTop: 12,
       textAlign: "center",
       fontSize: 12,
-      color: C.gray50,
     },
   });
 }
@@ -298,8 +284,8 @@ function FieldRow({
   const text = value?.trim() || "—";
   return (
     <View style={styles.fieldRow}>
-      <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
-      <ThemedText style={styles.fieldValue}>{text}</ThemedText>
+      <ThemedText type="label" style={styles.fieldLabel}>{label}</ThemedText>
+      <ThemedText type="defaultSemiBold" style={styles.fieldValue}>{text}</ThemedText>
     </View>
   );
 }
@@ -311,7 +297,7 @@ function SectionTitle({
   styles: ProfileStyles;
   title: string;
 }) {
-  return <ThemedText style={styles.sectionTitle}>{title}</ThemedText>;
+  return <ThemedText type="accent" style={styles.sectionTitle}>{title}</ThemedText>;
 }
 
 export default function ProfileScreen() {
@@ -559,7 +545,7 @@ export default function ProfileScreen() {
       accessibilityLabel="Settings"
       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
     >
-      <MaterialIcons name="settings" size={24} color={C.themeBlack} />
+      <MaterialIcons name="settings" size={24} color={C.textPrimary} />
     </Pressable>
   );
 
@@ -618,11 +604,11 @@ export default function ProfileScreen() {
                       style={styles.avatarImage}
                     />
                 ) : (
-                  <Text style={styles.avatarInitials}>{initials}</Text>
+                  <ThemedText type="secondary" style={styles.avatarInitials}>{initials}</ThemedText>
                 )}
                   {uploading && (
                     <View style={styles.avatarOverlay}>
-                      <ActivityIndicator size="large" color={C.black} />
+                      <ActivityIndicator size="large" color={C.textPrimary} />
                     </View>
                   )}
                 </View>
@@ -633,7 +619,7 @@ export default function ProfileScreen() {
                 )}
               </Pressable>
             {!editing && (
-              <ThemedText style={styles.displayName}>
+              <ThemedText type="default" style={styles.displayName}>
                 {displayName || "User"}
               </ThemedText>
             )}
@@ -643,57 +629,57 @@ export default function ProfileScreen() {
           {editing ? (
             <>
               <SectionTitle styles={styles} title="Personal" />
-              <ThemedText style={styles.inputLabel}>First name</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>First name</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.first_name}
                 onChangeText={(v) => updateForm({ first_name: v })}
                 placeholder="First name"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCorrect={false}
                 spellCheck={false}
               />
-              <ThemedText style={styles.inputLabel}>Last name</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Last name</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.last_name}
                 onChangeText={(v) => updateForm({ last_name: v })}
                 placeholder="Last name"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCorrect={false}
                 spellCheck={false}
               />
-              <ThemedText style={styles.inputLabel}>Full name</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Full name</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.full_name}
                 onChangeText={(v) => updateForm({ full_name: v })}
                 placeholder="Full name (optional)"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCorrect={false}
                 spellCheck={false}
               />
 
               <SectionTitle styles={styles} title="Contact" />
-              <ThemedText style={styles.inputLabel}>Email</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Email</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.email}
                 onChangeText={(v) => updateForm({ email: v })}
                 placeholder="Email"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
                 spellCheck={false}
               />
-              <ThemedText style={styles.inputLabel}>Mobile number</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Mobile number</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.phone}
                 onChangeText={(v) => updateForm({ phone: v })}
                 placeholder="Phone number"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 keyboardType="phone-pad"
                 autoCorrect={false}
                 spellCheck={false}
@@ -705,7 +691,7 @@ export default function ProfileScreen() {
                 value={form.address}
                 onChangeText={(v) => updateForm({ address: v })}
                 placeholder="Full address"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 multiline
                 numberOfLines={3}
                 autoCorrect={false}
@@ -733,7 +719,7 @@ export default function ProfileScreen() {
                   {saving ? (
                     <ActivityIndicator
                       size="small"
-                      color={C.black}
+                      color={C.textPrimary}
                     />
                   ) : (
                     <ThemedText style={styles.btnPrimaryText}>Save</ThemedText>
@@ -771,11 +757,11 @@ export default function ProfileScreen() {
       {!editing ? (
         <View style={styles.card}>
           <SectionTitle styles={styles} title="Cause List Reminder" />
-          <ThemedText style={styles.reminderHint}>
+          <ThemedText type="muted" style={styles.reminderHint}>
             Nightly reminders are sent automatically at 8:00 PM with tomorrow&apos;s
             hearing list.
           </ThemedText>
-          <ThemedText style={styles.timezoneText}>
+          <ThemedText type="muted" style={styles.timezoneText}>
             Timezone: {APP_TIMEZONE}
           </ThemedText>
 
@@ -784,7 +770,7 @@ export default function ProfileScreen() {
             // Permission was denied by the user in OS settings
             <View style={styles.notifStatusRow}>
               <MaterialIcons name="notifications-off" size={18} color={C.themeRed} />
-              <ThemedText style={styles.tokenStatusMuted}>
+              <ThemedText type="default" style={styles.tokenStatusMuted}>
                 Notifications are turned off for this app.
               </ThemedText>
             </View>
@@ -792,7 +778,7 @@ export default function ProfileScreen() {
             // Permission granted and token saved — fully active
             <View style={styles.notifStatusRow}>
               <MaterialIcons name="check-circle" size={18} color={C.themeGreen} />
-              <ThemedText style={styles.tokenStatus}>
+              <ThemedText type="default" style={styles.tokenStatus}>
                 Active — reminders are enabled.
               </ThemedText>
             </View>
@@ -800,7 +786,7 @@ export default function ProfileScreen() {
             // Permission granted (or undetermined) but token not yet saved
             <View style={styles.notifStatusRow}>
               <MaterialIcons name="notifications-none" size={18} color={C.themeWarm} />
-              <ThemedText style={styles.tokenStatusMuted}>
+              <ThemedText type="default" style={styles.tokenStatusMuted}>
                 Not yet registered for reminders.
               </ThemedText>
             </View>
@@ -873,7 +859,7 @@ export default function ProfileScreen() {
             </WalkthroughableView>
           </CopilotStep>
 
-          <ThemedText style={styles.versionText}>
+          <ThemedText type="default" style={styles.versionText}>
             Version {appVersion}
             {buildLabel ? ` • ${buildLabel}` : ""}
           </ThemedText>
@@ -891,7 +877,7 @@ export default function ProfileScreen() {
           rightComponent={settingsHeaderButton}
         />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );

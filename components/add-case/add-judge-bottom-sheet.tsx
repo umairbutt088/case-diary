@@ -83,7 +83,6 @@ function createAddJudgeBottomSheetStyles(
     title: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     cancel: {
       fontSize: 16,
@@ -104,7 +103,6 @@ function createAddJudgeBottomSheetStyles(
     },
     selectedTierText: {
       fontSize: 14,
-      color: C.gray50,
     },
     buttons: {
       flexDirection: "row",
@@ -124,7 +122,6 @@ function createAddJudgeBottomSheetStyles(
     btnSecondaryText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
     },
     btnPrimary: {
       backgroundColor: C.themeBlack,
@@ -153,7 +150,7 @@ export function AddJudgeBottomSheet({
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createAddJudgeBottomSheetStyles(C, onPrimary, modalSheet),
@@ -252,9 +249,9 @@ export function AddJudgeBottomSheet({
       <Pressable style={styles.backdrop} onPress={handleClose} />
       <View style={styles.sheet}>
         <View style={styles.header}>
-          <ThemedText style={styles.title}>Add Judge</ThemedText>
+          <ThemedText type="accent" style={styles.title}>Add Judge</ThemedText>
           <Pressable onPress={handleClose} hitSlop={12}>
-            <ThemedText style={styles.cancel}>Cancel</ThemedText>
+            <ThemedText type="default" style={styles.cancel}>Cancel</ThemedText>
           </Pressable>
         </View>
         <ScrollView

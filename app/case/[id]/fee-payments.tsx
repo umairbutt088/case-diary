@@ -38,7 +38,6 @@ function createFeePaymentsStyles(C: AppColors) {
     caseTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 8,
     },
     summaryRow: {
@@ -56,11 +55,9 @@ function createFeePaymentsStyles(C: AppColors) {
     summaryPillText: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
     },
     emptyText: {
       fontSize: 15,
-      color: C.gray50,
     },
     errorText: {
       marginBottom: 10,
@@ -75,7 +72,6 @@ function createFeePaymentsStyles(C: AppColors) {
     },
     loadingMoreText: {
       fontSize: 13,
-      color: C.gray50,
     },
     cardShadow: {
       ...theme.shadow,
@@ -185,7 +181,7 @@ export default function CaseFeePaymentsScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Payment history" />
         <View style={styles.centered}>
-          <ThemedText style={styles.emptyText}>
+          <ThemedText type="muted" style={styles.emptyText}>
             Fee details are hidden for this account.
           </ThemedText>
         </View>
@@ -198,7 +194,7 @@ export default function CaseFeePaymentsScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Payment history" />
         <View style={styles.centered}>
-          <ThemedText style={styles.emptyText}>
+          <ThemedText type="muted" style={styles.emptyText}>
             Fee details are hidden for this case.
           </ThemedText>
         </View>
@@ -211,7 +207,7 @@ export default function CaseFeePaymentsScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Payment history" />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );
@@ -237,21 +233,21 @@ export default function CaseFeePaymentsScreen() {
         }}
         ListHeaderComponent={
           <>
-            <ThemedText style={styles.caseTitle}>{title}</ThemedText>
+            <ThemedText type="accent" style={styles.caseTitle}>{title}</ThemedText>
             {caseData ? (
               <View style={styles.summaryRow}>
                 <View style={styles.summaryPill}>
-                  <ThemedText style={styles.summaryPillText}>
+                  <ThemedText type="default" style={styles.summaryPillText}>
                     Total {formatFeeAmount(caseData.total_fee)}
                   </ThemedText>
                 </View>
                 <View style={styles.summaryPill}>
-                  <ThemedText style={styles.summaryPillText}>
+                  <ThemedText type="default" style={styles.summaryPillText}>
                     Received {formatFeeAmount(caseData.fee_received)}
                   </ThemedText>
                 </View>
                 <View style={styles.summaryPill}>
-                  <ThemedText style={styles.summaryPillText}>
+                  <ThemedText type="default" style={styles.summaryPillText}>
                     Remaining {formatFeeAmount(remaining)}
                   </ThemedText>
                 </View>
@@ -261,7 +257,7 @@ export default function CaseFeePaymentsScreen() {
           </>
         }
         ListEmptyComponent={
-          <ThemedText style={styles.emptyText}>No payments recorded yet.</ThemedText>
+          <ThemedText type="muted" style={styles.emptyText}>No payments recorded yet.</ThemedText>
         }
         renderItem={({ item }) => (
           <View style={styles.cardShadow}>
@@ -272,9 +268,9 @@ export default function CaseFeePaymentsScreen() {
           hasMore ? (
             <View style={styles.loadingMoreWrap}>
               {loadingMore ? (
-                <ActivityIndicator size="small" color={C.black} />
+                <ActivityIndicator size="small" color={C.textPrimary} />
               ) : (
-                <ThemedText style={styles.loadingMoreText}>
+                <ThemedText type="default" style={styles.loadingMoreText}>
                   Scroll for more payments
                 </ThemedText>
               )}

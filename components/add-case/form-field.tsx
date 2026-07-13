@@ -20,7 +20,6 @@ function createFormFieldStyles(C: AppColors) {
     label: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 8,
     },
     hint: {
@@ -36,12 +35,12 @@ export function FormField({ label, required, hint, children }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <ThemedText style={styles.label}>
+      <ThemedText type="label" style={styles.label}>
         {label}
         {required ? " *" : ""}
       </ThemedText>
       {hint ? (
-        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
+        <ThemedText type="muted" style={styles.hint}>
           {hint}
         </ThemedText>
       ) : null}

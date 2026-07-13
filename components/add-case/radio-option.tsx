@@ -40,7 +40,6 @@ function createRadioOptionStyles(C: AppColors) {
     label: {
       fontSize: 16,
       flex: 1,
-      color: C.black,
     },
   });
 }
@@ -59,7 +58,7 @@ export function RadioOption({ label, selected, onSelect }: Props) {
       <View style={[styles.outer, selected && styles.outerSelected]}>
         {selected ? <View style={styles.inner} /> : null}
       </View>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      <ThemedText type="label" style={styles.label}>{label}</ThemedText>
     </Pressable>
   );
 }

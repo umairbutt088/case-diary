@@ -20,7 +20,6 @@ function createStyles(C: AppColors) {
     },
     text: {
       fontSize: 12,
-      color: C.gray50,
     },
   });
 }
@@ -32,7 +31,7 @@ export function ListPageFooter({ loading, hasMore, itemCount }: Props) {
   if (loading) {
     return (
       <View style={styles.wrap}>
-        <ActivityIndicator size="small" color={C.black} />
+        <ActivityIndicator size="small" color={C.textPrimary} />
       </View>
     );
   }
@@ -40,7 +39,7 @@ export function ListPageFooter({ loading, hasMore, itemCount }: Props) {
   if (!hasMore && itemCount > 0) {
     return (
       <View style={styles.wrap}>
-        <ThemedText style={styles.text}>End of list</ThemedText>
+        <ThemedText type="default" style={styles.text}>End of list</ThemedText>
       </View>
     );
   }

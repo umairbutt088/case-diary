@@ -59,7 +59,6 @@ function createAddDateToCaseStyles(C: AppColors) {
     processTitle: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 6,
     },
     processSteps: {
@@ -84,7 +83,6 @@ function createAddDateToCaseStyles(C: AppColors) {
     searchInput: {
       flex: 1,
       fontSize: 16,
-      color: C.black,
       paddingVertical: 0,
     },
     errorText: {
@@ -125,7 +123,6 @@ function createAddDateToCaseStyles(C: AppColors) {
     caseRowTitle: {
       fontSize: 17,
       fontWeight: "600",
-      color: C.black,
     },
     caseRowSubtitle: {
       fontSize: 13,
@@ -277,11 +274,10 @@ export default function AddDateToCaseScreen() {
         entering={FadeInUp.duration(400).springify().damping(20)}
       >
         <View style={styles.processCard}>
-          <ThemedText style={styles.processTitle}>How it works</ThemedText>
+          <ThemedText type="accent" style={styles.processTitle}>How it works</ThemedText>
           <ThemedText
             style={styles.processSteps}
-            lightColor={C.gray50}
-            darkColor={C.gray50}
+            type="secondary"
           >
             1. Search or scroll to find your case.{"\n"}
             2. Tap the case to set its next hearing date to {formattedDate}.
@@ -292,7 +288,7 @@ export default function AddDateToCaseScreen() {
           <MaterialIcons
             name="search"
             size={20}
-            color={C.gray50}
+            color={C.textSecondary}
             style={styles.searchIcon}
           />
           <TextInput
@@ -300,7 +296,7 @@ export default function AddDateToCaseScreen() {
             value={search}
             onChangeText={setSearch}
             placeholder="Search cases by title, number, or type..."
-            placeholderTextColor={C.gray50}
+            placeholderTextColor={C.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             spellCheck={false}
@@ -313,13 +309,12 @@ export default function AddDateToCaseScreen() {
 
         {loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={C.black} />
+            <ActivityIndicator size="large" color={C.textPrimary} />
           </View>
         ) : filteredCases.length === 0 ? (
           <ThemedText
             style={styles.empty}
-            lightColor={C.gray50}
-            darkColor={C.gray50}
+            type="secondary"
           >
             {search.trim()
               ? "No cases match your search."
@@ -345,27 +340,26 @@ export default function AddDateToCaseScreen() {
                   disabled={isSaving}
                 >
                   <View style={styles.caseRowText}>
-                    <ThemedText style={styles.caseRowTitle} numberOfLines={1}>
+                    <ThemedText type="accent" style={styles.caseRowTitle} numberOfLines={1}>
                       {title}
                     </ThemedText>
                     {subtitle ? (
                       <ThemedText
                         style={styles.caseRowSubtitle}
                         numberOfLines={1}
-                        lightColor={C.gray50}
-                        darkColor={C.gray50}
+                        type="secondary"
                       >
                         {subtitle}
                       </ThemedText>
                     ) : null}
                   </View>
                   {isSaving ? (
-                    <ActivityIndicator size="small" color={C.black} />
+                    <ActivityIndicator size="small" color={C.textPrimary} />
                   ) : (
                     <MaterialIcons
                       name="chevron-right"
                       size={24}
-                      color={C.gray50}
+                      color={C.textSecondary}
                     />
                   )}
                 </Pressable>
