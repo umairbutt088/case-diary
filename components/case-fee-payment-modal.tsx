@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DateField } from "@/components/add-case/date-field";
@@ -42,7 +45,7 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
       backgroundColor: modalSheet,
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
-      maxHeight: "90%",
+      maxHeight: "92%",
     },
     header: {
       flexDirection: "row",
@@ -55,16 +58,19 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
     title: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     cancel: {
       fontSize: 16,
       color: C.btnBlue,
       fontWeight: "500",
     },
-    body: {
+    scroll: {
+      maxHeight: 520,
+    },
+    scrollContent: {
       padding: 20,
-      paddingBottom: 32,
+      paddingBottom: 40,
+      flexGrow: 1,
     },
     errorText: {
       fontSize: 14,
@@ -94,7 +100,7 @@ export function CaseFeePaymentModal({
 }: Props) {
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createStyles(C, onPrimary, modalSheet),
@@ -139,56 +145,77 @@ export function CaseFeePaymentModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
-        <Pressable style={styles.backdrop} onPress={handleClose} />
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <ThemedText style={styles.title}>Record fee payment</ThemedText>
-            <Pressable onPress={handleClose} hitSlop={12} disabled={saving}>
-              <ThemedText style={styles.cancel}>Cancel</ThemedText>
-            </Pressable>
-          </View>
-          <View style={styles.body}>
-            <FormFieldWithHint
-              label="Amount received"
-              required
-              value={amount}
-              onChangeText={(v) => {
-                setAmount(v);
-                setError(null);
-              }}
-              placeholder="e.g. 5000"
-              keyboardType="number-pad"
-            />
-            <DateField
-              label="Payment date"
-              value={paymentDate}
-              onChange={setPaymentDate}
-              placeholder="e.g. 08/09/2025"
-            />
-            <FormFieldWithHint
-              label="Note (optional)"
-              value={note}
-              onChangeText={setNote}
-              placeholder="e.g. After hearing on 12 March"
-              multiline
-              numberOfLines={3}
-            />
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
-            <Pressable
-              style={styles.saveBtn}
-              onPress={() => void handleSave()}
-              disabled={saving}
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+      >
+        <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
+          <Pressable style={styles.backdrop} onPress={handleClose} />
+          <View style={styles.sheet}>
+            <View style={styles.header}>
+              <ThemedText type="accent" style={styles.title}>
+                Record fee payment
+              </ThemedText>
+              <Pressable onPress={handleClose} hitSlop={12} disabled={saving}>
+                <ThemedText type="default" style={styles.cancel}>
+                  Cancel
+                </ThemedText>
+              </Pressable>
+            </View>
+            <KeyboardAwareScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              enableOnAndroid
+              extraScrollHeight={24}
+              enableAutomaticScroll
+              keyboardOpeningTime={0}
             >
-              {saving ? (
-                <ActivityIndicator size="small" color={onPrimary} />
-              ) : (
-                <ThemedText style={styles.saveBtnText}>Save payment</ThemedText>
-              )}
-            </Pressable>
+              <FormFieldWithHint
+                label="Amount received"
+                required
+                value={amount}
+                onChangeText={(v) => {
+                  setAmount(v);
+                  setError(null);
+                }}
+                placeholder="e.g. 5000"
+                keyboardType="number-pad"
+              />
+              <DateField
+                label="Payment date"
+                value={paymentDate}
+                onChange={setPaymentDate}
+                placeholder="e.g. 08/09/2025"
+              />
+              <FormFieldWithHint
+                label="Note (optional)"
+                value={note}
+                onChangeText={setNote}
+                placeholder="e.g. After hearing on 12 March"
+                multiline
+                numberOfLines={3}
+              />
+              {error ? (
+                <ThemedText style={styles.errorText}>{error}</ThemedText>
+              ) : null}
+              <Pressable
+                style={styles.saveBtn}
+                onPress={() => void handleSave()}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color={onPrimary} />
+                ) : (
+                  <ThemedText style={styles.saveBtnText}>Save payment</ThemedText>
+                )}
+              </Pressable>
+            </KeyboardAwareScrollView>
           </View>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

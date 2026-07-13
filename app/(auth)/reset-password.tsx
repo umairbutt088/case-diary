@@ -100,7 +100,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <AuthScreenLayout title="New password">
-      <ThemedText style={{ textAlign: "center", marginBottom: 16 }}>
+      <ThemedText type="default" style={{ textAlign: "center", marginBottom: 16 }}>
         Choose a new password for your account.
       </ThemedText>
       <PasswordInput

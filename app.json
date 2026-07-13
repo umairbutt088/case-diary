@@ -12,6 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.umairbutt.legaldiary",
       "buildNumber": "1",
+      "userInterfaceStyle": "automatic",
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -19,11 +20,13 @@
         "NSPhotoLibraryUsageDescription": "Case Diary for Lawyers uses your photo library to set your profile picture.",
         "NSCameraUsageDescription": "Case Diary for Lawyers uses the camera to take your profile picture.",
         "CFBundleDisplayName": "Case Diary",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIUserInterfaceStyle": "Automatic"
       }
     },
     "android": {
       "versionCode": 4,
+      "userInterfaceStyle": "automatic",
       "googleServicesFile": "./google-services.json",
       "statusBar": {
         "barStyle": "dark-content",

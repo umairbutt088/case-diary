@@ -38,11 +38,9 @@ function createCourtTierCardStyles(C: AppColors) {
     label: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 4,
     },
     labelSelected: {
-      color: C.themeBlack,
     },
     description: {
       fontSize: 13,
@@ -68,19 +66,18 @@ export function CourtTierCard({
       accessibilityState={{ checked: selected }}
     >
       <View style={styles.content}>
-        <ThemedText style={[styles.label, selected && styles.labelSelected]}>
+        <ThemedText type="label" style={[styles.label, selected && styles.labelSelected]}>
           {label}
         </ThemedText>
         <ThemedText
           style={styles.description}
-          lightColor={C.gray50}
-          darkColor={C.gray50}
+          type="secondary"
         >
           {description}
         </ThemedText>
       </View>
       {selected ? (
-        <MaterialIcons name="check-circle" size={24} color={C.themeBlack} />
+        <MaterialIcons name="check-circle" size={24} color={C.textAccent} />
       ) : null}
     </Pressable>
   );

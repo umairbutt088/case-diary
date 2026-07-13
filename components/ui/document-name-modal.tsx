@@ -60,7 +60,6 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
     title: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     cancelText: {
       fontSize: 16,
@@ -70,24 +69,22 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
     label: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       marginBottom: 8,
     },
     input: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 10,
       paddingHorizontal: 14,
       paddingVertical: 12,
       fontSize: 16,
-      color: C.black,
       backgroundColor: C.background,
       marginBottom: 4,
     },
     hint: {
       fontSize: 12,
-      color: C.gray50,
       marginBottom: 20,
     },
     saveBtn: {
@@ -123,7 +120,7 @@ export function DocumentNameModal({
 }: Props) {
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createStyles(C, onPrimary, modalSheet),
@@ -168,27 +165,27 @@ export function DocumentNameModal({
         <SafeAreaView style={styles.sheetSafeArea} edges={["bottom"]}>
           <View style={styles.sheet}>
             <View style={styles.header}>
-              <ThemedText style={styles.title}>Name this document</ThemedText>
+              <ThemedText type="accent" style={styles.title}>Name this document</ThemedText>
               <Pressable onPress={handleCancel} hitSlop={12} disabled={saving}>
-                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+                <ThemedText type="default" style={styles.cancelText}>Cancel</ThemedText>
               </Pressable>
             </View>
 
-            <ThemedText style={styles.label}>Document name</ThemedText>
+            <ThemedText type="label" style={styles.label}>Document name</ThemedText>
             <TextInput
               ref={inputRef}
               style={styles.input}
               value={name}
               onChangeText={setName}
               placeholder="e.g. Vakalatnama, FIR, Order Sheet"
-              placeholderTextColor={C.gray50}
+              placeholderTextColor={C.textMuted}
               returnKeyType="done"
               onSubmitEditing={handleSave}
               editable={!saving}
               autoCorrect={false}
               spellCheck={false}
             />
-            <ThemedText style={styles.hint}>
+            <ThemedText type="muted" style={styles.hint}>
               Give this document a meaningful name so you can find it easily.
             </ThemedText>
 

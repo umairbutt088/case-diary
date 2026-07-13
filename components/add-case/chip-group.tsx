@@ -31,7 +31,6 @@ function createChipGroupStyles(C: AppColors, onPrimary: string) {
     },
     chipText: {
       fontSize: 15,
-      color: C.gray50,
     },
     chipTextSelected: {
       color: onPrimary,
@@ -43,7 +42,7 @@ function createChipGroupStyles(C: AppColors, onPrimary: string) {
 export function ChipGroup({ options, value, onChange }: Props) {
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createChipGroupStyles(C, onPrimary),
     [C, onPrimary],
@@ -63,7 +62,7 @@ export function ChipGroup({ options, value, onChange }: Props) {
             style={[styles.chip, selected && styles.chipSelected]}
             onPress={() => onChange(opt)}
           >
-            <ThemedText
+            <ThemedText type="default"
               style={[styles.chipText, selected && styles.chipTextSelected]}
             >
               {opt}

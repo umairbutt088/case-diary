@@ -59,7 +59,6 @@ export function ScreenHeader({
         headerTitle: {
           fontSize: 18,
           fontWeight: "700",
-          color: C.black,
         },
         rightWrap: {
           flexDirection: "row",
@@ -80,7 +79,7 @@ export function ScreenHeader({
   };
 
   const titleContent = (
-    <ThemedText
+    <ThemedText type="accent"
       style={styles.headerTitle}
       numberOfLines={1}
       adjustsFontSizeToFit
@@ -94,7 +93,7 @@ export function ScreenHeader({
     <View style={styles.header}>
       {showBack && (
         <Bounceable onPress={handleBack} style={styles.backBtn} activeScale={0.9}>
-          <MaterialIcons name="arrow-back" size={24} color={C.black} />
+          <MaterialIcons name="arrow-back" size={24} color={C.textAccent} />
         </Bounceable>
       )}
       {leftComponent && <View style={styles.leftWrap}>{leftComponent}</View>}

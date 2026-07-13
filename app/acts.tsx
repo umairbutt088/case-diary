@@ -46,21 +46,19 @@ function createActsStyles(C: AppColors) {
     title: {
       fontSize: 24,
       fontWeight: "800",
-      color: C.black,
       marginBottom: 2,
     },
     subtitle: {
       fontSize: 13,
-      color: C.gray50,
       marginBottom: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 12,
       paddingHorizontal: 14,
       height: 46,
-      color: C.black,
       backgroundColor: C.pureWhite,
       fontSize: 15,
       marginBottom: 4,
@@ -84,12 +82,10 @@ function createActsStyles(C: AppColors) {
     cardTitle: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 4,
     },
     cardMeta: {
       fontSize: 12,
-      color: C.gray50,
     },
     openIconWrap: {
       width: 34,
@@ -102,7 +98,6 @@ function createActsStyles(C: AppColors) {
     emptyText: {
       marginTop: 18,
       textAlign: "center",
-      color: C.gray50,
       fontSize: 14,
     },
     openingWrap: {
@@ -114,7 +109,6 @@ function createActsStyles(C: AppColors) {
     },
     openingText: {
       fontSize: 13,
-      color: C.gray50,
     },
   });
 }
@@ -203,14 +197,14 @@ export default function ActsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <ThemedText style={styles.subtitle}>
+            <ThemedText type="accent" style={styles.subtitle}>
               Read legal acts directly in the app. Search by title, category, or year.
             </ThemedText>
             <TextInput
               value={query}
               onChangeText={handleSearchChange}
               placeholder="Search by act name"
-              placeholderTextColor={C.gray50}
+              placeholderTextColor={C.textMuted}
               style={styles.searchInput}
               autoCorrect={false}
               spellCheck={false}
@@ -218,26 +212,26 @@ export default function ActsScreen() {
             />
             {openingActId ? (
               <View style={styles.openingWrap}>
-                <ActivityIndicator size="small" color={C.black} />
-                <ThemedText style={styles.openingText}>Opening act...</ThemedText>
+                <ActivityIndicator size="small" color={C.textPrimary} />
+                <ThemedText type="default" style={styles.openingText}>Opening act...</ThemedText>
               </View>
             ) : null}
           </>
         }
         ListEmptyComponent={
-          <ThemedText style={styles.emptyText}>No acts found for this search.</ThemedText>
+          <ThemedText type="muted" style={styles.emptyText}>No acts found for this search.</ThemedText>
         }
         renderItem={({ item }) => (
           <Bounceable style={styles.card} onPress={() => void openAct(item)}>
             <View style={styles.cardRow}>
               <View style={styles.cardMain}>
-                <ThemedText style={styles.cardTitle}>{item.title}</ThemedText>
-                <ThemedText style={styles.cardMeta}>
+                <ThemedText type="accent" style={styles.cardTitle}>{item.title}</ThemedText>
+                <ThemedText type="secondary" style={styles.cardMeta}>
                   {item.jurisdiction} • {item.category} • {item.year}
                 </ThemedText>
               </View>
               <View style={styles.openIconWrap}>
-                <MaterialIcons name="open-in-new" size={18} color={C.black} />
+                <MaterialIcons name="open-in-new" size={18} color={C.textPrimary} />
               </View>
             </View>
           </Bounceable>

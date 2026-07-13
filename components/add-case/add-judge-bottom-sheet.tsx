@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CourtTierPicker } from "@/components/add-case/court-tier-picker";
@@ -83,7 +85,6 @@ function createAddJudgeBottomSheetStyles(
     title: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     cancel: {
       fontSize: 16,
@@ -95,7 +96,7 @@ function createAddJudgeBottomSheetStyles(
     },
     scrollContent: {
       padding: 20,
-      paddingBottom: 32,
+      paddingBottom: 40,
     },
     errorText: {
       fontSize: 14,
@@ -104,7 +105,6 @@ function createAddJudgeBottomSheetStyles(
     },
     selectedTierText: {
       fontSize: 14,
-      color: C.gray50,
     },
     buttons: {
       flexDirection: "row",
@@ -124,7 +124,6 @@ function createAddJudgeBottomSheetStyles(
     btnSecondaryText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
     },
     btnPrimary: {
       backgroundColor: C.themeBlack,
@@ -153,7 +152,7 @@ export function AddJudgeBottomSheet({
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createAddJudgeBottomSheetStyles(C, onPrimary, modalSheet),
@@ -247,21 +246,25 @@ export function AddJudgeBottomSheet({
 
   if (!visible) return null;
 
-  const sheetBody = (
-    <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
+  const sheetInner = (
+    <>
       <Pressable style={styles.backdrop} onPress={handleClose} />
       <View style={styles.sheet}>
         <View style={styles.header}>
-          <ThemedText style={styles.title}>Add Judge</ThemedText>
+          <ThemedText type="accent" style={styles.title}>Add Judge</ThemedText>
           <Pressable onPress={handleClose} hitSlop={12}>
-            <ThemedText style={styles.cancel}>Cancel</ThemedText>
+            <ThemedText type="default" style={styles.cancel}>Cancel</ThemedText>
           </Pressable>
         </View>
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          enableOnAndroid
+          extraScrollHeight={24}
+          enableAutomaticScroll
+          keyboardOpeningTime={0}
         >
           <FormFieldWithHint
             label="Judge Name"
@@ -306,9 +309,21 @@ export function AddJudgeBottomSheet({
               )}
             </Pressable>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
-    </SafeAreaView>
+    </>
+  );
+
+  const sheetBody = (
+    <KeyboardAvoidingView
+      style={styles.overlay}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+    >
+      <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
+        {sheetInner}
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 
   if (inline) {

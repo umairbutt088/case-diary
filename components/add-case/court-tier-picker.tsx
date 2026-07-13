@@ -61,11 +61,9 @@ function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
     },
     triggerText: {
       fontSize: 16,
-      color: C.black,
       flex: 1,
     },
     placeholder: {
-      color: C.gray50,
     },
     triggerRowError: {
       borderColor: C.themeRed,
@@ -77,6 +75,7 @@ function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
       padding: 12,
     },
     searchInput: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 10,
@@ -84,7 +83,6 @@ function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 15,
-      color: C.black,
     },
     addRow: {
       flexDirection: "row",
@@ -100,7 +98,7 @@ function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 15,
-      color: C.black,
+      color: C.textPrimary,
     },
     addBtn: {
       minWidth: 72,
@@ -137,7 +135,6 @@ function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
     },
     optionText: {
       fontSize: 15,
-      color: C.black,
       flex: 1,
       marginRight: 8,
     },
@@ -182,7 +179,7 @@ export function CourtTierPicker({
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createCourtTierPickerStyles(C, onPrimary),
     [C, onPrimary],
@@ -358,13 +355,13 @@ export function CourtTierPicker({
     <FormField label={label} required={required} hint={hint}>
       <View style={[styles.dropdownWrap, error && styles.triggerRowError]}>
         <Pressable style={styles.trigger} onPress={() => setOpen((prev) => !prev)}>
-          <ThemedText style={[styles.triggerText, !value && styles.placeholder]}>
+          <ThemedText type="defaultSemiBold" style={[styles.triggerText, !value && styles.placeholder]}>
             {value ? displayValue : "Select court tier"}
           </ThemedText>
           <MaterialIcons
             name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
             size={24}
-            color={C.gray50}
+            color={C.textSecondary}
           />
         </Pressable>
 
@@ -375,7 +372,7 @@ export function CourtTierPicker({
               value={search}
               onChangeText={setSearch}
               placeholder="Search court tiers..."
-              placeholderTextColor={C.gray50}
+              placeholderTextColor={C.textMuted}
               autoCorrect={false}
               spellCheck={false}
             />
@@ -389,7 +386,7 @@ export function CourtTierPicker({
                   setAddError(null);
                 }}
                 placeholder="Add new court tier"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCorrect={false}
                 spellCheck={false}
               />
@@ -410,7 +407,7 @@ export function CourtTierPicker({
 
             {loading ? (
               <View style={styles.loadingWrap}>
-                <ActivityIndicator size="small" color={C.black} />
+                <ActivityIndicator size="small" color={C.textPrimary} />
               </View>
             ) : (
               <ScrollView
@@ -456,9 +453,9 @@ export function CourtTierPicker({
                           setSearch("");
                         }}
                       >
-                        <ThemedText style={styles.optionText}>{opt.label}</ThemedText>
+                        <ThemedText type="defaultSemiBold" style={styles.optionText}>{opt.label}</ThemedText>
                         {value === opt.value ? (
-                          <MaterialIcons name="check" size={20} color={C.themeBlack} />
+                          <MaterialIcons name="check" size={20} color={C.textAccent} />
                         ) : null}
                       </Pressable>
                     </Swipeable>
@@ -472,9 +469,9 @@ export function CourtTierPicker({
                         setSearch("");
                       }}
                     >
-                      <ThemedText style={styles.optionText}>{opt.label}</ThemedText>
+                      <ThemedText type="defaultSemiBold" style={styles.optionText}>{opt.label}</ThemedText>
                       {value === opt.value ? (
-                        <MaterialIcons name="check" size={20} color={C.themeBlack} />
+                        <MaterialIcons name="check" size={20} color={C.textAccent} />
                       ) : null}
                     </Pressable>
                   ),

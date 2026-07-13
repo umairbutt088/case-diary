@@ -23,7 +23,6 @@ function createStepIndicatorStyles(C: AppColors) {
     },
     label: {
       fontSize: 14,
-      color: C.gray50,
       fontWeight: "500",
     },
     dots: {
@@ -51,7 +50,7 @@ export function StepIndicator({ currentStep }: Props) {
 
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.label}>
+      <ThemedText type="label" style={styles.label}>
         Step {currentStep} of {TOTAL_STEPS}
       </ThemedText>
       <View style={styles.dots}>

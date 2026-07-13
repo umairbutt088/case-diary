@@ -39,7 +39,7 @@ export function DocumentIconPreview({
         {signedUrl ? (
           <Image source={{ uri: signedUrl }} style={styles.fill} contentFit="cover" />
         ) : (
-          <MaterialIcons name="image" size={24} color={C.gray50} />
+          <MaterialIcons name="image" size={24} color={C.textSecondary} />
         )}
       </View>
     );
@@ -56,7 +56,7 @@ export function DocumentIconPreview({
   // Default document fallback
   return (
     <View style={[styles.box, { backgroundColor: C.cream50 }]}>
-      <MaterialIcons name="insert-drive-file" size={24} color={C.gray50} />
+      <MaterialIcons name="insert-drive-file" size={24} color={C.textSecondary} />
     </View>
   );
 }

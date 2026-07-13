@@ -421,9 +421,9 @@ export default function CasesOverviewScreen() {
   const filedCasesButton = (
     <View style={styles.filedCasesRow}>
       <Bounceable style={styles.filedCasesBtn} onPress={() => setShowFiledCasesModal(true)}>
-        <MaterialIcons name="description" size={15} color={C.black} />
+        <MaterialIcons name="description" size={15} color={C.textPrimary} />
         <ThemedText style={styles.filedCasesBtnText}>Filed cases</ThemedText>
-        <MaterialIcons name="keyboard-arrow-down" size={16} color={C.black} />
+        <MaterialIcons name="keyboard-arrow-down" size={16} color={C.textPrimary} />
       </Bounceable>
     </View>
   );
@@ -439,9 +439,9 @@ export default function CasesOverviewScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowFiledCasesModal(false)} />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
-            <ThemedText style={styles.modalTitle}>Filed cases</ThemedText>
+            <ThemedText type="accent" style={styles.modalTitle}>Filed cases</ThemedText>
             <Bounceable style={styles.modalClose} onPress={() => setShowFiledCasesModal(false)}>
-              <MaterialIcons name="close" size={20} color={C.black} />
+              <MaterialIcons name="close" size={20} color={C.textPrimary} />
             </Bounceable>
           </View>
           <ScrollView
@@ -470,7 +470,7 @@ export default function CasesOverviewScreen() {
           </ScrollView>
           <ScrollView style={styles.filedListScroll} showsVerticalScrollIndicator={false}>
             {filedCases.length === 0 ? (
-              <ThemedText style={styles.filedEmptyText}>
+              <ThemedText type="muted" style={styles.filedEmptyText}>
                 No filed cases in {filedRangeLabel.toLowerCase()}.
               </ThemedText>
             ) : (
@@ -483,10 +483,10 @@ export default function CasesOverviewScreen() {
                     router.push(`/case/${caseItem.id}`);
                   }}
                 >
-                  <ThemedText style={styles.filedCaseTitle}>
+                  <ThemedText type="accent" style={styles.filedCaseTitle}>
                     {getCaseDisplayTitle(caseItem)}
                   </ThemedText>
-                  <ThemedText style={styles.filedCaseMeta}>
+                  <ThemedText type="secondary" style={styles.filedCaseMeta}>
                     Filed: {formatCaseDate(caseItem.date_of_filing)}
                   </ThemedText>
                 </Bounceable>
@@ -506,9 +506,9 @@ export default function CasesOverviewScreen() {
       disabled={isExporting}
     >
       {isExporting ? (
-        <ActivityIndicator size="small" color={C.black} />
+        <ActivityIndicator size="small" color={C.textPrimary} />
       ) : (
-        <MaterialIcons name="share" size={21} color={C.black} />
+        <MaterialIcons name="share" size={21} color={C.textPrimary} />
       )}
     </Bounceable>
   );
@@ -522,7 +522,7 @@ export default function CasesOverviewScreen() {
           onBack={goBack}
         />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );
@@ -580,14 +580,14 @@ export default function CasesOverviewScreen() {
                 size={38}
                 color={C.zodiacColour}
               />
-              <ThemedText style={styles.emptyHeading}>
+              <ThemedText type="accent" style={styles.emptyHeading}>
                 {isOffline
                   ? "You're offline"
                   : isTodayFilter
                     ? "Nothing for today"
                     : "Nothing this week"}
               </ThemedText>
-              <ThemedText style={styles.emptySubtext}>
+              <ThemedText type="muted" style={styles.emptySubtext}>
                 {isOffline
                   ? "Cached data is shown. New updates will load when you're online."
                   : isTodayFilter
@@ -602,7 +602,7 @@ export default function CasesOverviewScreen() {
                 .reduce((acc, s) => acc + s.data.length, 0);
               return (
                 <View key={section.title} style={styles.section}>
-                  <ThemedText style={styles.sectionTitle}>{section.title}</ThemedText>
+                  <ThemedText type="accent" style={styles.sectionTitle}>{section.title}</ThemedText>
                   <Spacer.Column numberOfSpaces={5} />
                   {section.data.map((caseItem, itemIndex) => (
                     <CaseCard
@@ -633,22 +633,22 @@ export default function CasesOverviewScreen() {
           collapsable={false}
           style={[styles.exportCaptureCanvas, { width: Math.max(screenWidth - 48, 280) }]}
         >
-          <ThemedText style={styles.exportCaptureHeading}>{shareTitle}</ThemedText>
+          <ThemedText type="accent" style={styles.exportCaptureHeading}>{shareTitle}</ThemedText>
           {sections.map((section) => (
             <View key={`export-${section.title}`} style={styles.exportSection}>
-              <ThemedText style={styles.exportSectionTitle}>{section.title}</ThemedText>
+              <ThemedText type="accent" style={styles.exportSectionTitle}>{section.title}</ThemedText>
               {section.data.map((caseItem) => (
                 <View key={`export-row-${caseItem.id}`} style={styles.exportRow}>
-                  <ThemedText style={styles.exportRowTitle}>
+                  <ThemedText type="accent" style={styles.exportRowTitle}>
                     {getCaseDisplayTitle(caseItem)}
                   </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
+                  <ThemedText type="secondary" style={styles.exportRowMeta}>
                     Case no: {caseItem.case_number?.trim() || "—"}
                   </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
+                  <ThemedText type="secondary" style={styles.exportRowMeta}>
                     Court: {caseItem.court_name?.trim() || "—"}
                   </ThemedText>
-                  <ThemedText style={styles.exportRowMeta}>
+                  <ThemedText type="secondary" style={styles.exportRowMeta}>
                     Next: {formatCaseDate(caseItem.next_hearing_date)}
                   </ThemedText>
                 </View>
@@ -710,7 +710,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     filedCasesBtnText: {
       fontSize: 12,
       fontWeight: "700",
-      color: C.black,
     },
     filterRow: {
       flexDirection: "row",
@@ -737,10 +736,9 @@ function createStyles(C: AppColors, modalSheet: string) {
     filterBtnText: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.gray50,
     },
     filterBtnTextActive: {
-      color: C.pureWhite,
+      color: C.textInverse,
     },
     section: {
       marginBottom: 20,
@@ -748,7 +746,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     sectionTitle: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 8,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -768,13 +765,11 @@ function createStyles(C: AppColors, modalSheet: string) {
     emptyHeading: {
       fontSize: 20,
       fontWeight: "700",
-      color: C.black,
       marginTop: 12,
       marginBottom: 8,
     },
     emptySubtext: {
       fontSize: 15,
-      color: C.gray50,
       textAlign: "center",
     },
     modalRoot: {
@@ -803,7 +798,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     modalTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     modalClose: {
       width: 34,
@@ -834,11 +828,10 @@ function createStyles(C: AppColors, modalSheet: string) {
     filedRangeBtnText: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       paddingHorizontal: 10,
     },
     filedRangeBtnTextActive: {
-      color: C.pureWhite,
+      color: C.textInverse,
     },
     filedListScroll: {
       maxHeight: 300,
@@ -855,16 +848,13 @@ function createStyles(C: AppColors, modalSheet: string) {
     filedCaseTitle: {
       fontSize: 14,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 4,
     },
     filedCaseMeta: {
       fontSize: 12,
-      color: C.gray50,
     },
     filedEmptyText: {
       fontSize: 13,
-      color: C.gray50,
       paddingVertical: 8,
     },
     exportCaptureRoot: {
@@ -881,7 +871,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     exportCaptureHeading: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 12,
     },
     exportSection: {
@@ -890,7 +879,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     exportSectionTitle: {
       fontSize: 13,
       fontWeight: "700",
-      color: C.gray50,
       marginBottom: 8,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -904,12 +892,10 @@ function createStyles(C: AppColors, modalSheet: string) {
     exportRowTitle: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 2,
     },
     exportRowMeta: {
       fontSize: 12,
-      color: C.gray50,
     },
   });
 }

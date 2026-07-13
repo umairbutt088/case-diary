@@ -131,7 +131,6 @@ function createCaseDetailStyles(
     sectionTitle: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 16,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -141,12 +140,10 @@ function createCaseDetailStyles(
     },
     detailLabel: {
       fontSize: 13,
-      color: C.gray50,
       marginBottom: 4,
     },
     detailValue: {
       fontSize: 16,
-      color: C.black,
     },
     overduePill: {
       alignSelf: "flex-start",
@@ -179,22 +176,18 @@ function createCaseDetailStyles(
     historyDate: {
       fontSize: 14,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 4,
     },
     historyJudge: {
       fontSize: 13,
-      color: C.gray50,
       marginBottom: 4,
     },
     historyProceeding: {
       fontSize: 15,
-      color: C.black,
       marginBottom: 4,
     },
     historyNext: {
       fontSize: 13,
-      color: C.gray50,
     },
     currentHearingCard: {
       marginBottom: 14,
@@ -206,30 +199,25 @@ function createCaseDetailStyles(
       fontSize: 12,
       textTransform: "uppercase",
       letterSpacing: 0.4,
-      color: C.gray50,
       marginBottom: 4,
       fontWeight: "600",
     },
     currentHearingDate: {
       fontSize: 20,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 6,
     },
     currentHearingDetail: {
       fontSize: 15,
-      color: C.black,
     },
     currentHearingJudge: {
       marginTop: 6,
       fontSize: 14,
-      color: C.gray50,
     },
     previousHeading: {
       fontSize: 12,
       textTransform: "uppercase",
       letterSpacing: 0.4,
-      color: C.gray50,
       marginBottom: 10,
       fontWeight: "600",
     },
@@ -247,7 +235,6 @@ function createCaseDetailStyles(
     seeAllBtnText: {
       fontSize: 14,
       fontWeight: "600",
-      color: C.black,
     },
     addProceedingBtn: {
       flexDirection: "row",
@@ -262,24 +249,20 @@ function createCaseDetailStyles(
     addProceedingText: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.black,
     },
     courtPortalHint: {
       fontSize: 12,
       lineHeight: 17,
-      color: C.gray50,
       marginBottom: 10,
     },
     courtPortalModalIntro: {
       fontSize: 13,
       lineHeight: 19,
-      color: C.black80,
       marginBottom: 10,
     },
     courtPortalSectionTitle: {
       fontSize: 11,
       fontWeight: "700",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.6,
       marginTop: 16,
@@ -314,13 +297,11 @@ function createCaseDetailStyles(
     courtPortalOptionLabel: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black90,
       letterSpacing: -0.2,
     },
     courtPortalOptionDesc: {
       fontSize: 13,
       lineHeight: 18,
-      color: C.gray70,
       marginTop: 4,
     },
     courtPortalOptionSelected: {
@@ -377,7 +358,6 @@ function createCaseDetailStyles(
     modalTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     modalClose: {
       minWidth: 32,
@@ -406,36 +386,32 @@ function createCaseDetailStyles(
     previousInfoLabel: {
       fontSize: 11,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       marginBottom: 4,
     },
     previousInfoDate: {
       fontSize: 16,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 2,
     },
     previousInfoText: {
       fontSize: 14,
-      color: C.black,
     },
     inputLabel: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 6,
       marginTop: 8,
       textTransform: "uppercase",
     },
     textInput: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 8,
       paddingHorizontal: 10,
       paddingVertical: 10,
       fontSize: 14,
-      color: C.black,
       backgroundColor: C.background,
     },
     textArea: {
@@ -476,7 +452,6 @@ function createCaseDetailStyles(
     proceedingAddJudgeFallbackText: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.black,
     },
     detailValueRow: {
       flexDirection: "row",
@@ -548,7 +523,6 @@ function createCaseDetailStyles(
     disposeButtonText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
     },
     disposedBanner: {
       marginBottom: 14,
@@ -561,12 +535,10 @@ function createCaseDetailStyles(
     disposedBannerTitle: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 4,
     },
     disposedBannerText: {
       fontSize: 14,
-      color: C.gray50,
       lineHeight: 20,
     },
     restoreButton: {
@@ -712,7 +684,7 @@ function DetailRow({
   const text = value?.trim() || "—";
   return (
     <View style={s.detailRow}>
-      <ThemedText style={s.detailLabel}>{label}</ThemedText>
+      <ThemedText type="label" style={s.detailLabel}>{label}</ThemedText>
       <View style={s.detailValueRow}>
         {onValueLongPress ? (
           <Pressable
@@ -722,10 +694,10 @@ function DetailRow({
             accessibilityHint={valueAccessibilityHint}
             style={s.detailValuePressable}
           >
-            <ThemedText style={s.detailValue}>{text}</ThemedText>
+            <ThemedText type="defaultSemiBold" style={s.detailValue}>{text}</ThemedText>
           </Pressable>
         ) : (
-          <ThemedText style={[s.detailValue, s.detailValuePressable]}>
+          <ThemedText type="defaultSemiBold" style={[s.detailValue, s.detailValuePressable]}>
             {text}
           </ThemedText>
         )}
@@ -736,7 +708,7 @@ function DetailRow({
             hitSlop={8}
             accessibilityLabel={`Copy ${label}`}
           >
-            <MaterialIcons name="content-copy" size={16} color={C.gray50} />
+            <MaterialIcons name="content-copy" size={16} color={C.textSecondary} />
           </Bounceable>
         ) : null}
       </View>
@@ -755,7 +727,7 @@ function SectionCard({
 }) {
   return (
     <View style={s.card}>
-      <ThemedText style={s.sectionTitle}>{title}</ThemedText>
+      <ThemedText type="accent" style={s.sectionTitle}>{title}</ThemedText>
       {children}
     </View>
   );
@@ -777,7 +749,7 @@ export default function CaseDetailScreen() {
   const isOnline = useIsOnline();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createCaseDetailStyles(C, onPrimary, modalSheet),
@@ -1054,7 +1026,7 @@ export default function CaseDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );
@@ -1578,9 +1550,9 @@ export default function CaseDetailScreen() {
               accessibilityLabel="Share case summary"
             >
               {isSharingCase ? (
-                <ActivityIndicator size="small" color={C.black} />
+                <ActivityIndicator size="small" color={C.textPrimary} />
               ) : (
-                <MaterialIcons name="share" size={20} color={C.black} />
+                <MaterialIcons name="share" size={20} color={C.textPrimary} />
               )}
             </Bounceable>
             <Bounceable
@@ -1589,7 +1561,7 @@ export default function CaseDetailScreen() {
               disabled={!canEditCases}
               accessibilityLabel="Edit case"
             >
-              <MaterialIcons name="edit" size={20} color={C.black} />
+              <MaterialIcons name="edit" size={20} color={C.textPrimary} />
             </Bounceable>
           </View>
         }
@@ -1602,13 +1574,13 @@ export default function CaseDetailScreen() {
         <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
           {isDisposed ? (
             <View style={styles.disposedBanner}>
-              <ThemedText style={styles.disposedBannerTitle}>
+              <ThemedText type="accent" style={styles.disposedBannerTitle}>
                 Disposed · {formatCaseDate(caseData.disposed_at?.slice(0, 10) ?? null)}
               </ThemedText>
               {caseData.disposal_note ? (
-                <ThemedText style={styles.disposedBannerText}>{caseData.disposal_note}</ThemedText>
+                <ThemedText type="default" style={styles.disposedBannerText}>{caseData.disposal_note}</ThemedText>
               ) : (
-                <ThemedText style={styles.disposedBannerText}>
+                <ThemedText type="default" style={styles.disposedBannerText}>
                   This case is hidden from active diary and cause lists.
                 </ThemedText>
               )}
@@ -1646,7 +1618,7 @@ export default function CaseDetailScreen() {
             <DetailRow s={styles} C={C} label="Court tier" value={caseData.court_tier} />
             <DetailRow s={styles} C={C} label="Court room location" value={caseData.court_room} />
             <DetailRow s={styles} C={C} label="Judge name" value={caseData.judge_name} />
-            <ThemedText style={styles.courtPortalHint}>
+            <ThemedText type="muted" style={styles.courtPortalHint}>
               Copy your case number from above, pick trial court, High Court, or Supreme Court in
               the list, then tap Open website.
             </ThemedText>
@@ -1655,8 +1627,8 @@ export default function CaseDetailScreen() {
               onPress={() => setShowCourtPortalModal(true)}
               accessibilityLabel="Choose court portal for case search"
             >
-              <MaterialIcons name="public" size={18} color={C.black} />
-              <ThemedText style={styles.addProceedingText}>
+              <MaterialIcons name="public" size={18} color={C.textPrimary} />
+              <ThemedText type="secondary" style={styles.addProceedingText}>
                 Search case in court website
               </ThemedText>
             </Bounceable>
@@ -1731,7 +1703,7 @@ export default function CaseDetailScreen() {
                 accessibilityLabel="Overdue. Add proceeding"
               >
                 <MaterialIcons name="warning-amber" size={14} color={C.themeRed} />
-                <ThemedText style={styles.overduePillText}>OVERDUE</ThemedText>
+                <ThemedText type="default" style={styles.overduePillText}>OVERDUE</ThemedText>
               </Bounceable>
             ) : null}
             <DetailRow s={styles} C={C} label="Current status" value={caseData.current_status} />
@@ -1754,49 +1726,49 @@ export default function CaseDetailScreen() {
               <MaterialIcons
                 name={showProceedingForm ? "close" : "add"}
                 size={18}
-                color={C.black}
+                color={C.textPrimary}
               />
-              <ThemedText style={styles.addProceedingText}>
+              <ThemedText type="secondary" style={styles.addProceedingText}>
                 Add proceeding
               </ThemedText>
             </Bounceable>
 
             <View style={styles.currentHearingCard}>
-              <ThemedText style={styles.currentHearingTitle}>Next hearing</ThemedText>
-              <ThemedText style={styles.currentHearingDate}>
+              <ThemedText type="accent" style={styles.currentHearingTitle}>Next hearing</ThemedText>
+              <ThemedText type="default" style={styles.currentHearingDate}>
                 {caseData.next_hearing_date
                   ? formatCaseDate(caseData.next_hearing_date)
                   : "No date set"}
               </ThemedText>
-              <ThemedText style={styles.currentHearingDetail}>
+              <ThemedText type="secondary" style={styles.currentHearingDetail}>
                 {(caseData.next_status || caseData.current_status || "No proceeding detail").trim()}
               </ThemedText>
               {caseData.judge_name?.trim() ? (
-                <ThemedText style={styles.currentHearingJudge}>
+                <ThemedText type="default" style={styles.currentHearingJudge}>
                   Judge: {caseData.judge_name.trim()}
                 </ThemedText>
               ) : null}
             </View>
 
-            <ThemedText style={styles.previousHeading}>Previous hearings</ThemedText>
+            <ThemedText type="accent" style={styles.previousHeading}>Previous hearings</ThemedText>
 
             {recentHearings.length === 0 ? (
               <DetailRow s={styles} C={C} label="Proceedings" value="No history yet" />
             ) : (
               recentHearings.map((entry) => (
                 <View key={entry.id} style={styles.historyItem}>
-                  <ThemedText style={styles.historyDate}>
+                  <ThemedText type="secondary" style={styles.historyDate}>
                     {formatCaseDate(entry.hearing_date)}
                   </ThemedText>
                   {entry.judge_name?.trim() ? (
-                    <ThemedText style={styles.historyJudge}>
+                    <ThemedText type="secondary" style={styles.historyJudge}>
                       Judge: {entry.judge_name.trim()}
                     </ThemedText>
                   ) : null}
-                  <ThemedText style={styles.historyProceeding}>
+                  <ThemedText type="secondary" style={styles.historyProceeding}>
                     {(entry.proceeding || entry.current_status || "Proceeding updated").trim()}
                   </ThemedText>
-                  <ThemedText style={styles.historyNext}>
+                  <ThemedText type="secondary" style={styles.historyNext}>
                     Next: {entry.next_status?.trim() || "—"} •{" "}
                     {entry.next_hearing_date
                       ? formatCaseDate(entry.next_hearing_date)
@@ -1812,7 +1784,7 @@ export default function CaseDetailScreen() {
                 onPress={() => router.push(`/case/${id}/hearings`)}
               >
                 <ThemedText style={styles.seeAllBtnText}>See all hearings</ThemedText>
-                <MaterialIcons name="chevron-right" size={18} color={C.black} />
+                <MaterialIcons name="chevron-right" size={18} color={C.textPrimary} />
               </Bounceable>
             ) : null}
           </SectionCard>
@@ -1843,17 +1815,17 @@ export default function CaseDetailScreen() {
                 disabled={uploadingDoc}
               >
                 {uploadingDoc ? (
-                  <ActivityIndicator size="small" color={C.black} />
+                  <ActivityIndicator size="small" color={C.textPrimary} />
                 ) : (
-                  <MaterialIcons name="upload-file" size={18} color={C.black} />
+                  <MaterialIcons name="upload-file" size={18} color={C.textPrimary} />
                 )}
-                <ThemedText style={styles.addProceedingText}>
+                <ThemedText type="secondary" style={styles.addProceedingText}>
                   {uploadingDoc ? "Uploading..." : "Add Document"}
                 </ThemedText>
               </Bounceable>
 
               {loadingDocs ? (
-                <ActivityIndicator size="small" color={C.black} />
+                <ActivityIndicator size="small" color={C.textPrimary} />
               ) : documents.length === 0 ? (
                 <DetailRow s={styles} C={C} label="Files" value="No documents attached yet" />
               ) : (
@@ -1864,8 +1836,8 @@ export default function CaseDetailScreen() {
                         <Bounceable style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingRight: 8 }} onPress={() => void handleViewDocument(doc)}>
                           <DocumentIconPreview filePath={doc.file_path} mimeType={doc.mime_type} C={C} />
                           <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.historyDate} numberOfLines={1}>{doc.file_name}</ThemedText>
-                            <ThemedText style={styles.historyNext}>
+                            <ThemedText type="secondary" style={styles.historyDate} numberOfLines={1}>{doc.file_name}</ThemedText>
+                            <ThemedText type="secondary" style={styles.historyNext}>
                               {doc.size_bytes ? (doc.size_bytes / 1024).toFixed(1) + " KB" : "Unknown size"} • {formatCaseDate(doc.created_at)}
                             </ThemedText>
                           </View>
@@ -1886,7 +1858,7 @@ export default function CaseDetailScreen() {
                       onPress={() => router.push(`/case/${id}/documents`)}
                     >
                       <ThemedText style={styles.seeAllBtnText}>See all documents ({documents.length})</ThemedText>
-                      <MaterialIcons name="chevron-right" size={18} color={C.black} />
+                      <MaterialIcons name="chevron-right" size={18} color={C.textPrimary} />
                     </Bounceable>
                   )}
                 </>
@@ -1982,7 +1954,7 @@ export default function CaseDetailScreen() {
             />
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Add proceeding</ThemedText>
+              <ThemedText type="accent" style={styles.modalTitle}>Add proceeding</ThemedText>
               <Bounceable
                 style={styles.modalClose}
                 onPress={() => {
@@ -1991,7 +1963,7 @@ export default function CaseDetailScreen() {
                   }
                 }}
               >
-                <MaterialIcons name="close" size={20} color={C.black} />
+                <MaterialIcons name="close" size={20} color={C.textPrimary} />
               </Bounceable>
               </View>
 
@@ -2002,11 +1974,11 @@ export default function CaseDetailScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <View style={styles.previousInfoBox}>
-                <ThemedText style={styles.previousInfoLabel}>Previous hearing</ThemedText>
-                <ThemedText style={styles.previousInfoDate}>
+                <ThemedText type="label" style={styles.previousInfoLabel}>Previous hearing</ThemedText>
+                <ThemedText type="default" style={styles.previousInfoDate}>
                   {formatCaseDate(previousHearingDate)}
                 </ThemedText>
-                <ThemedText style={styles.previousInfoText}>
+                <ThemedText type="default" style={styles.previousInfoText}>
                   {previousProceeding}
                 </ThemedText>
               </View>
@@ -2030,20 +2002,20 @@ export default function CaseDetailScreen() {
                   style={styles.proceedingAddJudgeFallback}
                   onPress={openAddJudgeFromProceeding}
                 >
-                  <MaterialIcons name="person-add" size={18} color={C.black} />
-                  <ThemedText style={styles.proceedingAddJudgeFallbackText}>
+                  <MaterialIcons name="person-add" size={18} color={C.textPrimary} />
+                  <ThemedText type="secondary" style={styles.proceedingAddJudgeFallbackText}>
                     Add judge
                   </ThemedText>
                 </Bounceable>
               ) : null}
 
-              <ThemedText style={styles.inputLabel}>Next proceeding detail</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Next proceeding detail</ThemedText>
               <TextInput
                 style={[styles.textInput, styles.textArea]}
                 value={nextStatusDraft}
                 onChangeText={setNextStatusDraft}
                 placeholder="e.g. Evidence, Final arguments"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 multiline
                 autoCorrect={false}
                 spellCheck={false}
@@ -2092,7 +2064,7 @@ export default function CaseDetailScreen() {
 
       {copyNotice ? (
         <View pointerEvents="none" style={styles.copyToastWrap}>
-          <ThemedText style={styles.copyToastText}>{copyNotice}</ThemedText>
+          <ThemedText type="default" style={styles.copyToastText}>{copyNotice}</ThemedText>
         </View>
       ) : null}
 

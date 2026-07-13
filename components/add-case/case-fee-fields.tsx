@@ -77,12 +77,10 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
     headerTitle: {
       fontSize: 16,
       fontWeight: "700",
-      color: C.black,
     },
     headerSubtitle: {
       fontSize: 12,
       marginTop: 2,
-      color: C.gray50,
     },
     body: {
       padding: 16,
@@ -103,7 +101,6 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
     fieldLabel: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.4,
       lineHeight: 16,
@@ -124,20 +121,18 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
     currencyPrefix: {
       fontSize: 14,
       fontWeight: "700",
-      color: C.gray50,
       marginRight: 6,
     },
     input: {
+      color: C.textPrimary,
       flex: 1,
       fontSize: 17,
       fontWeight: "600",
-      color: C.black,
       paddingVertical: 10,
     },
     readOnlyValue: {
       fontSize: 17,
       fontWeight: "700",
-      color: C.black,
       paddingVertical: 10,
       flex: 1,
     },
@@ -157,12 +152,10 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
     progressLabel: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.black,
     },
     progressPercent: {
       fontSize: 13,
       fontWeight: "700",
-      color: C.themeBlack,
     },
     progressTrack: {
       height: 8,
@@ -202,7 +195,6 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
     hint: {
       fontSize: 12,
       lineHeight: 17,
-      color: C.gray50,
       paddingHorizontal: 16,
       paddingBottom: 14,
     },
@@ -216,7 +208,6 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
     statPillText: {
       fontSize: 11,
       fontWeight: "700",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
@@ -240,7 +231,7 @@ function FeeInputField({
 }) {
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createCaseFeeStyles(C, onPrimary),
     [C, onPrimary],
@@ -249,12 +240,12 @@ function FeeInputField({
   return (
     <View style={styles.inputCol}>
       <View style={styles.fieldLabelWrap}>
-        <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
+        <ThemedText type="label" style={styles.fieldLabel}>{label}</ThemedText>
       </View>
       <View style={[styles.inputBox, error ? styles.inputBoxError : null]}>
-        <ThemedText style={styles.currencyPrefix}>Rs</ThemedText>
+        <ThemedText type="default" style={styles.currencyPrefix}>Rs</ThemedText>
         {readOnly ? (
-          <ThemedText style={styles.readOnlyValue} numberOfLines={1}>
+          <ThemedText type="defaultSemiBold" style={styles.readOnlyValue} numberOfLines={1}>
             {displayValue ?? "—"}
           </ThemedText>
         ) : (
@@ -263,7 +254,7 @@ function FeeInputField({
             value={value}
             onChangeText={onChangeText}
             placeholder="0"
-            placeholderTextColor={C.gray50}
+            placeholderTextColor={C.textMuted}
             keyboardType="number-pad"
           />
         )}
@@ -276,7 +267,7 @@ function FeeInputField({
 export function CaseFeeFields(props: Props) {
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createCaseFeeStyles(C, onPrimary),
     [C, onPrimary],
@@ -324,8 +315,8 @@ export function CaseFeeFields(props: Props) {
           <MaterialIcons name="payments" size={20} color={onPrimary} />
         </View>
         <View style={{ flex: 1 }}>
-          <ThemedText style={styles.headerTitle}>Case fees</ThemedText>
-          <ThemedText style={styles.headerSubtitle}>
+          <ThemedText type="accent" style={styles.headerTitle}>Case fees</ThemedText>
+          <ThemedText type="accent" style={styles.headerSubtitle}>
             {isReadOnly
               ? "Fee collection overview"
               : "Track agreed fee and advance received"}
@@ -333,7 +324,7 @@ export function CaseFeeFields(props: Props) {
         </View>
         {isFullyPaid ? (
           <View style={styles.statPill}>
-            <ThemedText style={styles.statPillText}>Paid in full</ThemedText>
+            <ThemedText type="default" style={styles.statPillText}>Paid in full</ThemedText>
           </View>
         ) : null}
       </View>
@@ -361,8 +352,8 @@ export function CaseFeeFields(props: Props) {
         {totalNum != null && totalNum > 0 ? (
           <View style={styles.progressBlock}>
             <View style={styles.progressLabels}>
-              <ThemedText style={styles.progressLabel}>Collected</ThemedText>
-              <ThemedText style={styles.progressPercent}>{progress}%</ThemedText>
+              <ThemedText type="label" style={styles.progressLabel}>Collected</ThemedText>
+              <ThemedText type="default" style={styles.progressPercent}>{progress}%</ThemedText>
             </View>
             <View style={styles.progressTrack}>
               <View
@@ -377,15 +368,15 @@ export function CaseFeeFields(props: Props) {
         ) : null}
 
         <View style={styles.remainingCard}>
-          <ThemedText style={styles.remainingLabel}>Remaining</ThemedText>
-          <ThemedText style={styles.remainingAmount}>
+          <ThemedText type="label" style={styles.remainingLabel}>Remaining</ThemedText>
+          <ThemedText type="default" style={styles.remainingAmount}>
             {formatFeeAmount(remaining)}
           </ThemedText>
         </View>
       </View>
 
       {isReadOnly && props.hint ? (
-        <ThemedText style={styles.hint}>{props.hint}</ThemedText>
+        <ThemedText type="muted" style={styles.hint}>{props.hint}</ThemedText>
       ) : null}
     </View>
   );

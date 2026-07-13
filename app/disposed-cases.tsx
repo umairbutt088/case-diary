@@ -10,7 +10,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -52,7 +51,6 @@ function createStyles(C: AppColors) {
     hintText: {
       fontSize: 13,
       lineHeight: 18,
-      color: C.gray50,
     },
     emptyWrap: {
       flex: 1,
@@ -64,12 +62,10 @@ function createStyles(C: AppColors) {
     emptyTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.themeBlack,
       textAlign: "center",
     },
     emptySubtitle: {
       fontSize: 14,
-      color: C.gray50,
       textAlign: "center",
       lineHeight: 20,
     },
@@ -96,12 +92,10 @@ function createStyles(C: AppColors) {
     cardTitle: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.black,
     },
     cardMeta: {
       marginTop: 4,
       fontSize: 13,
-      color: C.gray50,
     },
     restoreBtn: {
       padding: 8,
@@ -219,17 +213,17 @@ export default function DisposedCasesScreen() {
           style={styles.cardBody}
           onPress={() => router.push(`/case/${item.id}` as never)}
         >
-          <Text style={styles.cardTitle} numberOfLines={2}>
+          <ThemedText type="defaultSemiBold" style={styles.cardTitle} numberOfLines={2}>
             {getCaseDisplayTitle(item)}
-          </Text>
-          <Text style={styles.cardMeta}>
+          </ThemedText>
+          <ThemedText type="secondary" style={styles.cardMeta}>
             Disposed {formatCaseDate(item.disposed_at?.slice(0, 10) ?? null)}
             {item.case_number ? ` · ${item.case_number}` : ""}
-          </Text>
+          </ThemedText>
           {item.disposal_note ? (
-            <Text style={styles.cardMeta} numberOfLines={2}>
+            <ThemedText type="secondary" style={styles.cardMeta} numberOfLines={2}>
               {item.disposal_note}
-            </Text>
+            </ThemedText>
           ) : null}
         </Bounceable>
         {canRestore ? (
@@ -254,7 +248,7 @@ export default function DisposedCasesScreen() {
 
       {cases.length > 0 ? (
         <View style={styles.hintBanner}>
-          <ThemedText style={styles.hintText}>
+          <ThemedText type="muted" style={styles.hintText}>
             These cases are finished and hidden from active lists. Tap a case to
             view details, or restore to bring it back to your diary.
           </ThemedText>
@@ -263,16 +257,16 @@ export default function DisposedCasesScreen() {
 
       {loading && cases.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       ) : !loading && cases.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <MaterialIcons name="inventory-2" size={64} color={C.gray50} />
-          <Text style={styles.emptyTitle}>No disposed cases</Text>
-          <Text style={styles.emptySubtitle}>
+          <MaterialIcons name="inventory-2" size={64} color={C.textSecondary} />
+          <ThemedText type="defaultSemiBold" style={styles.emptyTitle}>No disposed cases</ThemedText>
+          <ThemedText type="secondary" style={styles.emptySubtitle}>
             When a case is finished, mark it as disposed from the case detail
             screen. It will appear here for your records.
-          </Text>
+          </ThemedText>
         </View>
       ) : (
         <FlatList

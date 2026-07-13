@@ -29,7 +29,6 @@ function createAuthOverlayStyles(C: AppColors) {
     },
     loadingText: {
       marginTop: 12,
-      color: C.black,
     },
   });
 }
@@ -112,8 +111,8 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
         <View style={[overlayStyles.overlay, { backgroundColor: overlayBackground }]}>
           {showAuthLoading ? (
             <>
-              <ActivityIndicator size="large" color={C.black} />
-              <ThemedText style={overlayStyles.loadingText}>
+              <ActivityIndicator size="large" color={C.textPrimary} />
+              <ThemedText type="default" style={overlayStyles.loadingText}>
                 Starting app...
               </ThemedText>
             </>

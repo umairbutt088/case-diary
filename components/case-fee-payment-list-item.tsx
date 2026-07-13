@@ -30,15 +30,15 @@ export function CaseFeePaymentListItem({
   return (
     <View style={styles.paymentItem}>
       <View style={styles.paymentTop}>
-        <ThemedText style={styles.paymentAmount}>
+        <ThemedText type="default" style={styles.paymentAmount}>
           {formatFeeAmount(payment.amount)}
         </ThemedText>
-        <ThemedText style={styles.paymentDate}>
+        <ThemedText type="default" style={styles.paymentDate}>
           {formatCaseDate(payment.payment_date)}
         </ThemedText>
       </View>
       {payment.note?.trim() ? (
-        <ThemedText style={styles.paymentNote}>{payment.note.trim()}</ThemedText>
+        <ThemedText type="muted" style={styles.paymentNote}>{payment.note.trim()}</ThemedText>
       ) : null}
     </View>
   );
@@ -60,15 +60,12 @@ function createListStyles(C: AppColors, isLast: boolean) {
     paymentAmount: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
     },
     paymentDate: {
       fontSize: 12,
-      color: C.gray50,
     },
     paymentNote: {
       fontSize: 13,
-      color: C.gray50,
       marginTop: 4,
       lineHeight: 18,
     },
@@ -95,15 +92,12 @@ function createCompactStyles(C: AppColors) {
     paymentAmount: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
     },
     paymentDate: {
       fontSize: 12,
-      color: C.gray50,
     },
     paymentNote: {
       fontSize: 13,
-      color: C.gray50,
       marginTop: 4,
       lineHeight: 18,
     },
@@ -128,15 +122,12 @@ function createCardStyles(C: AppColors) {
     paymentAmount: {
       fontSize: 17,
       fontWeight: "700",
-      color: C.black,
     },
     paymentDate: {
       fontSize: 13,
-      color: C.gray50,
     },
     paymentNote: {
       fontSize: 14,
-      color: C.gray50,
       lineHeight: 20,
     },
   });

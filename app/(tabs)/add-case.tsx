@@ -49,7 +49,7 @@ export default function AddCasePlaceholderScreen() {
   const canAddCases = can("add_cases");
   const { isDark } = useAppTheme();
   const C = useThemePalette();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createAddCaseStyles(C, onPrimary),
     [C, onPrimary],

@@ -63,7 +63,6 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
     title: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     cancelText: {
       fontSize: 16,
@@ -72,24 +71,22 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
     },
     hint: {
       fontSize: 14,
-      color: C.gray50,
       lineHeight: 20,
       marginBottom: 16,
     },
     label: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 6,
     },
     input: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 10,
       paddingHorizontal: 14,
       paddingVertical: 12,
       fontSize: 16,
-      color: C.black,
       backgroundColor: C.background,
       marginBottom: 14,
     },
@@ -121,7 +118,7 @@ export function DisposeCaseModal({
 }: Props) {
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createStyles(C, onPrimary, modalSheet),
@@ -165,13 +162,13 @@ export function DisposeCaseModal({
             contentContainerStyle={styles.sheet}
           >
             <View style={styles.header}>
-              <ThemedText style={styles.title}>Dispose case</ThemedText>
+              <ThemedText type="accent" style={styles.title}>Dispose case</ThemedText>
               <Pressable onPress={handleCancel} hitSlop={12} disabled={saving}>
-                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+                <ThemedText type="default" style={styles.cancelText}>Cancel</ThemedText>
               </Pressable>
             </View>
 
-            <ThemedText style={styles.hint}>
+            <ThemedText type="muted" style={styles.hint}>
               The case will be removed from your active diary and cause lists. You
               can find it under Disposed cases in Settings.
             </ThemedText>
@@ -182,13 +179,13 @@ export function DisposeCaseModal({
               onChange={setDisposedDate}
             />
 
-            <ThemedText style={styles.label}>Note (optional)</ThemedText>
+            <ThemedText type="label" style={styles.label}>Note (optional)</ThemedText>
             <TextInput
               style={[styles.input, styles.noteInput]}
               value={note}
               onChangeText={setNote}
               placeholder="e.g. Decree passed, compromise, dismissed"
-              placeholderTextColor={C.gray50}
+              placeholderTextColor={C.textMuted}
               multiline
               editable={!saving}
             />

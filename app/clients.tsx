@@ -83,7 +83,6 @@ function createClientsStyles(
     headerActionText: {
       fontSize: 12,
       fontWeight: "700",
-      color: C.black,
     },
     searchWrap: {
       flexDirection: "row",
@@ -97,10 +96,10 @@ function createClientsStyles(
       gap: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       flex: 1,
       minHeight: 44,
       fontSize: 15,
-      color: C.black,
     },
     listContent: {
       paddingBottom: 24,
@@ -121,7 +120,6 @@ function createClientsStyles(
     nameText: {
       fontSize: 17,
       fontWeight: "700",
-      color: C.black,
       flex: 1,
       marginRight: 8,
     },
@@ -139,7 +137,6 @@ function createClientsStyles(
     },
     metaText: {
       fontSize: 13,
-      color: C.gray50,
       marginBottom: 2,
     },
     usageText: {
@@ -161,7 +158,6 @@ function createClientsStyles(
       textAlign: "center",
     },
     emptyText: {
-      color: C.gray50,
       fontSize: 14,
       textAlign: "center",
     },
@@ -200,7 +196,6 @@ function createClientsStyles(
     modalTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     modalClose: {
       minWidth: 32,
@@ -216,7 +211,6 @@ function createClientsStyles(
     inputLabel: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       marginBottom: 6,
       marginTop: 10,
@@ -228,7 +222,7 @@ function createClientsStyles(
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 15,
-      color: C.black,
+      color: C.textPrimary,
       backgroundColor: C.background,
     },
     inputMultiline: {
@@ -265,7 +259,7 @@ export default function ClientsScreen() {
   const canInsertClient = canAddCases || canEditCases;
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createClientsStyles(C, onPrimary, modalSheet),
@@ -560,19 +554,19 @@ export default function ClientsScreen() {
             onPress={canInsertClient ? openAddModal : undefined}
             disabled={!canInsertClient}
           >
-            <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />
-            <ThemedText style={styles.headerActionText}>Add client</ThemedText>
+            <MaterialIcons name="person-add-alt-1" size={20} color={C.textPrimary} />
+            <ThemedText type="accent" style={styles.headerActionText}>Add client</ThemedText>
           </Bounceable>
         }
       />
 
       <View style={styles.container}>
         <View style={styles.searchWrap}>
-          <MaterialIcons name="search" size={20} color={C.gray50} />
+          <MaterialIcons name="search" size={20} color={C.textSecondary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search clients..."
-            placeholderTextColor={C.gray50}
+            placeholderTextColor={C.textMuted}
             value={search}
             onChangeText={setSearch}
             autoCapitalize="words"
@@ -583,7 +577,7 @@ export default function ClientsScreen() {
 
         {loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={C.black} />
+            <ActivityIndicator size="large" color={C.textPrimary} />
           </View>
         ) : error ? (
           <View style={styles.centered}>
@@ -594,7 +588,7 @@ export default function ClientsScreen() {
           </View>
         ) : clients.length === 0 ? (
           <View style={styles.centered}>
-            <ThemedText style={styles.emptyText}>
+            <ThemedText type="muted" style={styles.emptyText}>
               {search.trim() ? "No clients match your search." : "No clients saved yet."}
             </ThemedText>
           </View>
@@ -620,7 +614,7 @@ export default function ClientsScreen() {
             renderItem={({ item: client }) => (
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <ThemedText style={styles.nameText}>{client.name}</ThemedText>
+                  <ThemedText type="accent" style={styles.nameText}>{client.name}</ThemedText>
                   <View style={styles.cardActions}>
                     <Bounceable
                       style={styles.iconBtn}
@@ -628,7 +622,7 @@ export default function ClientsScreen() {
                       disabled={!canEditCases}
                       accessibilityLabel={`Edit ${client.name}`}
                     >
-                      <MaterialIcons name="edit" size={18} color={C.black} />
+                      <MaterialIcons name="edit" size={18} color={C.textPrimary} />
                     </Bounceable>
                     <Bounceable
                       style={styles.iconBtn}
@@ -640,10 +634,10 @@ export default function ClientsScreen() {
                     </Bounceable>
                   </View>
                 </View>
-                <ThemedText style={styles.metaText}>Phone: {client.phone?.trim() || "—"}</ThemedText>
-                <ThemedText style={styles.metaText}>Email: {client.email?.trim() || "—"}</ThemedText>
-                <ThemedText style={styles.metaText}>Address: {client.address?.trim() || "—"}</ThemedText>
-                <ThemedText style={styles.usageText}>
+                <ThemedText type="secondary" style={styles.metaText}>Phone: {client.phone?.trim() || "—"}</ThemedText>
+                <ThemedText type="secondary" style={styles.metaText}>Email: {client.email?.trim() || "—"}</ThemedText>
+                <ThemedText type="secondary" style={styles.metaText}>Address: {client.address?.trim() || "—"}</ThemedText>
+                <ThemedText type="muted" style={styles.usageText}>
                   Used in {usageByClientId[client.id] ?? 0} case
                   {(usageByClientId[client.id] ?? 0) === 1 ? "" : "s"}
                 </ThemedText>
@@ -661,11 +655,11 @@ export default function ClientsScreen() {
           <Pressable style={styles.modalOverlay} onPress={closeModal} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>
+              <ThemedText type="accent" style={styles.modalTitle}>
                 {editingClient ? "Edit Client" : "Add Client"}
               </ThemedText>
               <Bounceable style={styles.modalClose} onPress={closeModal}>
-                <MaterialIcons name="close" size={20} color={C.black} />
+                <MaterialIcons name="close" size={20} color={C.textPrimary} />
               </Bounceable>
             </View>
             <ScrollView
@@ -673,49 +667,51 @@ export default function ClientsScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.modalContent}
             >
-              <ThemedText style={styles.inputLabel}>Name</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Name</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.name}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, name: v }))}
                 placeholder="Client name"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCorrect={false}
                 spellCheck={false}
               />
 
-              <ThemedText style={styles.inputLabel}>Phone</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Phone</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.phone}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, phone: v }))}
                 placeholder="Phone number"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
                 autoCorrect={false}
                 spellCheck={false}
               />
 
-              <ThemedText style={styles.inputLabel}>Email</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Email</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.email}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, email: v }))}
                 placeholder="Email"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoCorrect={false}
                 spellCheck={false}
               />
 
-              <ThemedText style={styles.inputLabel}>Address</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Address</ThemedText>
               <TextInput
                 style={[styles.input, styles.inputMultiline]}
                 value={form.address}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, address: v }))}
                 placeholder="Address"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 multiline
                 autoCorrect={false}
                 spellCheck={false}

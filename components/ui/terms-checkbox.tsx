@@ -34,7 +34,6 @@ function createTermsCheckboxStyles(C: AppColors) {
     },
     label: {
       fontSize: 14,
-      color: C.black,
     },
     link: {
       textDecorationLine: "underline",
@@ -76,29 +75,29 @@ export function TermsCheckbox({
           <MaterialIcons
             name={checked ? "check-box" : "check-box-outline-blank"}
             size={24}
-            color={checked ? C.themeBlack : C.gray50}
+            color={checked ? C.textPrimary : C.textSecondary}
           />
         </Pressable>
         <View style={styles.labelWrap}>
-          <ThemedText style={styles.label}>I agree to the </ThemedText>
+          <ThemedText type="label" style={styles.label}>I agree to the </ThemedText>
           <Pressable
             onPress={onTermsPress}
             disabled={disabled}
             accessibilityRole="link"
             accessibilityLabel={termsLabel}
           >
-            <ThemedText style={styles.link}>{termsLabel}</ThemedText>
+            <ThemedText type="link" style={styles.link}>{termsLabel}</ThemedText>
           </Pressable>
-          <ThemedText style={styles.label}> and </ThemedText>
+          <ThemedText type="label" style={styles.label}> and </ThemedText>
           <Pressable
             onPress={onPrivacyPress}
             disabled={disabled}
             accessibilityRole="link"
             accessibilityLabel={privacyLabel}
           >
-            <ThemedText style={styles.link}>{privacyLabel}</ThemedText>
+            <ThemedText type="link" style={styles.link}>{privacyLabel}</ThemedText>
           </Pressable>
-          <ThemedText style={styles.label}> by using this app.</ThemedText>
+          <ThemedText type="label" style={styles.label}> by using this app.</ThemedText>
         </View>
       </View>
       {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}

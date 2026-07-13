@@ -51,14 +51,12 @@ function createStyles(C: AppColors) {
     heroTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
       textAlign: "center",
     },
     heroSubtitle: {
       marginTop: 8,
       fontSize: 14,
       lineHeight: 20,
-      color: C.gray50,
       textAlign: "center",
     },
     qrWrap: {
@@ -76,7 +74,6 @@ function createStyles(C: AppColors) {
     qrHint: {
       marginTop: 12,
       fontSize: 13,
-      color: C.gray50,
       textAlign: "center",
     },
     linkCard: {
@@ -87,7 +84,6 @@ function createStyles(C: AppColors) {
     linkLabel: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 6,
       textTransform: "uppercase",
       letterSpacing: 0.4,
@@ -95,7 +91,6 @@ function createStyles(C: AppColors) {
     linkText: {
       fontSize: 13,
       lineHeight: 18,
-      color: C.black,
     },
     actionBtn: {
       flexDirection: "row",
@@ -114,10 +109,9 @@ function createStyles(C: AppColors) {
     actionBtnText: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.pureWhite,
+      color: C.textInverse,
     },
     actionBtnTextSecondary: {
-      color: C.black,
     },
     storeBtn: {
       minHeight: 44,
@@ -132,13 +126,11 @@ function createStyles(C: AppColors) {
     storeBtnText: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.black,
       textAlign: "center",
     },
     noteText: {
       fontSize: 12,
       lineHeight: 18,
-      color: C.gray50,
       textAlign: "center",
     },
   });
@@ -183,8 +175,8 @@ export default function ShareAppScreen() {
       <ScreenHeader title="Share app" onBack={goBack} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroCard}>
-          <ThemedText style={styles.heroTitle}>Invite someone to install</ThemedText>
-          <ThemedText style={styles.heroSubtitle}>
+          <ThemedText type="accent" style={styles.heroTitle}>Invite someone to install</ThemedText>
+          <ThemedText type="accent" style={styles.heroSubtitle}>
             Share the Google Play link or let them scan the QR code to install{" "}
             {APP_DISPLAY_NAME} on Android.
           </ThemedText>
@@ -198,12 +190,12 @@ export default function ShareAppScreen() {
               ecl="M"
             />
           </View>
-          <ThemedText style={styles.qrHint}>Scan to open Google Play</ThemedText>
+          <ThemedText type="muted" style={styles.qrHint}>Scan to open Google Play</ThemedText>
         </View>
 
         <View style={styles.linkCard}>
-          <ThemedText style={styles.linkLabel}>Install link</ThemedText>
-          <ThemedText style={styles.linkText} selectable>
+          <ThemedText type="label" style={styles.linkLabel}>Install link</ThemedText>
+          <ThemedText type="link" style={styles.linkText} selectable>
             {installUrl}
           </ThemedText>
         </View>
@@ -224,7 +216,7 @@ export default function ShareAppScreen() {
           onPress={() => void handleCopy()}
           disabled={copying}
         >
-          <MaterialIcons name="content-copy" size={20} color={C.black} />
+          <MaterialIcons name="content-copy" size={20} color={C.textPrimary} />
           <ThemedText style={[styles.actionBtnText, styles.actionBtnTextSecondary]}>
             {copying ? "Copying…" : "Copy link"}
           </ThemedText>
@@ -234,7 +226,7 @@ export default function ShareAppScreen() {
           <ThemedText style={styles.storeBtnText}>Open Google Play</ThemedText>
         </Pressable>
 
-        <ThemedText style={styles.noteText}>
+        <ThemedText type="muted" style={styles.noteText}>
           {hasIosStoreListing()
             ? "Shared messages include both Google Play and App Store links."
             : "iPhone App Store link will be added to shared messages once the iOS app is published."}

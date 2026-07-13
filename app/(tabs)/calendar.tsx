@@ -39,17 +39,17 @@ const WalkthroughableView = walkthroughable(View);
 
 function buildCalendarTheme(C: AppColors) {
   return {
-    calendarBackground: C.pureWhite,
-    textSectionTitleColor: C.black,
+    calendarBackground: C.background,
+    textSectionTitleColor: C.textSecondary,
     selectedDayBackgroundColor: "transparent",
-    selectedDayTextColor: C.black,
+    selectedDayTextColor: C.textPrimary,
     todayBackgroundColor: "transparent",
     todayTextColor: C.themeRed,
-    dayTextColor: C.black,
-    textDisabledColor: C.gray40,
-    textInactiveColor: C.gray40,
-    monthTextColor: C.black,
-    arrowColor: C.black,
+    dayTextColor: C.textPrimary,
+    textDisabledColor: C.textMuted,
+    textInactiveColor: C.textMuted,
+    monthTextColor: C.textPrimary,
+    arrowColor: C.textPrimary,
     textDayFontWeight: "400" as const,
     textMonthFontWeight: "600" as const,
     textDayHeaderFontWeight: "500" as const,
@@ -105,16 +105,18 @@ function getMarkedDates(
       marked[dateString] = {
         selected: true,
         selectedColor: "transparent",
-        selectedTextColor: C.black,
+        selectedTextColor: C.textPrimary,
         caseCount,
         customStyles: {
           container: {
             borderWidth: 2,
-            borderColor: C.cream60,
+            borderColor: C.textAccent,
             borderRadius: 20,
             backgroundColor: "transparent",
           },
-          text: {},
+          text: {
+            color: C.textPrimary,
+          },
         },
       };
     } else if (hasCase) {
@@ -126,7 +128,7 @@ function getMarkedDates(
             borderRadius: 20,
           },
           text: {
-            color: C.gray30,
+            color: C.textPrimary,
           },
         },
       };
@@ -139,23 +141,34 @@ function getMarkedDates(
           },
         },
       };
+    } else {
+      marked[dateString] = {
+        caseCount: 0,
+        customStyles: {
+          text: {
+            color: C.textPrimary,
+          },
+        },
+      };
     }
   }
 
-  if (!marked[selectedDate]) {
+  if (!marked[selectedDate] || !(marked[selectedDate] as { selected?: boolean }).selected) {
     marked[selectedDate] = {
       selected: true,
       selectedColor: "transparent",
-      selectedTextColor: C.black,
+      selectedTextColor: C.textPrimary,
       caseCount: dateToCount[selectedDate] ?? 0,
       customStyles: {
         container: {
           borderWidth: 2,
-          borderColor: C.cream60,
+          borderColor: C.textAccent,
           borderRadius: 20,
           backgroundColor: "transparent",
         },
-        text: {},
+        text: {
+          color: C.textPrimary,
+        },
       },
     };
   }
@@ -181,14 +194,15 @@ function createCalendarDayStyles(C: AppColors) {
     },
     selected: {
       borderWidth: 2,
-      borderColor: C.cream60,
+      borderColor: C.textAccent,
     },
     text: {
       fontSize: 15,
-      color: C.black,
+      color: C.textPrimary,
     },
     selectedText: {
       fontWeight: "600",
+      color: C.textPrimary,
     },
     badge: {
       position: "absolute",
@@ -205,7 +219,7 @@ function createCalendarDayStyles(C: AppColors) {
     badgeText: {
       fontSize: 10,
       fontWeight: "700",
-      color: C.pureWhite,
+      color: C.textInverse,
     },
   });
 }
@@ -309,7 +323,7 @@ function createCalendarScreenStyles(C: AppColors) {
       paddingBottom: 24,
     },
     calendarWrap: {
-      backgroundColor: C.pureWhite,
+      backgroundColor: C.background,
       paddingHorizontal: 8,
       borderRadius: 0,
     },
@@ -325,7 +339,7 @@ function createCalendarScreenStyles(C: AppColors) {
       alignItems: "center",
     },
     addDateButtonText: {
-      color: C.pureWhite,
+      color: C.textInverse,
       fontSize: 15,
       fontWeight: "600",
     },
@@ -342,19 +356,16 @@ function createCalendarScreenStyles(C: AppColors) {
     addDateSectionTitle: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 12,
       textAlign: "center",
     },
     caseListTitle: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
       marginBottom: 12,
     },
     noCases: {
       fontSize: 14,
-      color: C.gray50,
     },
     errorWrap: {
       marginTop: 4,
@@ -374,7 +385,7 @@ function createCalendarScreenStyles(C: AppColors) {
     retryButtonText: {
       fontSize: 15,
       fontWeight: "600",
-      color: C.pureWhite,
+      color: C.textInverse,
     },
   });
 }
@@ -603,9 +614,9 @@ export default function CalendarScreen() {
         </View>
         <Spacer.Column numberOfSpaces={5} />
         <View style={styles.addDateSection}>
-          <Text style={styles.addDateSectionTitle}>
+          <ThemedText type="defaultSemiBold" style={styles.addDateSectionTitle}>
             Add this date {`"${selectedDate}"`} as next hearing date to a case
-          </Text>
+          </ThemedText>
           <Spacer.Column numberOfSpaces={5} />
           <CopilotStep
             text="Click here to add this selected date as the next hearing date to a case."
@@ -632,8 +643,7 @@ export default function CalendarScreen() {
           </CopilotStep>
           <ThemedText
             style={styles.addDateHint}
-            lightColor={C.gray50}
-            darkColor={C.gray50}
+            type="secondary"
           >
             Pick a case from the list.{"\n"}Its next hearing date will be set to
             this day.
@@ -641,7 +651,7 @@ export default function CalendarScreen() {
         </View>
 
         <View style={styles.caseList}>
-          <ThemedText style={styles.caseListTitle}>
+          <ThemedText type="accent" style={styles.caseListTitle}>
             Cases on {selectedDate}
           </ThemedText>
           {error ? (
@@ -658,9 +668,9 @@ export default function CalendarScreen() {
               </Pressable>
             </View>
           ) : loading && !refreshing ? (
-            <ThemedText style={styles.noCases}>Loading…</ThemedText>
+            <ThemedText type="default" style={styles.noCases}>Loading…</ThemedText>
           ) : casesForSelectedDate.length === 0 ? (
-            <ThemedText style={styles.noCases}>
+            <ThemedText type="default" style={styles.noCases}>
               No cases on this date.
             </ThemedText>
           ) : (

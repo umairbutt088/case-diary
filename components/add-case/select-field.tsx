@@ -44,15 +44,12 @@ function createSelectFieldStyles(C: AppColors, modalSheet: string) {
     triggerText: {
       fontSize: 16,
       flex: 1,
-      color: C.black,
     },
     placeholder: {
-      color: C.gray50,
     },
     hint: {
       fontSize: 13,
       marginTop: 6,
-      color: C.black,
     },
     triggerRowError: {
       borderColor: C.themeRed,
@@ -88,12 +85,10 @@ function createSelectFieldStyles(C: AppColors, modalSheet: string) {
     sheetTitle: {
       fontSize: 18,
       fontWeight: "600",
-      color: C.black,
     },
     sheetClose: {
       fontSize: 17,
       fontWeight: "600",
-      color: C.black,
     },
     list: {
       minHeight: 120,
@@ -110,11 +105,9 @@ function createSelectFieldStyles(C: AppColors, modalSheet: string) {
     },
     optionText: {
       fontSize: 16,
-      color: C.black,
     },
     optionTextSelected: {
       fontWeight: "600",
-      color: C.black,
     },
   });
 }
@@ -157,18 +150,18 @@ export function SelectField({
           style={styles.trigger}
           onPress={() => !disabled && setOpen(true)}
         >
-          <ThemedText
+          <ThemedText type="defaultSemiBold"
             style={[styles.triggerText, !value && styles.placeholder]}
             lightColor={!value ? C.gray50 : undefined}
             darkColor={!value ? C.gray50 : undefined}
           >
             {value || placeholder}
           </ThemedText>
-          <MaterialIcons name="keyboard-arrow-down" size={24} color={C.gray50} />
+          <MaterialIcons name="keyboard-arrow-down" size={24} color={C.textSecondary} />
         </Pressable>
       </View>
       {hint ? (
-        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
+        <ThemedText type="muted" style={styles.hint}>
           {hint}
         </ThemedText>
       ) : null}
@@ -177,9 +170,9 @@ export function SelectField({
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <ThemedText style={styles.sheetTitle}>{label}</ThemedText>
+              <ThemedText type="accent" style={styles.sheetTitle}>{label}</ThemedText>
               <Pressable onPress={() => setOpen(false)}>
-                <ThemedText style={styles.sheetClose}>Done</ThemedText>
+                <ThemedText type="default" style={styles.sheetClose}>Done</ThemedText>
               </Pressable>
             </View>
             <ScrollView style={styles.list}>
@@ -189,7 +182,7 @@ export function SelectField({
                   style={styles.option}
                   onPress={() => onSelect(opt)}
                 >
-                  <ThemedText
+                  <ThemedText type="defaultSemiBold"
                     style={[
                       styles.optionText,
                       value === opt && styles.optionTextSelected,
@@ -198,7 +191,7 @@ export function SelectField({
                     {opt}
                   </ThemedText>
                   {value === opt ? (
-                    <MaterialIcons name="check" size={22} color={C.themeBlack} />
+                    <MaterialIcons name="check" size={22} color={C.textAccent} />
                   ) : null}
                 </Pressable>
               ))}

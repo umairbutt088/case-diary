@@ -86,7 +86,6 @@ function createJudgesStyles(
     headerActionText: {
       fontSize: 12,
       fontWeight: "700",
-      color: C.black,
     },
     searchWrap: {
       flexDirection: "row",
@@ -100,10 +99,10 @@ function createJudgesStyles(
       gap: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       flex: 1,
       minHeight: 44,
       fontSize: 15,
-      color: C.black,
     },
     listContent: {
       paddingBottom: 24,
@@ -124,7 +123,6 @@ function createJudgesStyles(
     nameText: {
       fontSize: 17,
       fontWeight: "700",
-      color: C.black,
       flex: 1,
       marginRight: 8,
     },
@@ -142,7 +140,6 @@ function createJudgesStyles(
     },
     metaText: {
       fontSize: 13,
-      color: C.gray50,
       marginBottom: 2,
     },
     usageText: {
@@ -164,7 +161,6 @@ function createJudgesStyles(
       textAlign: "center",
     },
     emptyText: {
-      color: C.gray50,
       fontSize: 14,
       textAlign: "center",
     },
@@ -203,7 +199,6 @@ function createJudgesStyles(
     modalTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     modalClose: {
       minWidth: 32,
@@ -219,7 +214,6 @@ function createJudgesStyles(
     inputLabel: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.gray50,
       textTransform: "uppercase",
       marginBottom: 6,
       marginTop: 10,
@@ -231,7 +225,7 @@ function createJudgesStyles(
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 15,
-      color: C.black,
+      color: C.textPrimary,
       backgroundColor: C.background,
     },
     tierPickerWrap: {
@@ -264,7 +258,7 @@ export default function JudgesScreen() {
   const accessGuard = useAccessGuard("add_cases", "edit_cases");
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const modalSheet = modalSheetBackground(C, isDark);
   const styles = useMemo(
     () => createJudgesStyles(C, onPrimary, modalSheet),
@@ -599,19 +593,19 @@ export default function JudgesScreen() {
         onBack={goBack}
         rightComponent={
           <Bounceable style={styles.headerAction} onPress={openAddModal}>
-            <MaterialIcons name="person-add-alt-1" size={20} color={C.black} />
-            <ThemedText style={styles.headerActionText}>Add judge</ThemedText>
+            <MaterialIcons name="person-add-alt-1" size={20} color={C.textPrimary} />
+            <ThemedText type="accent" style={styles.headerActionText}>Add judge</ThemedText>
           </Bounceable>
         }
       />
 
       <View style={styles.container}>
         <View style={styles.searchWrap}>
-          <MaterialIcons name="search" size={20} color={C.gray50} />
+          <MaterialIcons name="search" size={20} color={C.textSecondary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search judges..."
-            placeholderTextColor={C.gray50}
+            placeholderTextColor={C.textMuted}
             value={search}
             onChangeText={setSearch}
             autoCapitalize="words"
@@ -622,7 +616,7 @@ export default function JudgesScreen() {
 
         {loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color={C.black} />
+            <ActivityIndicator size="large" color={C.textPrimary} />
           </View>
         ) : error ? (
           <View style={styles.centered}>
@@ -633,7 +627,7 @@ export default function JudgesScreen() {
           </View>
         ) : judges.length === 0 ? (
           <View style={styles.centered}>
-            <ThemedText style={styles.emptyText}>
+            <ThemedText type="muted" style={styles.emptyText}>
               {search.trim() ? "No judges match your search." : "No judges saved yet."}
             </ThemedText>
           </View>
@@ -659,14 +653,14 @@ export default function JudgesScreen() {
             renderItem={({ item: judge }) => (
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <ThemedText style={styles.nameText}>{judge.name}</ThemedText>
+                  <ThemedText type="accent" style={styles.nameText}>{judge.name}</ThemedText>
                   <View style={styles.cardActions}>
                     <Bounceable
                       style={styles.iconBtn}
                       onPress={() => openEditModal(judge)}
                       accessibilityLabel={`Edit ${judge.name}`}
                     >
-                      <MaterialIcons name="edit" size={18} color={C.black} />
+                      <MaterialIcons name="edit" size={18} color={C.textPrimary} />
                     </Bounceable>
                     <Bounceable
                       style={styles.iconBtn}
@@ -677,11 +671,11 @@ export default function JudgesScreen() {
                     </Bounceable>
                   </View>
                 </View>
-                <ThemedText style={styles.metaText}>Court tier: {judge.court_tier?.trim() || "—"}</ThemedText>
-                <ThemedText style={styles.metaText}>
+                <ThemedText type="secondary" style={styles.metaText}>Court tier: {judge.court_tier?.trim() || "—"}</ThemedText>
+                <ThemedText type="secondary" style={styles.metaText}>
                   Court room: {judge.court_room_address?.trim() || "—"}
                 </ThemedText>
-                <ThemedText style={styles.usageText}>
+                <ThemedText type="muted" style={styles.usageText}>
                   Used in {usageByJudgeId[judge.id] ?? 0} case
                   {(usageByJudgeId[judge.id] ?? 0) === 1 ? "" : "s"}
                 </ThemedText>
@@ -699,11 +693,11 @@ export default function JudgesScreen() {
           <Pressable style={styles.modalOverlay} onPress={closeModal} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>
+              <ThemedText type="accent" style={styles.modalTitle}>
                 {editingJudge ? "Edit Judge" : "Add Judge"}
               </ThemedText>
               <Bounceable style={styles.modalClose} onPress={closeModal}>
-                <MaterialIcons name="close" size={20} color={C.black} />
+                <MaterialIcons name="close" size={20} color={C.textPrimary} />
               </Bounceable>
             </View>
             <ScrollView
@@ -711,13 +705,13 @@ export default function JudgesScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.modalContent}
             >
-              <ThemedText style={styles.inputLabel}>Judge name</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Judge name</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.name}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, name: v }))}
                 placeholder="Judge name"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCorrect={false}
                 spellCheck={false}
               />
@@ -732,13 +726,13 @@ export default function JudgesScreen() {
                 />
               </View>
 
-              <ThemedText style={styles.inputLabel}>Court room address</ThemedText>
+              <ThemedText type="label" style={styles.inputLabel}>Court room address</ThemedText>
               <TextInput
                 style={styles.input}
                 value={form.court_room_address}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, court_room_address: v }))}
                 placeholder="e.g. Building A, 2nd Floor"
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCorrect={false}
                 spellCheck={false}
               />

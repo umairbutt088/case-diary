@@ -42,20 +42,20 @@ export function FormInput({
   return (
     <>
       <TextInput
-        style={[
-          styles.input,
-          {
-            color: C.black,
-            borderColor: C.borderGray,
-            backgroundColor: lightBackground ? C.pureWhite : "transparent",
-          },
-          style,
-        ]}
-        placeholderTextColor={C.gray50}
+        placeholderTextColor={C.textMuted}
         onChangeText={handleChange}
         autoCorrect={false}
         spellCheck={false}
         {...rest}
+        style={[
+          styles.input,
+          {
+            borderColor: C.borderGray,
+            backgroundColor: lightBackground ? C.pureWhite : "transparent",
+          },
+          style,
+          { color: C.textPrimary },
+        ]}
       />
       {error ? <ThemedText style={themed.error}>{error}</ThemedText> : null}
     </>

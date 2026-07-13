@@ -155,7 +155,6 @@ function createDiaryStyles(C: AppColors) {
     },
     title: {
       marginBottom: 12,
-      color: C.black,
     },
     listContent: {
       paddingHorizontal: 2,
@@ -173,7 +172,6 @@ function createDiaryStyles(C: AppColors) {
     bulkToggleBtnText: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.black,
     },
     bulkActionsBar: {
       borderRadius: 10,
@@ -187,7 +185,6 @@ function createDiaryStyles(C: AppColors) {
     bulkCountText: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.black,
     },
     bulkActionsRow: {
       flexDirection: "row",
@@ -205,7 +202,6 @@ function createDiaryStyles(C: AppColors) {
     bulkActionBtnText: {
       fontSize: 12,
       fontWeight: "600",
-      color: C.black,
     },
     bulkDeleteBtn: {
       borderColor: C.themeRed,
@@ -234,17 +230,17 @@ function createDiaryStyles(C: AppColors) {
       height: 22,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: C.gray50,
+      borderColor: C.textSecondary,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: C.pureWhite,
+      backgroundColor: "transparent",
     },
     checkboxSelected: {
-      borderColor: C.themeBlack,
-      backgroundColor: C.themeBlack,
+      borderColor: C.textPrimary,
+      backgroundColor: C.textPrimary,
     },
     checkboxTick: {
-      color: C.pureWhite,
+      color: C.background,
       fontSize: 13,
       fontWeight: "700",
     },
@@ -255,12 +251,10 @@ function createDiaryStyles(C: AppColors) {
     bulkRowTitle: {
       fontSize: 16,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 3,
     },
     bulkRowMeta: {
       fontSize: 12,
-      color: C.gray50,
     },
     noResultsWrap: {
       marginTop: 18,
@@ -272,18 +266,15 @@ function createDiaryStyles(C: AppColors) {
     noResultsTitle: {
       fontSize: 16,
       fontWeight: "700",
-      color: C.black,
       textAlign: "center",
     },
     noResultsText: {
       marginTop: 6,
       fontSize: 13,
-      color: C.gray50,
       textAlign: "center",
     },
     placeholder: {
       opacity: 0.8,
-      color: C.black,
     },
     errorText: {
       color: C.themeRed,
@@ -688,7 +679,7 @@ export default function DiaryScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Your cases" {...headerBackProps} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       </SafeAreaView>
     );
@@ -732,7 +723,7 @@ export default function DiaryScreen() {
           />
         </CopilotStep>
         <View style={styles.container}>
-          <ThemedText style={styles.placeholder}>
+          <ThemedText type="muted" style={styles.placeholder}>
             No cases yet. Add a case from the Add button or Home.
           </ThemedText>
         </View>
@@ -838,17 +829,17 @@ export default function DiaryScreen() {
                     ]}
                   >
                     {selectedCaseIds.has(item.id) ? (
-                      <ThemedText style={styles.checkboxTick}>✓</ThemedText>
+                      <ThemedText type="default" style={styles.checkboxTick}>✓</ThemedText>
                     ) : null}
                   </View>
                   <View style={styles.bulkRowContent}>
-                    <ThemedText style={styles.bulkRowTitle} numberOfLines={1}>
+                    <ThemedText type="accent" style={styles.bulkRowTitle} numberOfLines={1}>
                       {getCaseDisplayTitle(item)}
                     </ThemedText>
-                    <ThemedText style={styles.bulkRowMeta}>
+                    <ThemedText type="secondary" style={styles.bulkRowMeta}>
                       Case no: {item.case_number?.trim() || "—"}
                     </ThemedText>
-                    <ThemedText style={styles.bulkRowMeta}>
+                    <ThemedText type="secondary" style={styles.bulkRowMeta}>
                       Next: {formatCaseDate(item.next_hearing_date)}
                     </ThemedText>
                   </View>
@@ -865,8 +856,8 @@ export default function DiaryScreen() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.noResultsWrap}>
-                <ThemedText style={styles.noResultsTitle}>No matching case</ThemedText>
-                <ThemedText style={styles.noResultsText}>
+                <ThemedText type="accent" style={styles.noResultsTitle}>No matching case</ThemedText>
+                <ThemedText type="default" style={styles.noResultsText}>
                   {searchMode === "number"
                     ? "Try another case number."
                     : "Try another case name."}

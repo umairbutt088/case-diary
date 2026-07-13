@@ -68,12 +68,12 @@ export function CourtPortalBottomSheet({
         <Pressable style={styles.modalOverlay} onPress={onClose} />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
-            <ThemedText style={styles.modalTitle}>Court case search</ThemedText>
+            <ThemedText type="accent" style={styles.modalTitle}>Court case search</ThemedText>
             <Bounceable style={styles.modalClose} onPress={onClose}>
-              <MaterialIcons name="close" size={20} color={C.black} />
+              <MaterialIcons name="close" size={20} color={C.textPrimary} />
             </Bounceable>
           </View>
-          <ThemedText style={styles.courtPortalModalIntro}>
+          <ThemedText type="default" style={styles.courtPortalModalIntro}>
             Select trial court / registry, a High Court, or the Supreme Court, then open the
             website and paste your case number on the court site.
           </ThemedText>
@@ -85,7 +85,7 @@ export function CourtPortalBottomSheet({
           >
             {COURT_PORTAL_SECTIONS.map((section, sectionIdx) => (
               <View key={section.title}>
-                <ThemedText
+                <ThemedText type="accent"
                   style={[
                     styles.courtPortalSectionTitle,
                     sectionIdx === 0 && styles.courtPortalSectionTitleFirst,
@@ -107,10 +107,10 @@ export function CourtPortalBottomSheet({
                     >
                       <View style={styles.courtPortalOptionRow}>
                         <View style={styles.courtPortalOptionTexts}>
-                          <ThemedText style={styles.courtPortalOptionLabel}>
+                          <ThemedText type="label" style={styles.courtPortalOptionLabel}>
                             {portal.label}
                           </ThemedText>
-                          <ThemedText style={styles.courtPortalOptionDesc}>
+                          <ThemedText type="default" style={styles.courtPortalOptionDesc}>
                             {portal.description}
                           </ThemedText>
                         </View>
@@ -119,7 +119,7 @@ export function CourtPortalBottomSheet({
                             <MaterialIcons
                               name="check-circle"
                               size={24}
-                              color={C.themeBlack}
+                              color={C.textAccent}
                             />
                           ) : (
                             <MaterialIcons
@@ -187,7 +187,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     modalTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
     },
     modalClose: {
       width: 34,
@@ -200,7 +199,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     courtPortalModalIntro: {
       fontSize: 12,
       lineHeight: 18,
-      color: C.gray50,
       marginBottom: 10,
     },
     courtPortalScroll: {
@@ -212,7 +210,6 @@ function createStyles(C: AppColors, modalSheet: string) {
     courtPortalSectionTitle: {
       fontSize: 12,
       fontWeight: "700",
-      color: C.gray50,
       textTransform: "uppercase",
       letterSpacing: 0.5,
       marginTop: 12,
@@ -247,11 +244,9 @@ function createStyles(C: AppColors, modalSheet: string) {
     courtPortalOptionLabel: {
       fontSize: 14,
       fontWeight: "700",
-      color: C.black,
     },
     courtPortalOptionDesc: {
       fontSize: 12,
-      color: C.gray50,
       lineHeight: 17,
     },
     courtPortalOptionIconCol: {
@@ -269,7 +264,7 @@ function createStyles(C: AppColors, modalSheet: string) {
       opacity: 0.5,
     },
     courtPortalOpenBtnText: {
-      color: C.pureWhite,
+      color: C.textInverse,
       fontWeight: "700",
       fontSize: 15,
     },

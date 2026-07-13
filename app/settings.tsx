@@ -59,14 +59,12 @@ function createSettingsStyles(C: AppColors) {
     sectionTitle: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 8,
       textTransform: "uppercase",
       letterSpacing: 0.5,
     },
     addHint: {
       fontSize: 14,
-      color: C.gray50,
       marginBottom: 8,
     },
     divider: {
@@ -86,7 +84,6 @@ function createSettingsStyles(C: AppColors) {
       flex: 1,
       fontSize: 16,
       fontWeight: "600",
-      color: C.themeBlack,
     },
     rowLeading: {
       flexDirection: "row",
@@ -98,7 +95,6 @@ function createSettingsStyles(C: AppColors) {
     walkthroughButtonText: {
       fontWeight: "600",
       fontSize: 16,
-      color: C.black,
     },
     rowLabelDanger: {
       flex: 1,
@@ -122,12 +118,10 @@ function createSettingsStyles(C: AppColors) {
     modalTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 10,
     },
     modalBody: {
       fontSize: 14,
-      color: C.gray50,
       lineHeight: 20,
       marginBottom: 14,
     },
@@ -138,8 +132,8 @@ function createSettingsStyles(C: AppColors) {
       paddingHorizontal: 14,
       paddingVertical: 12,
       fontSize: 16,
-      color: C.black,
       marginBottom: 8,
+      color: C.textPrimary,
     },
     modalError: {
       fontSize: 13,
@@ -164,7 +158,6 @@ function createSettingsStyles(C: AppColors) {
     modalBtnGhostText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.black,
     },
     modalBtnDanger: {
       backgroundColor: C.themeRed,
@@ -172,7 +165,7 @@ function createSettingsStyles(C: AppColors) {
     modalBtnDangerText: {
       fontSize: 16,
       fontWeight: "600",
-      color: C.pureWhite,
+      color: C.textInverse,
     },
   });
 }
@@ -297,8 +290,8 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Edit profile"
           >
-            <ThemedText style={styles.rowLabel}>Edit profile</ThemedText>
-            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+            <ThemedText type="label" style={styles.rowLabel}>Edit profile</ThemedText>
+            <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
           </Pressable>
           {showManageClients ? (
             <>
@@ -313,9 +306,9 @@ export default function SettingsScreen() {
                 accessibilityLabel="Clients"
               >
                 <View style={styles.rowLeading}>
-                  <ThemedText style={styles.rowLabel}>Manage Clients</ThemedText>
+                  <ThemedText type="label" style={styles.rowLabel}>Manage Clients</ThemedText>
                 </View>
-                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+                <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
               </Pressable>
             </>
           ) : null}
@@ -330,9 +323,9 @@ export default function SettingsScreen() {
             accessibilityLabel="Judges"
           >
             <View style={styles.rowLeading}>
-              <ThemedText style={styles.rowLabel}>Manage Judges</ThemedText>
+              <ThemedText type="label" style={styles.rowLabel}>Manage Judges</ThemedText>
             </View>
-            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+            <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
           </Pressable>
           <View style={styles.divider} />
           {role !== "subordinate" ? (
@@ -347,9 +340,9 @@ export default function SettingsScreen() {
                 accessibilityLabel="Subordinate access"
               >
                 <View style={styles.rowLeading}>
-                  <ThemedText style={styles.rowLabel}>Subordinate access</ThemedText>
+                  <ThemedText type="label" style={styles.rowLabel}>Subordinate access</ThemedText>
                 </View>
-                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+                <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
               </Pressable>
               <View style={styles.divider} />
             </>
@@ -364,9 +357,9 @@ export default function SettingsScreen() {
             accessibilityLabel="Share app"
           >
             <View style={styles.rowLeading}>
-              <ThemedText style={styles.rowLabel}>Share app</ThemedText>
+              <ThemedText type="label" style={styles.rowLabel}>Share app</ThemedText>
             </View>
-            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+            <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
           </Pressable>
           <View style={styles.divider} />
           <Pressable
@@ -379,11 +372,11 @@ export default function SettingsScreen() {
             accessibilityLabel="Start a walkthrough"
           >
             <View style={styles.rowLeading}>
-              <ThemedText style={styles.rowLabel}>
+              <ThemedText type="label" style={styles.rowLabel}>
                 Start a walkthrough
               </ThemedText>
             </View>
-            <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+            <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
           </Pressable>
           {showDisposedCases ? (
             <>
@@ -398,9 +391,9 @@ export default function SettingsScreen() {
                 accessibilityLabel="Disposed cases"
               >
                 <View style={styles.rowLeading}>
-                  <ThemedText style={styles.rowLabel}>Disposed cases</ThemedText>
+                  <ThemedText type="label" style={styles.rowLabel}>Disposed cases</ThemedText>
                 </View>
-                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+                <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
               </Pressable>
             </>
           ) : null}
@@ -417,9 +410,9 @@ export default function SettingsScreen() {
                 accessibilityLabel="Trash"
               >
                 <View style={styles.rowLeading}>
-                  <ThemedText style={styles.rowLabel}>Trash</ThemedText>
+                  <ThemedText type="label" style={styles.rowLabel}>Trash</ThemedText>
                 </View>
-                <MaterialIcons name="chevron-right" size={22} color={C.gray50} />
+                <MaterialIcons name="chevron-right" size={22} color={C.textSecondary} />
               </Pressable>
             </>
           ) : null}
@@ -456,8 +449,8 @@ export default function SettingsScreen() {
             style={[styles.modalCard, { backgroundColor: modalSheet }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <ThemedText style={styles.modalTitle}>Delete your account</ThemedText>
-            <ThemedText style={styles.modalBody}>
+            <ThemedText type="accent" style={styles.modalTitle}>Delete your account</ThemedText>
+            <ThemedText type="default" style={styles.modalBody}>
               Enter your password to permanently delete your account and server-side data.
             </ThemedText>
             <TextInput
@@ -468,7 +461,7 @@ export default function SettingsScreen() {
                 setDeleteError(null);
               }}
               placeholder="Password"
-              placeholderTextColor={C.gray50}
+              placeholderTextColor={C.textMuted}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}

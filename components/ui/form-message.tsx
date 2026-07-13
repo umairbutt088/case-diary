@@ -27,7 +27,7 @@ export function FormMessage({ message, type = "error" }: FormMessageProps) {
   const C = useThemePalette();
   const styles = useMemo(() => createFormMessageStyles(C), [C]);
   return (
-    <ThemedText style={[styles.text, type === "success" && styles.success]}>
+    <ThemedText type="default" style={[styles.text, type === "success" && styles.success]}>
       {message}
     </ThemedText>
   );

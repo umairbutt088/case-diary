@@ -11,7 +11,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -58,12 +57,10 @@ function createStyles(C: AppColors) {
     emptyTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: C.themeBlack,
       textAlign: "center",
     },
     emptySubtitle: {
       fontSize: 14,
-      color: C.gray50,
       textAlign: "center",
       lineHeight: 20,
     },
@@ -120,11 +117,9 @@ function createStyles(C: AppColors) {
     cardTitle: {
       fontSize: 14,
       fontWeight: "600",
-      color: C.themeBlack,
     },
     cardMeta: {
       fontSize: 12,
-      color: C.gray50,
       marginTop: 2,
     },
     cardActions: {
@@ -152,7 +147,6 @@ function createStyles(C: AppColors) {
     },
     hintText: {
       fontSize: 12,
-      color: C.gray50,
       lineHeight: 17,
     },
   });
@@ -296,13 +290,13 @@ export default function TrashScreen() {
           <MaterialIcons name="folder-delete" size={22} color="#FFA726" />
         </View>
         <View style={styles.cardBody}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
+          <ThemedText type="defaultSemiBold" style={styles.cardTitle} numberOfLines={1}>
             {getCaseDisplayTitle(item)}
-          </Text>
-          <Text style={styles.cardMeta}>
+          </ThemedText>
+          <ThemedText type="secondary" style={styles.cardMeta}>
             Deleted {formatRelative(item.deleted_at)}
             {item.case_number ? ` · ${item.case_number}` : ""}
-          </Text>
+          </ThemedText>
         </View>
         <View style={styles.cardActions}>
           <Pressable
@@ -336,13 +330,13 @@ export default function TrashScreen() {
       {cases.length > 0 && (
         <>
           <View style={styles.hintBanner}>
-            <ThemedText style={styles.hintText}>
+            <ThemedText type="muted" style={styles.hintText}>
               Cases here are hidden from your diary. Tap{" "}
-              <ThemedText style={[styles.hintText, { fontWeight: "700" }]}>
+              <ThemedText type="muted" style={[styles.hintText, { fontWeight: "700" }]}>
                 restore
               </ThemedText>{" "}
               to recover a case, or{" "}
-              <ThemedText style={[styles.hintText, { fontWeight: "700" }]}>
+              <ThemedText type="muted" style={[styles.hintText, { fontWeight: "700" }]}>
                 delete forever
               </ThemedText>{" "}
               to remove it permanently.
@@ -359,9 +353,9 @@ export default function TrashScreen() {
             accessibilityLabel="Empty Trash"
           >
             <MaterialIcons name="delete-sweep" size={18} color="#C62828" />
-            <Text style={styles.emptyTrashBtnText}>
+            <ThemedText type="default" style={styles.emptyTrashBtnText}>
               Empty Trash ({cases.length})
-            </Text>
+            </ThemedText>
           </Pressable>
         </>
       )}
@@ -371,14 +365,14 @@ export default function TrashScreen() {
           <MaterialIcons
             name="delete-outline"
             size={64}
-            color={C.gray50}
+            color={C.textSecondary}
             style={styles.emptyIcon}
           />
-          <Text style={styles.emptyTitle}>Trash is Empty</Text>
-          <Text style={styles.emptySubtitle}>
+          <ThemedText type="defaultSemiBold" style={styles.emptyTitle}>Trash is Empty</ThemedText>
+          <ThemedText type="secondary" style={styles.emptySubtitle}>
             Cases you delete will appear here. You can restore them or
             permanently remove them from this screen.
-          </Text>
+          </ThemedText>
         </View>
       ) : (
         <FlatList

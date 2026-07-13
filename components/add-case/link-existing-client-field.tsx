@@ -57,10 +57,8 @@ function createLinkExistingClientStyles(C: AppColors) {
     triggerText: {
       fontSize: 16,
       flex: 1,
-      color: C.black,
     },
     placeholder: {
-      color: C.gray50,
     },
     clearBtn: {
       paddingVertical: 8,
@@ -91,16 +89,15 @@ function createLinkExistingClientStyles(C: AppColors) {
       marginRight: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       flex: 1,
       fontSize: 16,
-      color: C.black,
       paddingVertical: 10,
       minHeight: 40,
     },
     listLabel: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
       marginBottom: 6,
     },
     loadingWrap: {
@@ -131,11 +128,9 @@ function createLinkExistingClientStyles(C: AppColors) {
     },
     optionText: {
       fontSize: 16,
-      color: C.black,
     },
     optionTextSelected: {
       fontWeight: "600",
-      color: C.black,
     },
   });
 }
@@ -209,7 +204,7 @@ export function LinkExistingClientField({
             style={styles.trigger}
             onPress={() => setOpen((prev) => !prev)}
           >
-            <ThemedText
+            <ThemedText type="defaultSemiBold"
               style={[styles.triggerText, !value && styles.placeholder]}
               lightColor={!value ? C.gray50 : undefined}
               darkColor={!value ? C.gray50 : undefined}
@@ -220,7 +215,7 @@ export function LinkExistingClientField({
             <MaterialIcons
               name={open ? "keyboard-arrow-up" : "keyboard-arrow-down"}
               size={24}
-              color={C.gray50}
+              color={C.textSecondary}
             />
           </Pressable>
           {value ? (
@@ -239,7 +234,7 @@ export function LinkExistingClientField({
               <MaterialIcons
                 name="search"
                 size={20}
-                color={C.gray50}
+                color={C.textSecondary}
                 style={styles.searchIcon}
               />
               <TextInput
@@ -247,21 +242,20 @@ export function LinkExistingClientField({
                 value={search}
                 onChangeText={setSearch}
                 placeholder="Search by name..."
-                placeholderTextColor={C.gray50}
+                placeholderTextColor={C.textMuted}
                 autoCapitalize="words"
                 autoCorrect={false}
                 spellCheck={false}
               />
             </View>
-            <ThemedText style={styles.listLabel}>
+            <ThemedText type="label" style={styles.listLabel}>
               Saved clients
             </ThemedText>
             {loading ? (
               <View style={styles.loadingWrap}>
                 <ThemedText
                   style={styles.loadingText}
-                  lightColor={C.gray50}
-                  darkColor={C.gray50}
+                  type="secondary"
                 >
                   Loading...
                 </ThemedText>
@@ -269,8 +263,7 @@ export function LinkExistingClientField({
             ) : filteredNames.length === 0 ? (
               <ThemedText
                 style={styles.emptyHint}
-                lightColor={C.gray50}
-                darkColor={C.gray50}
+                type="secondary"
               >
                 {search.trim()
                   ? "No names match."
@@ -289,7 +282,7 @@ export function LinkExistingClientField({
                     style={styles.option}
                     onPress={() => onSelect(name)}
                   >
-                    <ThemedText
+                    <ThemedText type="defaultSemiBold"
                       style={[
                         styles.optionText,
                         value === name && styles.optionTextSelected,
@@ -298,7 +291,7 @@ export function LinkExistingClientField({
                       {name}
                     </ThemedText>
                     {value === name ? (
-                      <MaterialIcons name="check" size={22} color={C.themeBlack} />
+                      <MaterialIcons name="check" size={22} color={C.textAccent} />
                     ) : null}
                   </Pressable>
                 ))}

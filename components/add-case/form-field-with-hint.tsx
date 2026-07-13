@@ -39,7 +39,6 @@ function createFormFieldWithHintStyles(C: AppColors) {
     label: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 8,
     },
     inputRow: {
@@ -62,7 +61,7 @@ function createFormFieldWithHintStyles(C: AppColors) {
     input: {
       flex: 1,
       fontSize: 16,
-      color: C.black,
+      color: C.textPrimary,
       paddingVertical: 12,
       minHeight: 44,
       maxHeight: 120,
@@ -106,12 +105,12 @@ export function FormFieldWithHint({
 }: Props) {
   const C = useThemePalette();
   const styles = useMemo(() => createFormFieldWithHintStyles(C), [C]);
-  const ph = placeholderTextColor ?? C.gray50;
+  const ph = placeholderTextColor ?? C.textMuted;
 
   return (
     <View style={styles.wrap}>
       {label ? (
-        <ThemedText style={styles.label}>
+        <ThemedText type="label" style={styles.label}>
           {label}
           {required ? " *" : ""}
         </ThemedText>
@@ -124,7 +123,7 @@ export function FormFieldWithHint({
         ]}
       >
         <TextInput
-          style={[styles.input, multiline && styles.inputMultiline, inputStyle]}
+          style={[styles.input, multiline && styles.inputMultiline, inputStyle, { color: C.textPrimary }]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -143,7 +142,7 @@ export function FormFieldWithHint({
         />
       </View>
       {hint ? (
-        <ThemedText style={styles.hint} lightColor={C.gray50} darkColor={C.gray50}>
+        <ThemedText type="muted" style={styles.hint}>
           {hint}
         </ThemedText>
       ) : null}

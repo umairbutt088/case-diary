@@ -83,12 +83,10 @@ function createStyles(C: AppColors) {
       flex: 1,
       fontSize: 14,
       fontWeight: "700",
-      color: C.black,
     },
     hintText: {
       fontSize: 13,
       lineHeight: 18,
-      color: C.gray50,
       marginTop: 10,
     },
     addRow: {
@@ -105,8 +103,8 @@ function createStyles(C: AppColors) {
       borderRadius: 10,
       backgroundColor: C.background,
       paddingHorizontal: 12,
-      color: C.black,
       fontSize: 14,
+      color: C.textPrimary,
     },
     addButton: {
       minWidth: 88,
@@ -121,7 +119,7 @@ function createStyles(C: AppColors) {
       opacity: 0.55,
     },
     addButtonText: {
-      color: C.pureWhite,
+      color: C.textInverse,
       fontSize: 13,
       fontWeight: "700",
     },
@@ -152,18 +150,15 @@ function createStyles(C: AppColors) {
     nameText: {
       fontSize: 15,
       fontWeight: "700",
-      color: C.black,
       flexShrink: 1,
     },
     emailText: {
       marginTop: 2,
       fontSize: 12,
-      color: C.gray50,
     },
     statusText: {
       marginTop: 4,
       fontSize: 12,
-      color: C.gray50,
     },
     cardBody: {
       paddingHorizontal: 14,
@@ -177,7 +172,6 @@ function createStyles(C: AppColors) {
     },
     toggleLabel: {
       fontSize: 14,
-      color: C.black,
       flex: 1,
       marginRight: 10,
     },
@@ -240,7 +234,6 @@ function createStyles(C: AppColors) {
     },
     emptyText: {
       fontSize: 14,
-      color: C.gray50,
       textAlign: "center",
     },
   });
@@ -455,7 +448,7 @@ export default function SubordinatesScreen() {
       <ScreenHeader title="Subordinate Access" onBack={goBack} />
       {loading ? (
         <View style={s.centered}>
-          <ActivityIndicator size="large" color={C.black} />
+          <ActivityIndicator size="large" color={C.textPrimary} />
         </View>
       ) : (
         <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
@@ -466,18 +459,18 @@ export default function SubordinatesScreen() {
               accessibilityRole="button"
               accessibilityState={{ expanded: addExpanded }}
             >
-              <ThemedText style={s.addHeaderText}>Add subordinate</ThemedText>
+              <ThemedText type="accent" style={s.addHeaderText}>Add subordinate</ThemedText>
               <View style={s.chevronWrap}>
                 <MaterialIcons
                   name={addExpanded ? "expand-less" : "expand-more"}
                   size={22}
-                  color={C.black}
+                  color={C.textPrimary}
                 />
               </View>
             </Pressable>
             {addExpanded ? (
               <>
-                <ThemedText style={s.hintText}>
+                <ThemedText type="muted" style={s.hintText}>
                   Add a subordinate with the same email they used to sign up. Each person can
                   only be linked to one supervisor at a time.
                 </ThemedText>
@@ -487,7 +480,7 @@ export default function SubordinatesScreen() {
                     value={email}
                     onChangeText={setEmail}
                     placeholder="subordinate@email.com"
-                    placeholderTextColor={C.gray50}
+                    placeholderTextColor={C.textMuted}
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
@@ -511,7 +504,7 @@ export default function SubordinatesScreen() {
 
           {rows.length === 0 ? (
             <View style={s.card}>
-              <ThemedText style={s.emptyText}>No subordinate links found.</ThemedText>
+              <ThemedText type="muted" style={s.emptyText}>No subordinate links found.</ThemedText>
             </View>
           ) : (
             rows.map((row) => {
@@ -531,19 +524,19 @@ export default function SubordinatesScreen() {
                   >
                     <View style={s.cardHeaderBody}>
                       <View style={s.cardHeaderTop}>
-                        <ThemedText style={s.nameText} numberOfLines={1}>
+                        <ThemedText type="accent" style={s.nameText} numberOfLines={1}>
                           {displayName}
                         </ThemedText>
                         {!row.is_active ? (
                           <View style={s.disabledBadge}>
-                            <ThemedText style={s.disabledBadgeText}>Disabled</ThemedText>
+                            <ThemedText type="default" style={s.disabledBadgeText}>Disabled</ThemedText>
                           </View>
                         ) : null}
                       </View>
-                      <ThemedText style={s.emailText} numberOfLines={1}>
+                      <ThemedText type="default" style={s.emailText} numberOfLines={1}>
                         {email}
                       </ThemedText>
-                      <ThemedText style={s.statusText}>
+                      <ThemedText type="default" style={s.statusText}>
                         {row.is_active
                           ? `${enabledCount} of ${TOGGLE_KEYS.length} permissions`
                           : "Tap to manage access"}
@@ -553,7 +546,7 @@ export default function SubordinatesScreen() {
                       <MaterialIcons
                         name={isExpanded ? "expand-less" : "expand-more"}
                         size={22}
-                        color={C.black}
+                        color={C.textPrimary}
                       />
                     </View>
                   </Pressable>
@@ -562,11 +555,17 @@ export default function SubordinatesScreen() {
                     <View style={s.cardBody}>
                       {TOGGLE_KEYS.map((item) => (
                         <View key={`${row.id}-${item.key}`} style={s.toggleRow}>
-                          <ThemedText style={s.toggleLabel}>{item.label}</ThemedText>
+                          <ThemedText type="label" style={s.toggleLabel}>{item.label}</ThemedText>
                           <Switch
                             value={Boolean(row[`can_${item.key}` as keyof SubordinateLinkRow])}
                             onValueChange={(value) => void setPermission(row.id, item.key, value)}
                             disabled={!row.is_active || savingId === row.id}
+                            trackColor={{
+                              false: C.borderGray,
+                              true: C.textPrimary,
+                            }}
+                            thumbColor={C.background}
+                            ios_backgroundColor={C.borderGray}
                           />
                         </View>
                       ))}

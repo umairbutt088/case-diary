@@ -33,7 +33,6 @@ function createCalendarCaseCardStyles(C: AppColors) {
     title: {
       fontSize: 16,
       fontWeight: "700",
-      color: C.black,
       marginBottom: 4,
     },
     titleRow: {
@@ -45,12 +44,10 @@ function createCalendarCaseCardStyles(C: AppColors) {
     },
     subtitle: {
       fontSize: 14,
-      color: C.gray50,
       marginBottom: 6,
     },
     dateText: {
       fontSize: 13,
-      color: C.gray50,
     },
     dateTextOverdue: {
       color: C.themeRed,
@@ -96,18 +93,18 @@ export function CalendarCaseCard({ caseItem }: Props) {
     <Pressable style={styles.card} onPress={openCase}>
       <View style={styles.titleRow}>
         <View style={styles.titleTextWrap}>
-          <ThemedText style={styles.title} numberOfLines={1}>
+          <ThemedText type="accent" style={styles.title} numberOfLines={1}>
             {caseItem.title}
           </ThemedText>
         </View>
         {isOverdue ? (
           <View style={styles.overdueBadge}>
-            <ThemedText style={styles.overdueBadgeText}>OVERDUE</ThemedText>
+            <ThemedText type="default" style={styles.overdueBadgeText}>OVERDUE</ThemedText>
           </View>
         ) : null}
       </View>
-      <ThemedText style={styles.subtitle}>{caseItem.subtitle}</ThemedText>
-      <ThemedText style={[styles.dateText, isOverdue && styles.dateTextOverdue]}>
+      <ThemedText type="accent" style={styles.subtitle}>{caseItem.subtitle}</ThemedText>
+      <ThemedText type="default" style={[styles.dateText, isOverdue && styles.dateTextOverdue]}>
         Next: {formatCaseDate(caseItem.nextHearingDate)}
       </ThemedText>
     </Pressable>

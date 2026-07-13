@@ -74,7 +74,6 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
     filterBtnText: {
       fontSize: 14,
       fontWeight: "600",
-      color: C.gray50,
     },
     filterBtnTextActive: {
       color: onPrimary,
@@ -93,8 +92,8 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
       borderRadius: 12,
       paddingHorizontal: 12,
       paddingVertical: 10,
-      color: C.black,
       textAlignVertical: "top",
+      color: C.textPrimary,
     },
     actionsRow: {
       marginTop: 10,
@@ -122,7 +121,6 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
     secondaryButtonText: {
       fontSize: 13,
       fontWeight: "600",
-      color: C.gray50,
     },
     notesList: {
       flex: 1,
@@ -137,7 +135,6 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
       backgroundColor: C.background,
     },
     emptyText: {
-      color: C.gray50,
       fontSize: 14,
       textAlign: "center",
       paddingVertical: 24,
@@ -158,11 +155,9 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
     noteContent: {
       flex: 1,
       fontSize: 14,
-      color: C.black,
       lineHeight: 20,
     },
     noteContentDone: {
-      color: C.gray50,
       textDecorationLine: "line-through",
     },
     noteStatusBadge: {
@@ -183,12 +178,10 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
       color: C.zodiacColour,
     },
     noteStatusTextDone: {
-      color: C.gray50,
     },
     noteTime: {
       marginTop: 6,
       fontSize: 12,
-      color: C.gray50,
     },
     noteActions: {
       marginTop: 8,
@@ -207,7 +200,6 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
       fontWeight: "600",
     },
     noteActionInactive: {
-      color: C.gray50,
     },
     noteActionDelete: {
       color: C.themeRed,
@@ -233,7 +225,7 @@ export default function NotesScreen() {
   const { session } = useAuth();
   const C = useThemePalette();
   const { isDark } = useAppTheme();
-  const onPrimary = isDark ? C.black : C.pureWhite;
+  const onPrimary = C.textInverse;
   const styles = useMemo(
     () => createNotesStyles(C, onPrimary),
     [C, onPrimary],
@@ -408,7 +400,7 @@ export default function NotesScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {visibleNotes.length === 0 ? (
-              <ThemedText style={styles.emptyText}>
+              <ThemedText type="muted" style={styles.emptyText}>
                 {filter === "today"
                   ? "No notes for today yet."
                   : "No notes yet. Add one to get started."}
@@ -417,18 +409,18 @@ export default function NotesScreen() {
               visibleNotes.map((note) => (
                 <View key={note.id} style={styles.noteCard}>
                   <View style={styles.noteTopRow}>
-                    <ThemedText style={[styles.noteContent, note.isDone && styles.noteContentDone]}>
+                    <ThemedText type="defaultSemiBold" style={[styles.noteContent, note.isDone && styles.noteContentDone]}>
                       {note.content}
                     </ThemedText>
                     <View style={[styles.noteStatusBadge, note.isDone && styles.noteStatusBadgeDone]}>
-                      <ThemedText
+                      <ThemedText type="muted"
                         style={[styles.noteStatusText, note.isDone && styles.noteStatusTextDone]}
                       >
                         {note.isDone ? "Done" : "Active"}
                       </ThemedText>
                     </View>
                   </View>
-                  <ThemedText style={styles.noteTime}>
+                  <ThemedText type="muted" style={styles.noteTime}>
                     {filter === "all" ? `Date ${note.noteDate} - ` : ""}
                     Updated {new Date(note.updatedAt).toLocaleString()}
                   </ThemedText>
@@ -448,7 +440,7 @@ export default function NotesScreen() {
                     </Bounceable>
                     <Bounceable style={styles.noteAction} onPress={() => editNote(note)}>
                       <MaterialIcons name="edit" size={16} color={C.zodiacColour} />
-                      <ThemedText style={styles.noteActionText}>Edit</ThemedText>
+                      <ThemedText type="muted" style={styles.noteActionText}>Edit</ThemedText>
                     </Bounceable>
                     <Bounceable style={styles.noteAction} onPress={() => deleteNote(note.id)}>
                       <MaterialIcons name="delete" size={16} color={C.themeRed} />
@@ -472,7 +464,7 @@ export default function NotesScreen() {
                       ? "Write a note for today..."
                       : "Write a note (saved for today)..."
                   }
-                  placeholderTextColor={C.gray50}
+                  placeholderTextColor={C.textMuted}
                   value={noteInput}
                   onChangeText={setNoteInput}
                   multiline
