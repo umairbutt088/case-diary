@@ -75,6 +75,7 @@ function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
       padding: 12,
     },
     searchInput: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 10,
@@ -97,6 +98,7 @@ function createCourtTierPickerStyles(C: AppColors, onPrimary: string) {
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 15,
+      color: C.textPrimary,
     },
     addBtn: {
       minWidth: 72,

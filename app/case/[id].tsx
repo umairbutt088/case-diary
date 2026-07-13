@@ -405,6 +405,7 @@ function createCaseDetailStyles(
       textTransform: "uppercase",
     },
     textInput: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 8,

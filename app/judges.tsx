@@ -99,6 +99,7 @@ function createJudgesStyles(
       gap: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       flex: 1,
       minHeight: 44,
       fontSize: 15,
@@ -224,6 +225,7 @@ function createJudgesStyles(
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 15,
+      color: C.textPrimary,
       backgroundColor: C.background,
     },
     tierPickerWrap: {

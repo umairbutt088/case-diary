@@ -133,6 +133,7 @@ function createSettingsStyles(C: AppColors) {
       paddingVertical: 12,
       fontSize: 16,
       marginBottom: 8,
+      color: C.textPrimary,
     },
     modalError: {
       fontSize: 13,

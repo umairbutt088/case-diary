@@ -81,6 +81,7 @@ function createAddDateToCaseStyles(C: AppColors) {
       marginRight: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       flex: 1,
       fontSize: 16,
       paddingVertical: 0,

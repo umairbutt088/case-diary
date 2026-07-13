@@ -29,13 +29,13 @@ function createRadioOptionStyles(C: AppColors) {
       marginRight: 12,
     },
     outerSelected: {
-      borderColor: C.themeBlack,
+      borderColor: C.textPrimary,
     },
     inner: {
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: C.themeBlack,
+      backgroundColor: C.textPrimary,
     },
     label: {
       fontSize: 16,

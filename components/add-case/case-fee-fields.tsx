@@ -124,6 +124,7 @@ function createCaseFeeStyles(C: AppColors, onPrimary: string) {
       marginRight: 6,
     },
     input: {
+      color: C.textPrimary,
       flex: 1,
       fontSize: 17,
       fontWeight: "600",

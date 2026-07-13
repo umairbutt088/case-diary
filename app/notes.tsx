@@ -93,6 +93,7 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
       paddingHorizontal: 12,
       paddingVertical: 10,
       textAlignVertical: "top",
+      color: C.textPrimary,
     },
     actionsRow: {
       marginTop: 10,

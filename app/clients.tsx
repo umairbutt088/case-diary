@@ -96,6 +96,7 @@ function createClientsStyles(
       gap: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       flex: 1,
       minHeight: 44,
       fontSize: 15,
@@ -221,6 +222,7 @@ function createClientsStyles(
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 15,
+      color: C.textPrimary,
       backgroundColor: C.background,
     },
     inputMultiline: {
@@ -684,6 +686,8 @@ export default function ClientsScreen() {
                 placeholder="Phone number"
                 placeholderTextColor={C.textMuted}
                 keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
                 autoCorrect={false}
                 spellCheck={false}
               />

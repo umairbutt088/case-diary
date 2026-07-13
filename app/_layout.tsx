@@ -30,12 +30,25 @@ const NavigationDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: "#FFFFFF",
-    background: "#000000",
-    card: "#3A3A3C",
-    text: "#FFFFFF",
-    border: "#48484A",
+    primary: "#E8C872",
+    background: "#0F1118",
+    card: "#1C1F28",
+    text: "#F5F5F7",
+    border: "#3A3D47",
     notification: "#FF453A",
+  },
+};
+
+const NavigationLightTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: "#A67C2D",
+    background: "#F9F9FB",
+    card: "#FFFFFF",
+    text: "#101828",
+    border: "#D0D5DD",
+    notification: "#D92D20",
   },
 };
 
@@ -58,7 +71,7 @@ function RootLayoutInner() {
     ? colors.background
     : colors.background;
 
-  const navigationTheme = isDark ? NavigationDarkTheme : DefaultTheme;
+  const navigationTheme = isDark ? NavigationDarkTheme : NavigationLightTheme;
   const copilotOverlay = "svg";
   const copilotVerticalOffset = Platform.OS === "android"
     ? RNStatusBar.currentHeight ?? 0

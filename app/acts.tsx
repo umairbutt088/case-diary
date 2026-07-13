@@ -53,6 +53,7 @@ function createActsStyles(C: AppColors) {
       marginBottom: 8,
     },
     searchInput: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 12,

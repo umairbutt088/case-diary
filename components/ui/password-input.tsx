@@ -45,6 +45,12 @@ export function PasswordInput({
     <>
       <View style={styles.wrapper}>
         <TextInput
+          placeholderTextColor={C.textMuted}
+          secureTextEntry={!show}
+          onChangeText={handleChange}
+          autoCorrect={false}
+          spellCheck={false}
+          {...rest}
           style={[
             styles.input,
             {
@@ -52,13 +58,8 @@ export function PasswordInput({
               backgroundColor: lightBackground ? C.pureWhite : "transparent",
             },
             style,
+            { color: C.textPrimary },
           ]}
-          placeholderTextColor={C.textMuted}
-          secureTextEntry={!show}
-          onChangeText={handleChange}
-          autoCorrect={false}
-          spellCheck={false}
-          {...rest}
         />
         <Pressable
           style={styles.eye}

@@ -86,7 +86,7 @@ export const darkAppColors: AppColors = {
 
 export const APPEARANCE_STORAGE_KEY = "@legal_diary/appearance_preference";
 
-export type AppearancePreference = "light" | "dark";
+export type AppearancePreference = "system" | "light" | "dark";
 
 /**
  * Bottom sheets and centered modals: in dark mode use a surface darker than

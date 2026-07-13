@@ -73,6 +73,7 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
       marginBottom: 8,
     },
     input: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 10,

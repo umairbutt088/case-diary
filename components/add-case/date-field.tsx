@@ -14,15 +14,15 @@ import { useThemePalette } from "@/hooks/use-theme-palette";
 function buildDateFieldCalendarTheme(C: AppColors, modalSheet: string) {
   return {
     calendarBackground: modalSheet,
-    textSectionTitleColor: C.black,
-    selectedDayBackgroundColor: C.black,
-    selectedDayTextColor: C.pureWhite,
+    textSectionTitleColor: C.textSecondary,
+    selectedDayBackgroundColor: C.themeBlack,
+    selectedDayTextColor: C.textInverse,
     todayTextColor: C.themeRed,
-    dayTextColor: C.black,
-    textDisabledColor: C.gray40,
-    textInactiveColor: C.gray40,
-    monthTextColor: C.black,
-    arrowColor: C.black,
+    dayTextColor: C.textPrimary,
+    textDisabledColor: C.textMuted,
+    textInactiveColor: C.textMuted,
+    monthTextColor: C.textPrimary,
+    arrowColor: C.textPrimary,
   };
 }
 

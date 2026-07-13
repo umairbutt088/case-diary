@@ -87,6 +87,7 @@ function createJudgeNameSelectorStyles(C: AppColors, onPrimary: string) {
       padding: 12,
     },
     searchInput: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 10,

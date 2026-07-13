@@ -70,6 +70,7 @@ function createCaseSearchStyles(C: AppColors, modalSheet: string) {
       fontWeight: "600",
     },
     searchInput: {
+      color: C.textPrimary,
       flex: 1,
       fontSize: 14,
       paddingVertical: 10,

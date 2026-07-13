@@ -61,6 +61,7 @@ function createFormFieldWithHintStyles(C: AppColors) {
     input: {
       flex: 1,
       fontSize: 16,
+      color: C.textPrimary,
       paddingVertical: 12,
       minHeight: 44,
       maxHeight: 120,
@@ -104,7 +105,7 @@ export function FormFieldWithHint({
 }: Props) {
   const C = useThemePalette();
   const styles = useMemo(() => createFormFieldWithHintStyles(C), [C]);
-  const ph = placeholderTextColor ?? C.gray50;
+  const ph = placeholderTextColor ?? C.textMuted;
 
   return (
     <View style={styles.wrap}>
@@ -122,7 +123,7 @@ export function FormFieldWithHint({
         ]}
       >
         <TextInput
-          style={[styles.input, multiline && styles.inputMultiline, inputStyle]}
+          style={[styles.input, multiline && styles.inputMultiline, inputStyle, { color: C.textPrimary }]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

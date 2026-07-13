@@ -161,6 +161,7 @@ function createProfileStyles(C: AppColors) {
       marginTop: 4,
     },
     input: {
+      color: C.textPrimary,
       borderWidth: 1,
       borderColor: C.borderGray,
       borderRadius: 10,
@@ -332,7 +333,7 @@ export default function ProfileScreen() {
   });
 
   const C = useThemePalette();
-  const { isDark, setPreference } = useAppTheme();
+  const { preference, setPreference } = useAppTheme();
   const styles = useMemo(() => createProfileStyles(C), [C]);
 
   const fetchProfile = useCallback(async () => {
@@ -681,6 +682,8 @@ export default function ProfileScreen() {
                 placeholder="Phone number"
                 placeholderTextColor={C.textMuted}
                 keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
                 autoCorrect={false}
                 spellCheck={false}
               />
@@ -745,12 +748,18 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <SectionTitle styles={styles} title="Appearance" />
           <SegmentedTwoOption<AppearancePreference>
-            value={isDark ? "dark" : "light"}
+            value={preference}
             onChange={(v) => void setPreference(v)}
-            left={{ label: "Light", value: "light" }}
-            right={{ label: "Dark", value: "dark" }}
+            options={[
+              { label: "System", value: "system" },
+              { label: "Light", value: "light" },
+              { label: "Dark", value: "dark" },
+            ]}
             accessibilityLabel="Appearance"
           />
+          <ThemedText type="muted" style={styles.reminderHint}>
+            System follows your device light or dark setting.
+          </ThemedText>
         </View>
       ) : null}
 

@@ -39,17 +39,17 @@ const WalkthroughableView = walkthroughable(View);
 
 function buildCalendarTheme(C: AppColors) {
   return {
-    calendarBackground: C.pureWhite,
-    textSectionTitleColor: C.black,
+    calendarBackground: C.background,
+    textSectionTitleColor: C.textSecondary,
     selectedDayBackgroundColor: "transparent",
-    selectedDayTextColor: C.black,
+    selectedDayTextColor: C.textPrimary,
     todayBackgroundColor: "transparent",
     todayTextColor: C.themeRed,
-    dayTextColor: C.black,
-    textDisabledColor: C.gray40,
-    textInactiveColor: C.gray40,
-    monthTextColor: C.black,
-    arrowColor: C.black,
+    dayTextColor: C.textPrimary,
+    textDisabledColor: C.textMuted,
+    textInactiveColor: C.textMuted,
+    monthTextColor: C.textPrimary,
+    arrowColor: C.textPrimary,
     textDayFontWeight: "400" as const,
     textMonthFontWeight: "600" as const,
     textDayHeaderFontWeight: "500" as const,
@@ -105,16 +105,18 @@ function getMarkedDates(
       marked[dateString] = {
         selected: true,
         selectedColor: "transparent",
-        selectedTextColor: C.black,
+        selectedTextColor: C.textPrimary,
         caseCount,
         customStyles: {
           container: {
             borderWidth: 2,
-            borderColor: C.cream60,
+            borderColor: C.textAccent,
             borderRadius: 20,
             backgroundColor: "transparent",
           },
-          text: {},
+          text: {
+            color: C.textPrimary,
+          },
         },
       };
     } else if (hasCase) {
@@ -126,7 +128,7 @@ function getMarkedDates(
             borderRadius: 20,
           },
           text: {
-            color: C.gray30,
+            color: C.textPrimary,
           },
         },
       };
@@ -139,23 +141,34 @@ function getMarkedDates(
           },
         },
       };
+    } else {
+      marked[dateString] = {
+        caseCount: 0,
+        customStyles: {
+          text: {
+            color: C.textPrimary,
+          },
+        },
+      };
     }
   }
 
-  if (!marked[selectedDate]) {
+  if (!marked[selectedDate] || !(marked[selectedDate] as { selected?: boolean }).selected) {
     marked[selectedDate] = {
       selected: true,
       selectedColor: "transparent",
-      selectedTextColor: C.black,
+      selectedTextColor: C.textPrimary,
       caseCount: dateToCount[selectedDate] ?? 0,
       customStyles: {
         container: {
           borderWidth: 2,
-          borderColor: C.cream60,
+          borderColor: C.textAccent,
           borderRadius: 20,
           backgroundColor: "transparent",
         },
-        text: {},
+        text: {
+          color: C.textPrimary,
+        },
       },
     };
   }
@@ -181,13 +194,15 @@ function createCalendarDayStyles(C: AppColors) {
     },
     selected: {
       borderWidth: 2,
-      borderColor: C.cream60,
+      borderColor: C.textAccent,
     },
     text: {
       fontSize: 15,
+      color: C.textPrimary,
     },
     selectedText: {
       fontWeight: "600",
+      color: C.textPrimary,
     },
     badge: {
       position: "absolute",
@@ -308,7 +323,7 @@ function createCalendarScreenStyles(C: AppColors) {
       paddingBottom: 24,
     },
     calendarWrap: {
-      backgroundColor: C.pureWhite,
+      backgroundColor: C.background,
       paddingHorizontal: 8,
       borderRadius: 0,
     },

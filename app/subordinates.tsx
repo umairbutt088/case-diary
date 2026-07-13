@@ -104,6 +104,7 @@ function createStyles(C: AppColors) {
       backgroundColor: C.background,
       paddingHorizontal: 12,
       fontSize: 14,
+      color: C.textPrimary,
     },
     addButton: {
       minWidth: 88,
@@ -559,6 +560,12 @@ export default function SubordinatesScreen() {
                             value={Boolean(row[`can_${item.key}` as keyof SubordinateLinkRow])}
                             onValueChange={(value) => void setPermission(row.id, item.key, value)}
                             disabled={!row.is_active || savingId === row.id}
+                            trackColor={{
+                              false: C.borderGray,
+                              true: C.textPrimary,
+                            }}
+                            thumbColor={C.background}
+                            ios_backgroundColor={C.borderGray}
                           />
                         </View>
                       ))}

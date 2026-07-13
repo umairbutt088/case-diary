@@ -12,15 +12,15 @@ function createSegmentedStyles(C: AppColors) {
       backgroundColor: "transparent",
       width: "100%",
       paddingVertical: 10,
+      paddingHorizontal: 8,
       justifyContent: "space-around",
+      gap: 6,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: C.borderGray,
     },
-    btnWrapper: {
-      width: "45%",
-    },
     btn: {
+      flex: 1,
       paddingVertical: 10,
       alignItems: "center",
       borderRadius: 12,
@@ -33,7 +33,7 @@ function createSegmentedStyles(C: AppColors) {
       borderColor: C.themeBlack,
     },
     text: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: "600",
     },
     textActive: {
@@ -50,26 +50,31 @@ export type SegmentedOption<T extends string = string> = {
 type Props<T extends string> = {
   value: T;
   onChange: (value: T) => void;
-  left: SegmentedOption<T>;
-  right: SegmentedOption<T>;
-  /** Optional a11y hint for the group */
+  /** Prefer `options` for 2+ choices. */
+  options?: SegmentedOption<T>[];
+  /** @deprecated Use `options` instead. */
+  left?: SegmentedOption<T>;
+  /** @deprecated Use `options` instead. */
+  right?: SegmentedOption<T>;
   accessibilityLabel?: string;
 };
 
 /**
- * Two-option segmented control (same visual pattern as Home Today / Weekly).
+ * Segmented control for 2+ options (Appearance, Today/Weekly, etc.).
  */
 export function SegmentedTwoOption<T extends string>({
   value,
   onChange,
+  options,
   left,
   right,
   accessibilityLabel = "Choose an option",
 }: Props<T>) {
   const C = useThemePalette();
   const styles = useMemo(() => createSegmentedStyles(C), [C]);
-  const leftSelected = value === left.value;
-  const rightSelected = value === right.value;
+  const items =
+    options ??
+    (left && right ? [left, right] : ([] as SegmentedOption<T>[]));
 
   return (
     <View
@@ -77,32 +82,26 @@ export function SegmentedTwoOption<T extends string>({
       accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
     >
-      <View style={styles.btnWrapper}>
-        <Pressable
-          style={[styles.btn, leftSelected && styles.btnActive]}
-          onPress={() => onChange(left.value)}
-          accessibilityRole="radio"
-          accessibilityState={{ checked: leftSelected }}
-          accessibilityLabel={left.label}
-        >
-          <ThemedText style={[styles.text, leftSelected && styles.textActive]}>
-            {left.label}
-          </ThemedText>
-        </Pressable>
-      </View>
-      <View style={styles.btnWrapper}>
-        <Pressable
-          style={[styles.btn, rightSelected && styles.btnActive]}
-          onPress={() => onChange(right.value)}
-          accessibilityRole="radio"
-          accessibilityState={{ checked: rightSelected }}
-          accessibilityLabel={right.label}
-        >
-          <ThemedText style={[styles.text, rightSelected && styles.textActive]}>
-            {right.label}
-          </ThemedText>
-        </Pressable>
-      </View>
+      {items.map((item) => {
+        const selected = value === item.value;
+        return (
+          <Pressable
+            key={item.value}
+            style={[styles.btn, selected && styles.btnActive]}
+            onPress={() => onChange(item.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            accessibilityLabel={item.label}
+          >
+            <ThemedText
+              type="secondary"
+              style={[styles.text, selected && styles.textActive]}
+            >
+              {item.label}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

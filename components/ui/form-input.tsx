@@ -42,6 +42,11 @@ export function FormInput({
   return (
     <>
       <TextInput
+        placeholderTextColor={C.textMuted}
+        onChangeText={handleChange}
+        autoCorrect={false}
+        spellCheck={false}
+        {...rest}
         style={[
           styles.input,
           {
@@ -49,12 +54,8 @@ export function FormInput({
             backgroundColor: lightBackground ? C.pureWhite : "transparent",
           },
           style,
+          { color: C.textPrimary },
         ]}
-        placeholderTextColor={C.textMuted}
-        onChangeText={handleChange}
-        autoCorrect={false}
-        spellCheck={false}
-        {...rest}
       />
       {error ? <ThemedText style={themed.error}>{error}</ThemedText> : null}
     </>

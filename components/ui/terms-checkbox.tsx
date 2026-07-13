@@ -75,7 +75,7 @@ export function TermsCheckbox({
           <MaterialIcons
             name={checked ? "check-box" : "check-box-outline-blank"}
             size={24}
-            color={checked ? C.themeBlack : C.gray50}
+            color={checked ? C.textPrimary : C.textSecondary}
           />
         </Pressable>
         <View style={styles.labelWrap}>
