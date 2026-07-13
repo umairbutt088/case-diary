@@ -108,7 +108,6 @@ function createEditCaseStyles(C: AppColors, onPrimary: string) {
       letterSpacing: 0.5,
     },
     fieldError: {
-      color: C.themeRed,
       fontSize: 14,
       marginTop: 4,
       marginBottom: 4,
@@ -132,7 +131,6 @@ function createEditCaseStyles(C: AppColors, onPrimary: string) {
       color: onPrimary,
     },
     saveError: {
-      color: C.themeRed,
       fontSize: 14,
       marginTop: 12,
     },
@@ -171,7 +169,6 @@ function createEditCaseStyles(C: AppColors, onPrimary: string) {
       padding: 24,
     },
     errorText: {
-      color: C.themeRed,
       fontSize: 16,
     },
   });
@@ -513,7 +510,7 @@ export default function EditCaseScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Edit case" />
         <View style={styles.centered}>
-          <ThemedText style={styles.errorText}>
+          <ThemedText type="danger" style={styles.errorText}>
             {error || "Case not found"}
           </ThemedText>
         </View>
@@ -572,7 +569,7 @@ export default function EditCaseScreen() {
               onChange={handleCaseTypeChange}
             />
             {errors.caseType ? (
-              <ThemedText style={styles.fieldError}>{errors.caseType}</ThemedText>
+              <ThemedText type="danger" style={styles.fieldError}>{errors.caseType}</ThemedText>
             ) : null}
           </FormField>
           <AddOtherCaseTypeModal
@@ -597,7 +594,7 @@ export default function EditCaseScreen() {
                 onChange={handleCaseSubTypeChange}
               />
               {errors.caseSubType ? (
-                <ThemedText style={styles.fieldError}>
+                <ThemedText type="danger" style={styles.fieldError}>
                   {errors.caseSubType}
                 </ThemedText>
               ) : null}
@@ -658,7 +655,7 @@ export default function EditCaseScreen() {
           <ThemedText type="accent" style={styles.sectionTitle}>Client</ThemedText>
           <FormField label="My Client is" required>
             {errors.myClientIs ? (
-              <ThemedText style={styles.fieldError}>
+              <ThemedText type="danger" style={styles.fieldError}>
                 {errors.myClientIs}
               </ThemedText>
             ) : null}
@@ -770,7 +767,7 @@ export default function EditCaseScreen() {
           ) : null}
 
           {saveError ? (
-            <ThemedText style={styles.saveError}>{saveError}</ThemedText>
+            <ThemedText type="danger" style={styles.saveError}>{saveError}</ThemedText>
           ) : null}
           <View style={styles.buttons}>
             <Bounceable

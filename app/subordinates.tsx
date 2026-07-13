@@ -188,19 +188,17 @@ function createStyles(C: AppColors) {
       alignItems: "center",
     },
     dangerBtnText: {
-      color: C.themeRed,
       fontWeight: "700",
       fontSize: 14,
     },
     enableBtn: {
       borderWidth: 1,
-      borderColor: "#2E7D32",
+      borderColor: C.themeGreen,
       borderRadius: 10,
       paddingVertical: 10,
       alignItems: "center",
     },
     enableBtnText: {
-      color: "#2E7D32",
       fontWeight: "700",
       fontSize: 14,
     },
@@ -213,7 +211,6 @@ function createStyles(C: AppColors) {
     disabledBadgeText: {
       fontSize: 11,
       fontWeight: "700",
-      color: C.themeRed,
     },
     cardInactive: {
       opacity: 0.72,
@@ -529,7 +526,7 @@ export default function SubordinatesScreen() {
                         </ThemedText>
                         {!row.is_active ? (
                           <View style={s.disabledBadge}>
-                            <ThemedText type="default" style={s.disabledBadgeText}>Disabled</ThemedText>
+                            <ThemedText type="danger" style={s.disabledBadgeText}>Disabled</ThemedText>
                           </View>
                         ) : null}
                       </View>
@@ -577,7 +574,7 @@ export default function SubordinatesScreen() {
                           onPress={() => void setLinkActive(row.id, false)}
                           disabled={savingId === row.id}
                         >
-                          <ThemedText style={s.dangerBtnText}>Disable subordinate</ThemedText>
+                          <ThemedText type="danger" style={s.dangerBtnText}>Disable subordinate</ThemedText>
                         </Pressable>
                       ) : (
                         <Pressable
@@ -586,9 +583,9 @@ export default function SubordinatesScreen() {
                           disabled={savingId === row.id}
                         >
                           {savingId === row.id ? (
-                            <ActivityIndicator size="small" color="#2E7D32" />
+                            <ActivityIndicator size="small" color={C.themeGreen} />
                           ) : (
-                            <ThemedText style={s.enableBtnText}>Enable subordinate</ThemedText>
+                            <ThemedText type="success" style={s.enableBtnText}>Enable subordinate</ThemedText>
                           )}
                         </Pressable>
                       )}
@@ -600,7 +597,7 @@ export default function SubordinatesScreen() {
                         {savingId === row.id ? (
                           <ActivityIndicator size="small" color={C.themeRed} />
                         ) : (
-                          <ThemedText style={s.dangerBtnText}>Remove subordinate</ThemedText>
+                          <ThemedText type="danger" style={s.dangerBtnText}>Remove subordinate</ThemedText>
                         )}
                       </Pressable>
                     </View>

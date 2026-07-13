@@ -65,7 +65,6 @@ function createHearingsStyles(C: AppColors) {
     },
     errorText: {
       marginBottom: 10,
-      color: C.themeRed,
       fontSize: 14,
     },
     loadingMoreWrap: {
@@ -196,7 +195,7 @@ export default function CaseHearingsScreen() {
         ListHeaderComponent={
           <>
             <ThemedText type="accent" style={styles.caseTitle}>{title}</ThemedText>
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+            {error ? <ThemedText type="danger" style={styles.errorText}>{error}</ThemedText> : null}
           </>
         }
         ListEmptyComponent={

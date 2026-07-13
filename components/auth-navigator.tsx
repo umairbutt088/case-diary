@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRootNavigationState, useRouter } from "expo-router";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -39,22 +39,38 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
     isLoading,
     isAccessLoading,
     expectsPasswordChange,
+    onboardingCompleted,
+    postOnboardingRoute,
   } = useAuth();
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
+  const rootReady = !!rootNavigationState?.key;
   const C = useThemePalette();
   const overlayStyles = useMemo(() => createAuthOverlayStyles(C), [C]);
 
   const isAuthenticated = !!session?.user;
-  const ready = !isLoading && (!isAuthenticated || !isAccessLoading);
-  const targetRoute = useMemo(
-    () =>
-      isAuthenticated && expectsPasswordChange
-        ? "/(auth)/reset-password"
-        : isAuthenticated
-          ? "/(tabs)"
-          : "/(auth)/login",
-    [expectsPasswordChange, isAuthenticated],
-  );
+  const ready =
+    !isLoading &&
+    onboardingCompleted !== null &&
+    rootReady &&
+    (!isAuthenticated || !isAccessLoading);
+  const targetRoute = useMemo(() => {
+    if (isAuthenticated && expectsPasswordChange) {
+      return "/(auth)/reset-password";
+    }
+    if (isAuthenticated) {
+      return "/(tabs)";
+    }
+    if (onboardingCompleted === false) {
+      return "/(auth)/onboarding";
+    }
+    return postOnboardingRoute;
+  }, [
+    expectsPasswordChange,
+    isAuthenticated,
+    onboardingCompleted,
+    postOnboardingRoute,
+  ]);
 
   /** After `ready`, cover the stack until `router.replace` has visibly applied (prevents one frame of tabs/home). */
   const [routeSettled, setRouteSettled] = useState(false);

@@ -372,7 +372,6 @@ function createCalendarScreenStyles(C: AppColors) {
     },
     errorText: {
       fontSize: 14,
-      color: C.themeRed,
       marginBottom: 12,
     },
     retryButton: {
@@ -656,7 +655,7 @@ export default function CalendarScreen() {
           </ThemedText>
           {error ? (
             <View style={styles.errorWrap}>
-              <ThemedText style={styles.errorText}>{error}</ThemedText>
+              <ThemedText type="danger" style={styles.errorText}>{error}</ThemedText>
               <Pressable
                 style={styles.retryButton}
                 onPress={() => {

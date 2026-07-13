@@ -234,7 +234,7 @@ export function CaseFeeDetailCard({
       />
 
       {paymentError && !showPaymentModal ? (
-        <ThemedText type="muted" style={[styles.emptyText, { marginHorizontal: 16 }]}>
+        <ThemedText type="danger" style={[styles.emptyText, { marginHorizontal: 16 }]}>
           {paymentError}
         </ThemedText>
       ) : null}

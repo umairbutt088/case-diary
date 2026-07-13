@@ -58,6 +58,7 @@ type HomeWidget = {
   subtitle: string;
   icon: keyof typeof MaterialIcons.glyphMap;
   count?: number;
+  tone?: "warning" | "success";
   onPress: () => void;
   disabled?: boolean;
 };
@@ -599,6 +600,7 @@ export default function HomeScreen() {
         subtitle: "Open today's hearings",
         icon: "today",
         count: hearingsToday.length,
+        tone: "warning",
         onPress: () => openFromHome("/cases-overview", { filter: "today" }),
       },
       {
@@ -633,6 +635,7 @@ export default function HomeScreen() {
         subtitle: "Finished matters",
         icon: "archive",
         count: disposedCount,
+        tone: "success",
         onPress: () => openFromHome("/disposed-cases"),
       },
       {
@@ -833,6 +836,8 @@ export default function HomeScreen() {
     </Modal>
   );
 
+  const toneColors = { warning: C.themeWarm, success: C.themeGreen } as const;
+
   const renderWidget = (widget: HomeWidget) => (
     (() => {
       const isSelectedWidget = selectedWidgetKey === widget.key;
@@ -876,8 +881,18 @@ export default function HomeScreen() {
           />
         </View>
         {typeof widget.count === "number" && widget.count > 0 ? (
-          <View style={styles.widgetCountPill}>
-            <ThemedText style={styles.widgetCountText} numberOfLines={1}>
+          <View
+            style={[
+              styles.widgetCountPill,
+              widget.tone ? { backgroundColor: toneColors[widget.tone] + "22", borderWidth: 1, borderColor: toneColors[widget.tone] } : null,
+            ]}
+          >
+            <ThemedText
+              style={styles.widgetCountText}
+              numberOfLines={1}
+              lightColor={widget.tone ? toneColors[widget.tone] : undefined}
+              darkColor={widget.tone ? toneColors[widget.tone] : undefined}
+            >
               {widget.key === "notes" ? String(widget.count) : formatWidgetCount(widget.count)}
             </ThemedText>
           </View>

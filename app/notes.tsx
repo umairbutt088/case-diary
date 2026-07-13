@@ -175,7 +175,6 @@ function createNotesStyles(C: AppColors, onPrimary: string) {
     noteStatusText: {
       fontSize: 11,
       fontWeight: "700",
-      color: C.zodiacColour,
     },
     noteStatusTextDone: {
     },
@@ -413,7 +412,10 @@ export default function NotesScreen() {
                       {note.content}
                     </ThemedText>
                     <View style={[styles.noteStatusBadge, note.isDone && styles.noteStatusBadgeDone]}>
-                      <ThemedText type="muted"
+                      <ThemedText
+                        type={note.isDone ? "success" : "muted"}
+                        lightColor={note.isDone ? undefined : C.zodiacColour}
+                        darkColor={note.isDone ? undefined : C.zodiacColour}
                         style={[styles.noteStatusText, note.isDone && styles.noteStatusTextDone]}
                       >
                         {note.isDone ? "Done" : "Active"}

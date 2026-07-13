@@ -30,7 +30,7 @@ export function CaseFeePaymentListItem({
   return (
     <View style={styles.paymentItem}>
       <View style={styles.paymentTop}>
-        <ThemedText type="default" style={styles.paymentAmount}>
+        <ThemedText type="success" style={styles.paymentAmount}>
           {formatFeeAmount(payment.amount)}
         </ThemedText>
         <ThemedText type="default" style={styles.paymentDate}>

@@ -74,7 +74,6 @@ function createStyles(C: AppColors, onPrimary: string, modalSheet: string) {
     },
     errorText: {
       fontSize: 14,
-      color: C.themeRed,
       marginTop: 8,
     },
     saveBtn: {
@@ -199,7 +198,7 @@ export function CaseFeePaymentModal({
                 numberOfLines={3}
               />
               {error ? (
-                <ThemedText style={styles.errorText}>{error}</ThemedText>
+                <ThemedText type="danger" style={styles.errorText}>{error}</ThemedText>
               ) : null}
               <Pressable
                 style={styles.saveBtn}

@@ -88,7 +88,6 @@ function createAddDateToCaseStyles(C: AppColors) {
     },
     errorText: {
       fontSize: 14,
-      color: C.themeRed,
       paddingHorizontal: 20,
       marginBottom: 8,
     },
@@ -305,7 +304,7 @@ export default function AddDateToCaseScreen() {
         </View>
 
         {error ? (
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          <ThemedText type="danger" style={styles.errorText}>{error}</ThemedText>
         ) : null}
 
         {loading ? (

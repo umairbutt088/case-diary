@@ -75,6 +75,11 @@ type AuthContextValue = {
   clearPasswordRecoveryExpectation: () => Promise<void>;
   onboardingCompleted: boolean | null;
   setOnboardingCompleted: (value: boolean) => Promise<void>;
+  /** Where to land after finishing first-run onboarding. */
+  postOnboardingRoute: "/(auth)/login" | "/(auth)/signup";
+  completeOnboarding: (
+    route?: "/(auth)/login" | "/(auth)/signup",
+  ) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -96,6 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [onboardingCompleted, setOnboardingCompletedState] = useState<
     boolean | null
   >(null);
+  const [postOnboardingRoute, setPostOnboardingRoute] = useState<
+    "/(auth)/login" | "/(auth)/signup"
+  >("/(auth)/login");
 
   const loadOnboardingFlag = useCallback(async () => {
     try {
@@ -113,6 +121,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     setOnboardingCompletedState(value);
   }, []);
+
+  const completeOnboarding = useCallback(
+    async (route: "/(auth)/login" | "/(auth)/signup" = "/(auth)/login") => {
+      setPostOnboardingRoute(route);
+      await setOnboardingCompleted(true);
+    },
+    [setOnboardingCompleted],
+  );
 
   const clearPasswordRecoveryExpectation = useCallback(async () => {
     await AsyncStorage.removeItem(EXPECTS_PASSWORD_CHANGE_KEY);
@@ -452,6 +468,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearPasswordRecoveryExpectation,
       onboardingCompleted,
       setOnboardingCompleted,
+      postOnboardingRoute,
+      completeOnboarding,
       signOut,
     }),
     [
@@ -469,6 +487,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearPasswordRecoveryExpectation,
       onboardingCompleted,
       setOnboardingCompleted,
+      postOnboardingRoute,
+      completeOnboarding,
       signOut,
     ]
   );
