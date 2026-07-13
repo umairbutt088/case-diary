@@ -196,9 +196,7 @@ function createCaseCardStyles(C: AppColors) {
     },
     overdueBadgeText: {
       fontSize: 10,
-      fontWeight: "700",
       letterSpacing: 0.3,
-      color: C.themeRed,
     },
     actions: {
       flexDirection: "row",
@@ -318,11 +316,9 @@ export function CaseCard({
             </View>
             <View style={[styles.compactCell, styles.compactCellRight]}>
               <ThemedText type="caption" style={styles.compactDateLabel}>Next</ThemedText>
-              <ThemedText type="defaultSemiBold"
+              <ThemedText type={isOverdue ? "danger" : "defaultSemiBold"}
                 style={[styles.compactDateValue, isOverdue && styles.nextDateTextOverdue]}
                 numberOfLines={1}
-                lightColor={isOverdue ? C.themeRed : C.black}
-                darkColor={isOverdue ? C.themeRed : C.black}
               >
                 {nextDate}
               </ThemedText>
@@ -434,10 +430,8 @@ export function CaseCard({
                   color={isOverdue ? C.themeRed : C.gray50}
                   style={styles.nextDateIcon}
                 />
-                <ThemedText type="default"
+                <ThemedText type={isOverdue ? "danger" : "secondary"}
                   style={[styles.nextDateText, isOverdue && styles.nextDateTextOverdue]}
-                  lightColor={isOverdue ? C.themeRed : C.gray50}
-                  darkColor={isOverdue ? C.themeRed : C.gray50}
                 >
                   Next: {nextDate}
                 </ThemedText>
@@ -452,7 +446,7 @@ export function CaseCard({
                     accessibilityRole="button"
                     accessibilityLabel="Add proceeding to update next hearing"
                   >
-                    <ThemedText type="default" style={styles.overdueBadgeText}>OVERDUE</ThemedText>
+                    <ThemedText type="danger" style={styles.overdueBadgeText}>OVERDUE</ThemedText>
                   </Bounceable>
                 ) : null}
               </View>

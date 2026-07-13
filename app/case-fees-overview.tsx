@@ -177,12 +177,6 @@ function createStyles(C: AppColors) {
       fontSize: 14,
       fontWeight: "700",
     },
-    feeValueRemaining: {
-      color: C.themeRed,
-    },
-    feeValueComplete: {
-      color: C.themeGreen,
-    },
     noFeeText: {
       marginTop: 8,
       fontSize: 13,
@@ -375,21 +369,21 @@ export default function CaseFeesOverviewScreen() {
             </View>
             <View style={styles.feeStat}>
               <ThemedText type="label" style={styles.feeLabel}>Received</ThemedText>
-              <ThemedText type="defaultSemiBold" style={styles.feeValue}>
+              <ThemedText type="success" style={styles.feeValue}>
                 {formatFeeAmount(item.fee_received)}
               </ThemedText>
             </View>
             <View style={styles.feeStat}>
               <ThemedText type="label" style={styles.feeLabel}>Remaining</ThemedText>
               <ThemedText
-                style={[
-                  styles.feeValue,
+                type={
                   remaining != null && remaining > 0
-                    ? styles.feeValueRemaining
+                    ? "danger"
                     : remaining === 0
-                      ? styles.feeValueComplete
-                      : null,
-                ]}
+                      ? "success"
+                      : "defaultSemiBold"
+                }
+                style={styles.feeValue}
               >
                 {formatFeeAmount(remaining)}
               </ThemedText>

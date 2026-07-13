@@ -242,12 +242,15 @@ export default function CaseFeePaymentsScreen() {
                   </ThemedText>
                 </View>
                 <View style={styles.summaryPill}>
-                  <ThemedText type="default" style={styles.summaryPillText}>
+                  <ThemedText type="success" style={styles.summaryPillText}>
                     Received {formatFeeAmount(caseData.fee_received)}
                   </ThemedText>
                 </View>
                 <View style={styles.summaryPill}>
-                  <ThemedText type="default" style={styles.summaryPillText}>
+                  <ThemedText
+                    type={remaining != null && remaining > 0 ? "danger" : "success"}
+                    style={styles.summaryPillText}
+                  >
                     Remaining {formatFeeAmount(remaining)}
                   </ThemedText>
                 </View>

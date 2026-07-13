@@ -147,12 +147,10 @@ function createAddCaseFlowStyles(C: AppColors, onPrimary: string) {
       minHeight: 100,
     },
     saveError: {
-      color: C.themeRed,
       fontSize: 14,
       marginBottom: 12,
     },
     fieldError: {
-      color: C.themeRed,
       fontSize: 14,
       marginTop: 4,
       marginBottom: 4,
@@ -728,7 +726,7 @@ export default function AddCaseFlowScreen() {
                     onChange={handleCaseTypeChange}
                   />
                   {errors.caseType ? (
-                    <ThemedText style={styles.fieldError}>
+                    <ThemedText type="danger" style={styles.fieldError}>
                       {errors.caseType}
                     </ThemedText>
                   ) : null}
@@ -764,7 +762,7 @@ export default function AddCaseFlowScreen() {
                       onChange={handleCaseSubTypeChange}
                     />
                     {errors.caseSubType ? (
-                      <ThemedText style={styles.fieldError}>
+                      <ThemedText type="danger" style={styles.fieldError}>
                         {errors.caseSubType}
                       </ThemedText>
                     ) : null}
@@ -872,7 +870,7 @@ export default function AddCaseFlowScreen() {
               <WalkthroughableView collapsable={false}>
                 <FormField label="My Client is" required>
                   {errors.myClientIs ? (
-                    <ThemedText style={styles.fieldError}>
+                    <ThemedText type="danger" style={styles.fieldError}>
                       {errors.myClientIs}
                     </ThemedText>
                   ) : null}
@@ -1082,7 +1080,7 @@ export default function AddCaseFlowScreen() {
               </WalkthroughableView>
             </CopilotStep>
             {saveError ? (
-              <ThemedText style={styles.saveError}>{saveError}</ThemedText>
+              <ThemedText type="danger" style={styles.saveError}>{saveError}</ThemedText>
             ) : null}
             <View style={styles.buttons}>
               <CopilotStep

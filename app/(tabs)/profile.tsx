@@ -176,7 +176,6 @@ function createProfileStyles(C: AppColors) {
     },
     saveError: {
       fontSize: 14,
-      color: C.themeRed,
       marginTop: 12,
     },
     editButtons: {
@@ -208,7 +207,6 @@ function createProfileStyles(C: AppColors) {
     },
     errorText: {
       fontSize: 15,
-      color: C.themeRed,
       marginBottom: 16,
     },
     reminderHint: {
@@ -231,21 +229,14 @@ function createProfileStyles(C: AppColors) {
     tokenStatus: {
       flex: 1,
       fontSize: 14,
-      color: C.themeGreen,
     },
     tokenStatusMuted: {
       flex: 1,
       fontSize: 14,
     },
-    tokenSyncSuccess: {
+    tokenSyncMessage: {
       marginTop: 8,
       fontSize: 14,
-      color: C.themeGreen,
-    },
-    tokenSyncError: {
-      marginTop: 8,
-      fontSize: 14,
-      color: C.themeRed,
     },
     registerButton: {
       marginTop: 16,
@@ -582,7 +573,7 @@ export default function ProfileScreen() {
       </ThemedText> */}
 
       {error && !profile ? (
-        <ThemedText style={styles.errorText}>{error}</ThemedText>
+        <ThemedText type="danger" style={styles.errorText}>{error}</ThemedText>
       ) : (
         <View style={styles.card}>
           {/* Avatar & name */}
@@ -702,7 +693,7 @@ export default function ProfileScreen() {
               />
 
               {saveError ? (
-                <ThemedText style={styles.saveError}>{saveError}</ThemedText>
+                <ThemedText type="danger" style={styles.saveError}>{saveError}</ThemedText>
               ) : null}
               <View style={styles.editButtons}>
                 <Pressable
@@ -779,7 +770,7 @@ export default function ProfileScreen() {
             // Permission was denied by the user in OS settings
             <View style={styles.notifStatusRow}>
               <MaterialIcons name="notifications-off" size={18} color={C.themeRed} />
-              <ThemedText type="default" style={styles.tokenStatusMuted}>
+              <ThemedText type="danger" style={styles.tokenStatusMuted}>
                 Notifications are turned off for this app.
               </ThemedText>
             </View>
@@ -787,7 +778,7 @@ export default function ProfileScreen() {
             // Permission granted and token saved — fully active
             <View style={styles.notifStatusRow}>
               <MaterialIcons name="check-circle" size={18} color={C.themeGreen} />
-              <ThemedText type="default" style={styles.tokenStatus}>
+              <ThemedText type="success" style={styles.tokenStatus}>
                 Active — reminders are enabled.
               </ThemedText>
             </View>
@@ -795,7 +786,7 @@ export default function ProfileScreen() {
             // Permission granted (or undetermined) but token not yet saved
             <View style={styles.notifStatusRow}>
               <MaterialIcons name="notifications-none" size={18} color={C.themeWarm} />
-              <ThemedText type="default" style={styles.tokenStatusMuted}>
+              <ThemedText type="warning" style={styles.tokenStatusMuted}>
                 Not yet registered for reminders.
               </ThemedText>
             </View>
@@ -803,11 +794,8 @@ export default function ProfileScreen() {
 
           {tokenSyncMessage ? (
             <ThemedText
-              style={
-                tokenSyncMessage.startsWith("Registered")
-                  ? styles.tokenSyncSuccess
-                  : styles.tokenSyncError
-              }
+              type={tokenSyncMessage.startsWith("Registered") ? "success" : "danger"}
+              style={styles.tokenSyncMessage}
             >
               {tokenSyncMessage}
             </ThemedText>

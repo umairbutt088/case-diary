@@ -100,7 +100,6 @@ function createSettingsStyles(C: AppColors) {
       flex: 1,
       fontSize: 16,
       fontWeight: "600",
-      color: C.themeRed,
     },
     modalBackdrop: {
       flex: 1,
@@ -137,7 +136,6 @@ function createSettingsStyles(C: AppColors) {
     },
     modalError: {
       fontSize: 13,
-      color: C.themeRed,
       marginBottom: 12,
     },
     modalActions: {
@@ -427,7 +425,7 @@ export default function SettingsScreen() {
             accessibilityLabel="Delete account"
           >
             <View style={styles.rowLeading}>
-              <ThemedText style={styles.rowLabelDanger}>Delete account</ThemedText>
+              <ThemedText type="danger" style={styles.rowLabelDanger}>Delete account</ThemedText>
             </View>
             <MaterialIcons name="chevron-right" size={22} color={C.themeRed} />
           </Pressable>
@@ -468,7 +466,7 @@ export default function SettingsScreen() {
               editable={!deleteLoading}
             />
             {deleteError ? (
-              <ThemedText style={styles.modalError}>{deleteError}</ThemedText>
+              <ThemedText type="danger" style={styles.modalError}>{deleteError}</ThemedText>
             ) : null}
             <View style={styles.modalActions}>
               <Pressable

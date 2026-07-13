@@ -153,7 +153,6 @@ function createClientsStyles(
       gap: 10,
     },
     errorText: {
-      color: C.themeRed,
       fontSize: 14,
       textAlign: "center",
     },
@@ -231,7 +230,6 @@ function createClientsStyles(
     },
     formErrorText: {
       marginTop: 10,
-      color: C.themeRed,
       fontSize: 13,
     },
     saveBtn: {
@@ -581,7 +579,7 @@ export default function ClientsScreen() {
           </View>
         ) : error ? (
           <View style={styles.centered}>
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
+            <ThemedText type="danger" style={styles.errorText}>{error}</ThemedText>
             <Bounceable style={styles.retryBtn} onPress={() => void refreshClients()}>
               <ThemedText style={styles.retryBtnText}>Retry</ThemedText>
             </Bounceable>
@@ -717,7 +715,7 @@ export default function ClientsScreen() {
                 spellCheck={false}
               />
 
-              {formError ? <ThemedText style={styles.formErrorText}>{formError}</ThemedText> : null}
+              {formError ? <ThemedText type="danger" style={styles.formErrorText}>{formError}</ThemedText> : null}
 
               <Bounceable
                 style={styles.saveBtn}

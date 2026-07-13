@@ -12,7 +12,11 @@ export type ThemedTextType =
   | "secondary"
   | "muted"
   | "accent"
-  | "caption";
+  | "caption"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info";
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
@@ -37,6 +41,14 @@ function resolveTypeColor(
       return colors.textAccent;
     case "link":
       return colors.textLink;
+    case "success":
+      return colors.themeGreen;
+    case "warning":
+      return colors.themeWarm;
+    case "danger":
+      return colors.themeRed;
+    case "info":
+      return colors.btnBlue;
     default:
       return colors.textPrimary;
   }
@@ -123,5 +135,25 @@ const typeStyles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     fontWeight: "600",
+  },
+  success: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+  warning: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+  danger: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+  info: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "700",
   },
 });

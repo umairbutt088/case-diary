@@ -164,7 +164,6 @@ function createCaseDetailStyles(
     overduePillText: {
       fontSize: 12,
       fontWeight: "700",
-      color: C.themeRed,
       letterSpacing: 0.2,
     },
     historyItem: {
@@ -421,7 +420,6 @@ function createCaseDetailStyles(
     formErrorText: {
       marginTop: 10,
       fontSize: 13,
-      color: C.themeRed,
     },
     saveProceedingBtn: {
       marginTop: 12,
@@ -492,7 +490,6 @@ function createCaseDetailStyles(
       padding: 24,
     },
     errorText: {
-      color: C.themeRed,
       fontSize: 16,
     },
     deleteButton: {
@@ -528,9 +525,9 @@ function createCaseDetailStyles(
       marginBottom: 14,
       padding: 14,
       borderRadius: 12,
-      backgroundColor: C.grey100,
+      backgroundColor: C.themeGreen + "14",
       borderWidth: 1,
-      borderColor: C.borderGray,
+      borderColor: C.themeGreen + "55",
     },
     disposedBannerTitle: {
       fontSize: 15,
@@ -1037,7 +1034,7 @@ export default function CaseDetailScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader title="Error" />
         <View style={styles.centered}>
-          <ThemedText style={styles.errorText}>
+          <ThemedText type="danger" style={styles.errorText}>
             {error || "Case not found"}
           </ThemedText>
         </View>
@@ -1574,7 +1571,7 @@ export default function CaseDetailScreen() {
         <Animated.View entering={FadeInUp.duration(400).springify().damping(20)}>
           {isDisposed ? (
             <View style={styles.disposedBanner}>
-              <ThemedText type="accent" style={styles.disposedBannerTitle}>
+              <ThemedText type="success" style={styles.disposedBannerTitle}>
                 Disposed · {formatCaseDate(caseData.disposed_at?.slice(0, 10) ?? null)}
               </ThemedText>
               {caseData.disposal_note ? (
@@ -1703,7 +1700,7 @@ export default function CaseDetailScreen() {
                 accessibilityLabel="Overdue. Add proceeding"
               >
                 <MaterialIcons name="warning-amber" size={14} color={C.themeRed} />
-                <ThemedText type="default" style={styles.overduePillText}>OVERDUE</ThemedText>
+                <ThemedText type="danger" style={styles.overduePillText}>OVERDUE</ThemedText>
               </Bounceable>
             ) : null}
             <DetailRow s={styles} C={C} label="Current status" value={caseData.current_status} />
@@ -2030,7 +2027,7 @@ export default function CaseDetailScreen() {
               />
 
               {proceedingError ? (
-                <ThemedText style={styles.formErrorText}>{proceedingError}</ThemedText>
+                <ThemedText type="danger" style={styles.formErrorText}>{proceedingError}</ThemedText>
               ) : null}
 
               <Bounceable

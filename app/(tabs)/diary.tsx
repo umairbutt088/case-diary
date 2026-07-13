@@ -277,7 +277,6 @@ function createDiaryStyles(C: AppColors) {
       opacity: 0.8,
     },
     errorText: {
-      color: C.themeRed,
       marginTop: 8,
     },
     centered: {
@@ -701,7 +700,7 @@ export default function DiaryScreen() {
           />
         </CopilotStep>
         <View style={styles.container}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          <ThemedText type="danger" style={styles.errorText}>{error}</ThemedText>
         </View>
       </SafeAreaView>
     );
