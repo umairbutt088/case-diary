@@ -84,14 +84,15 @@ async function sendPush(
   retryCount = 0,
 ): Promise<ExpoPushResult> {
   const maxRetries = 1;
-  const deepLinkUrl = `legaldiary://calendar?date=${date}`;
+  const deepLinkUrl = `legaldiary://cases-overview?filter=today&date=${date}`;
   const payload = {
     to: token,
     title,
     body,
     sound: "default",
     data: {
-      screen: "calendar",
+      screen: "cases-overview",
+      filter: "today",
       date,
       url: deepLinkUrl,
     },

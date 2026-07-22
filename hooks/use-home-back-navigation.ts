@@ -14,16 +14,14 @@ export function useHomeBackNavigation() {
   const fromHome = useMemo(() => isFromHomeParam(params.from), [params.from]);
 
   const goBack = useCallback(() => {
-    if (fromHome) {
-      router.replace("/(tabs)");
-      return;
-    }
+    // Prefer pop: Home → push(cases-overview) → replace("/(tabs)") left a second
+    // Home under the first, so iOS swipe-back unstacked duplicate Homes.
     if (router.canGoBack()) {
       router.back();
       return;
     }
     router.replace("/(tabs)");
-  }, [fromHome, router]);
+  }, [router]);
 
   useFocusEffect(
     useCallback(() => {

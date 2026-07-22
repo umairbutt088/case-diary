@@ -11,6 +11,7 @@ const DENIED_ALERT_KEY = "@legal_diary/notif_denied_alert_shown";
 
 type NotificationRouteData = {
   screen?: string;
+  filter?: string;
   date?: string;
   url?: string;
 };
@@ -24,7 +25,12 @@ function extractDateFromDeepLink(url: string) {
 
 function hasNotificationDateTarget(data: NotificationRouteData | undefined): boolean {
   if (!data) return false;
-  if (data.screen === "calendar" && typeof data.date === "string") return true;
+  if (
+    (data.screen === "cases-overview" || data.screen === "calendar") &&
+    typeof data.date === "string"
+  ) {
+    return true;
+  }
   if (typeof data.url === "string" && data.url.startsWith("legaldiary://")) {
     return extractDateFromDeepLink(data.url) !== null;
   }
@@ -76,16 +82,19 @@ export function PushNotificationProvider({
   }, [session?.user?.id]);
 
   useEffect(() => {
-    const navigateToHomeToday = () => {
-      router.push("/(tabs)");
+    const navigateToTodayCases = () => {
+      router.push({
+        pathname: "/cases-overview",
+        params: { filter: "today", from: "home" },
+      });
     };
 
     const navigateFromData = (data: NotificationRouteData | undefined) => {
       if (!data) return;
 
-      // For hearing reminders, open Home (today-cases flow) instead of Calendar.
+      // Cause-list reminders open the Today Cases screen (same as the home widget).
       if (hasNotificationDateTarget(data)) {
-        navigateToHomeToday();
+        navigateToTodayCases();
         return;
       }
     };
