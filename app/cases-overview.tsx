@@ -28,6 +28,7 @@ import { useAuth } from "@/context/auth-context";
 import { useIsOnline } from "@/hooks/use-is-online";
 import { useHomeBackNavigation } from "@/hooks/use-home-back-navigation";
 import { useThemePalette } from "@/hooks/use-theme-palette";
+import { resolveCauseListDayMode } from "@/lib/cause-list-mode";
 import { getCachedCases, removeCachedCase, setCachedCases } from "@/lib/cases-cache";
 import { addPendingCaseDelete } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -185,11 +186,22 @@ function normalizeFilter(value: string | string[] | undefined): HomeFilter {
   return raw === "weekly" ? "weekly" : "today";
 }
 
+function normalizeParam(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === "string" && raw.length > 0 ? raw : undefined;
+}
+
 export default function CasesOverviewScreen() {
   const router = useRouter();
   const { goBack } = useHomeBackNavigation();
-  const params = useLocalSearchParams<{ filter?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    filter?: string | string[];
+    date?: string | string[];
+    from?: string | string[];
+  }>();
   const initialFilter = normalizeFilter(params.filter);
+  const notificationDate = normalizeParam(params.date);
+  const openedFromNotification = normalizeParam(params.from) === "notification";
 
   const isOnline = useIsOnline();
   const { session, effectiveOwnerId, can } = useAuth();
@@ -208,12 +220,29 @@ export default function CasesOverviewScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
+  const [dayModeTick, setDayModeTick] = useState(0);
 
   useEffect(() => {
     setFilter(initialFilter);
   }, [initialFilter]);
 
+  useFocusEffect(
+    useCallback(() => {
+      setDayModeTick((n) => n + 1);
+      const id = setInterval(() => setDayModeTick((n) => n + 1), 60_000);
+      return () => clearInterval(id);
+    }, []),
+  );
+
   const canTrashCase = can("edit_cases") && can("delete_cases");
+
+  const dayMode = useMemo(
+    () =>
+      resolveCauseListDayMode({
+        date: openedFromNotification ? notificationDate : undefined,
+      }),
+    [openedFromNotification, notificationDate, dayModeTick],
+  );
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
@@ -322,21 +351,32 @@ export default function CasesOverviewScreen() {
     [session?.user?.id, effectiveOwnerId, fetchCases, isOnline],
   );
 
-  const { hearingsToday, filedToday } = getTodayCases(cases, today);
+  const hearingsForDay = useMemo(
+    () =>
+      cases.filter(
+        (c) =>
+          c.next_hearing_date &&
+          c.next_hearing_date.slice(0, 10) === dayMode.hearingDate,
+      ),
+    [cases, dayMode.hearingDate],
+  );
+  const { filedToday } = getTodayCases(cases, today);
   const { hearingsThisWeek, filedThisWeek } = getWeeklyCases(cases, weekStart, weekEnd);
   const filedThisMonth = useMemo(() => getMonthCases(cases, today), [cases, today]);
 
   const isTodayFilter = filter === "today";
-  const selectedHearings = isTodayFilter ? hearingsToday : hearingsThisWeek;
+  const selectedHearings = isTodayFilter ? hearingsForDay : hearingsThisWeek;
 
   const sections = useMemo<CaseSection[]>(() => {
     if (isTodayFilter) {
-      return hearingsToday.length > 0 ? [{ title: "Hearings today", data: hearingsToday }] : [];
+      return hearingsForDay.length > 0
+        ? [{ title: dayMode.sectionTitle, data: hearingsForDay }]
+        : [];
     }
     return hearingsThisWeek.length > 0
       ? [{ title: "Hearings this week", data: hearingsThisWeek }]
       : [];
-  }, [isTodayFilter, hearingsToday, hearingsThisWeek]);
+  }, [isTodayFilter, hearingsForDay, hearingsThisWeek, dayMode.sectionTitle]);
 
   const filedCases = useMemo(() => {
     if (filedRange === "today") return filedToday;
@@ -347,7 +387,8 @@ export default function CasesOverviewScreen() {
   const filedRangeLabel =
     filedRange === "today" ? "Today" : filedRange === "week" ? "This week" : "This month";
 
-  const shareTitle = isTodayFilter ? "Today Hearings" : "This Week Hearings";
+  const shareTitle = isTodayFilter ? dayMode.shareTitle : "This Week Hearings";
+  const screenTitle = isTodayFilter ? dayMode.screenTitle : "This week Cases";
 
   const shareCasesAsPdf = useCallback(async () => {
     if (isExporting || sections.length === 0) return;
@@ -407,7 +448,7 @@ export default function CasesOverviewScreen() {
     if (sections.length === 0) {
       Alert.alert(
         "No hearings to share",
-        isTodayFilter ? "There are no hearings today." : "There are no hearings this week.",
+        isTodayFilter ? dayMode.noHearingsMessage : "There are no hearings this week.",
       );
       return;
     }
@@ -416,7 +457,7 @@ export default function CasesOverviewScreen() {
       { text: "Image", onPress: () => void shareCasesAsImage() },
       { text: "Cancel", style: "cancel" },
     ]);
-  }, [sections.length, isTodayFilter, shareCasesAsPdf, shareCasesAsImage]);
+  }, [sections.length, isTodayFilter, dayMode.noHearingsMessage, shareCasesAsPdf, shareCasesAsImage]);
 
   const filedCasesButton = (
     <View style={styles.filedCasesRow}>
@@ -517,7 +558,7 @@ export default function CasesOverviewScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScreenHeader
-          title={isTodayFilter ? "Today Cases" : "This week Cases"}
+          title={screenTitle}
           rightComponent={headerActions}
           onBack={goBack}
         />
@@ -531,7 +572,7 @@ export default function CasesOverviewScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScreenHeader
-        title={isTodayFilter ? "Today Cases" : "This week Cases"}
+        title={screenTitle}
         rightComponent={headerActions}
         onBack={goBack}
       />
@@ -545,7 +586,7 @@ export default function CasesOverviewScreen() {
             onPress={() => setFilter("today")}
           >
             <ThemedText style={[styles.filterBtnText, isTodayFilter && styles.filterBtnTextActive]}>
-              Today
+              {dayMode.segmentLabel}
             </ThemedText>
           </Bounceable>
           <Bounceable
@@ -584,14 +625,14 @@ export default function CasesOverviewScreen() {
                 {isOffline
                   ? "You're offline"
                   : isTodayFilter
-                    ? "Nothing for today"
+                    ? dayMode.emptyHeading
                     : "Nothing this week"}
               </ThemedText>
               <ThemedText type="muted" style={styles.emptySubtext}>
                 {isOffline
                   ? "Cached data is shown. New updates will load when you're online."
                   : isTodayFilter
-                    ? "Cases with a hearing today will appear here."
+                    ? dayMode.emptySubtext
                     : "Cases with a hearing this week will appear here."}
               </ThemedText>
             </View>

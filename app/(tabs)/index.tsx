@@ -38,6 +38,7 @@ import {
   getActivityNotesStorageKey,
   sanitizeActivityNotes,
 } from "@/lib/activity-notes";
+import { getCauseListDayMode } from "@/lib/cause-list-mode";
 import { getCachedCases, setCachedCases } from "@/lib/cases-cache";
 import { getPendingCasesCount } from "@/lib/offline-queue";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -214,13 +215,14 @@ function getMonthCases(cases: CaseRow[], todayIso: string): CaseRow[] {
 
 function buildSharePayload(
   shareFilter: HomeFilter,
-  hearingsToday: CaseRow[],
+  hearingsForDay: CaseRow[],
   hearingsThisWeek: CaseRow[],
+  dayLabels: { sectionTitle: string; shareTitle: string },
 ): { title: string; sections: CaseSection[] } {
   const isToday = shareFilter === "today";
-  const hearings = isToday ? hearingsToday : hearingsThisWeek;
-  const sectionTitle = isToday ? "Today hearings" : "This week hearings";
-  const title = isToday ? "Today Hearings" : "This Week Hearings";
+  const hearings = isToday ? hearingsForDay : hearingsThisWeek;
+  const sectionTitle = isToday ? dayLabels.sectionTitle : "This week hearings";
+  const title = isToday ? dayLabels.shareTitle : "This Week Hearings";
   const sections =
     hearings.length > 0 ? [{ title: sectionTitle, data: hearings }] : [];
   return { title, sections };
@@ -262,6 +264,7 @@ export default function HomeScreen() {
   const [showFiledCasesModal, setShowFiledCasesModal] = useState(false);
   const [filedRange, setFiledRange] = useState<FiledRange>("today");
   const [selectedWidgetKey, setSelectedWidgetKey] = useState<string>("today-hearings");
+  const [dayModeTick, setDayModeTick] = useState(0);
 
   const canAddCases = can("add_cases");
   const canManageJudges = can("add_cases") || can("edit_cases");
@@ -269,6 +272,7 @@ export default function HomeScreen() {
 
   const today = getTodayISO();
   const { weekStart, weekEnd } = getWeekBounds();
+  const dayMode = useMemo(() => getCauseListDayMode(), [dayModeTick]);
 
   const fetchCases = useCallback(
     async (isSilent = false) => {
@@ -381,6 +385,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      setDayModeTick((n) => n + 1);
+      const dayModeInterval = setInterval(() => setDayModeTick((n) => n + 1), 60_000);
       (async () => {
         await loadNotesCount();
         await loadDisposedCount();
@@ -402,6 +408,7 @@ export default function HomeScreen() {
       })();
       return () => {
         cancelled = true;
+        clearInterval(dayModeInterval);
       };
     }, [fetchCases, loadFeeCasesCount, loadNotesCount, loadDisposedCount, session?.user?.id, isOnline]),
   );
@@ -433,9 +440,26 @@ export default function HomeScreen() {
     if (isOffline) fetchCases(true);
   }, [isOnline, isOffline, session?.user?.id, fetchCases]);
 
-  const { hearingsToday, filedToday } = getTodayCases(cases, today);
+  const hearingsForDay = useMemo(
+    () =>
+      cases.filter(
+        (c) =>
+          c.next_hearing_date &&
+          c.next_hearing_date.slice(0, 10) === dayMode.hearingDate,
+      ),
+    [cases, dayMode.hearingDate],
+  );
+  const { filedToday } = getTodayCases(cases, today);
   const { hearingsThisWeek, filedThisWeek } = getWeeklyCases(cases, weekStart, weekEnd);
   const filedThisMonth = useMemo(() => getMonthCases(cases, today), [cases, today]);
+
+  const dayShareLabels = useMemo(
+    () => ({
+      sectionTitle: dayMode.sectionTitle,
+      shareTitle: dayMode.shareTitle,
+    }),
+    [dayMode.sectionTitle, dayMode.shareTitle],
+  );
 
   const filedCases = useMemo(() => {
     if (filedRange === "today") return filedToday;
@@ -448,15 +472,21 @@ export default function HomeScreen() {
 
   const exportCapturePayload = useMemo(() => {
     if (!shareExportFilter) return null;
-    return buildSharePayload(shareExportFilter, hearingsToday, hearingsThisWeek);
-  }, [shareExportFilter, hearingsToday, hearingsThisWeek]);
+    return buildSharePayload(
+      shareExportFilter,
+      hearingsForDay,
+      hearingsThisWeek,
+      dayShareLabels,
+    );
+  }, [shareExportFilter, hearingsForDay, hearingsThisWeek, dayShareLabels]);
 
   const shareCasesAsPdf = useCallback(
     async (shareFilter: HomeFilter) => {
       const { title, sections } = buildSharePayload(
         shareFilter,
-        hearingsToday,
+        hearingsForDay,
         hearingsThisWeek,
+        dayShareLabels,
       );
       if (isExporting || sections.length === 0) return;
       setIsExporting(true);
@@ -479,15 +509,16 @@ export default function HomeScreen() {
         setIsExporting(false);
       }
     },
-    [isExporting, hearingsToday, hearingsThisWeek],
+    [isExporting, hearingsForDay, hearingsThisWeek, dayShareLabels],
   );
 
   const shareCasesAsImage = useCallback(
     async (shareFilter: HomeFilter) => {
       const { title, sections } = buildSharePayload(
         shareFilter,
-        hearingsToday,
+        hearingsForDay,
         hearingsThisWeek,
+        dayShareLabels,
       );
       if (isExporting || sections.length === 0) return;
       setIsExporting(true);
@@ -523,17 +554,22 @@ export default function HomeScreen() {
         setIsExporting(false);
       }
     },
-    [isExporting, hearingsToday, hearingsThisWeek],
+    [isExporting, hearingsForDay, hearingsThisWeek, dayShareLabels],
   );
 
   const promptShareFormat = useCallback(
     (shareFilter: HomeFilter) => {
-      const { sections } = buildSharePayload(shareFilter, hearingsToday, hearingsThisWeek);
+      const { sections } = buildSharePayload(
+        shareFilter,
+        hearingsForDay,
+        hearingsThisWeek,
+        dayShareLabels,
+      );
       if (sections.length === 0) {
         Alert.alert(
           "No hearings to share",
           shareFilter === "today"
-            ? "There are no hearings today."
+            ? dayMode.noHearingsMessage
             : "There are no hearings this week.",
         );
         return;
@@ -544,17 +580,24 @@ export default function HomeScreen() {
         { text: "Cancel", style: "cancel" },
       ]);
     },
-    [hearingsToday, hearingsThisWeek, shareCasesAsPdf, shareCasesAsImage],
+    [
+      hearingsForDay,
+      hearingsThisWeek,
+      dayShareLabels,
+      dayMode.noHearingsMessage,
+      shareCasesAsPdf,
+      shareCasesAsImage,
+    ],
   );
 
   const handleShareCases = useCallback(() => {
     if (isExporting) return;
     Alert.alert("Share case list", "Which list would you like to share?", [
-      { text: "Today cases", onPress: () => promptShareFormat("today") },
+      { text: dayMode.homeWidgetTitle, onPress: () => promptShareFormat("today") },
       { text: "This week cases", onPress: () => promptShareFormat("weekly") },
       { text: "Cancel", style: "cancel" },
     ]);
-  }, [isExporting, promptShareFormat]);
+  }, [isExporting, promptShareFormat, dayMode.homeWidgetTitle]);
 
   const openCourtPortalUrl = useCallback((entry: PakistanCourtPortal) => {
     const url = entry.url;
@@ -596,10 +639,10 @@ export default function HomeScreen() {
     const list: HomeWidget[] = [
       {
         key: "today-hearings",
-        title: "Today cases",
-        subtitle: "Open today's hearings",
+        title: dayMode.homeWidgetTitle,
+        subtitle: dayMode.homeWidgetSubtitle,
         icon: "today",
-        count: hearingsToday.length,
+        count: hearingsForDay.length,
         tone: "warning",
         onPress: () => openFromHome("/cases-overview", { filter: "today" }),
       },
@@ -749,7 +792,7 @@ export default function HomeScreen() {
       return true;
     });
   }, [
-    hearingsToday.length,
+    hearingsForDay.length,
     hearingsThisWeek.length,
     filedToday.length,
     notesCount,
@@ -764,6 +807,8 @@ export default function HomeScreen() {
     isExporting,
     openCourtSearchWebsite,
     openFromHome,
+    dayMode.homeWidgetTitle,
+    dayMode.homeWidgetSubtitle,
   ]);
 
   const filedCasesModal = (

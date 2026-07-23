@@ -2,7 +2,8 @@
 
 This feature sends lawyers a push notification at night with tomorrow's hearing list.
 All reminder scheduling runs in Pakistan time (`Asia/Karachi`).
-Notification payload includes deep link data (`legaldiary://calendar?date=YYYY-MM-DD`) and opens the Calendar tab for that date.
+Notification payload includes deep link data (`legaldiary://cases-overview?filter=tomorrow&date=YYYY-MM-DD`) and opens the cause list for that hearing date (Tomorrow Cases).
+From **8:00 PM to midnight** (Asia/Karachi), the home widget and Today/Tomorrow day list also show **tomorrow's** hearings; before 8 PM and after midnight they show **today's**.
 The send window is `8:00 PM` to `10:59 PM` Karachi time to avoid misses if the 8 PM run is delayed.
 
 ## What is included

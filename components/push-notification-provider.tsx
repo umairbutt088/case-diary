@@ -23,6 +23,11 @@ function extractDateFromDeepLink(url: string) {
   return match?.[1] ?? null;
 }
 
+function extractFilterFromDeepLink(url: string) {
+  const match = url.match(/[?&]filter=([^&]+)/);
+  return match?.[1] ?? null;
+}
+
 function hasNotificationDateTarget(data: NotificationRouteData | undefined): boolean {
   if (!data) return false;
   if (
@@ -35,6 +40,26 @@ function hasNotificationDateTarget(data: NotificationRouteData | undefined): boo
     return extractDateFromDeepLink(data.url) !== null;
   }
   return false;
+}
+
+function resolveNotificationRoute(data: NotificationRouteData | undefined): {
+  filter: string;
+  date?: string;
+} | null {
+  if (!data || !hasNotificationDateTarget(data)) return null;
+
+  const dateFromData = typeof data.date === "string" ? data.date.slice(0, 10) : null;
+  const dateFromUrl =
+    typeof data.url === "string" ? extractDateFromDeepLink(data.url) : null;
+  const date = dateFromData || dateFromUrl || undefined;
+
+  const filterFromUrl =
+    typeof data.url === "string" ? extractFilterFromDeepLink(data.url) : null;
+  const rawFilter = data.filter || filterFromUrl || "tomorrow";
+  const filter =
+    rawFilter === "weekly" ? "weekly" : rawFilter === "tomorrow" ? "tomorrow" : "today";
+
+  return { filter, date };
 }
 
 export function PushNotificationProvider({
@@ -82,21 +107,20 @@ export function PushNotificationProvider({
   }, [session?.user?.id]);
 
   useEffect(() => {
-    const navigateToTodayCases = () => {
+    const navigateFromData = (data: NotificationRouteData | undefined) => {
+      const route = resolveNotificationRoute(data);
+      if (!route) return;
+
+      // Cause-list reminders open the day cause list for the target hearing date
+      // (tomorrow's cases), not the calendar-today list.
       router.push({
         pathname: "/cases-overview",
-        params: { filter: "today", from: "home" },
+        params: {
+          filter: route.filter,
+          ...(route.date ? { date: route.date } : {}),
+          from: "notification",
+        },
       });
-    };
-
-    const navigateFromData = (data: NotificationRouteData | undefined) => {
-      if (!data) return;
-
-      // Cause-list reminders open the Today Cases screen (same as the home widget).
-      if (hasNotificationDateTarget(data)) {
-        navigateToTodayCases();
-        return;
-      }
     };
 
     const handleResponse = (response: Notifications.NotificationResponse | null) => {
