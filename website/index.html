@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Case Diary for Lawyers — track hearings, cause lists, and court work offline. Built for advocates in Pakistan."
+    />
+    <meta property="og:title" content="Case Diary for Lawyers" />
+    <meta
+      property="og:description"
+      content="Your pocket case diary. Hearings, reminders, and cause lists — ready for court."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/png" href="/images/launcher-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Case Diary for Lawyers</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/app-mocks.css" />
+  </head>
+  <body>
+    <div class="page-mesh" aria-hidden="true"></div>
+    <header class="site-header" id="top">
+      <div class="shell header-inner">
+        <a class="brand" href="#top" aria-label="Case Diary for Lawyers home">
+          <img
+            class="brand-mark"
+            src="/images/launcher-icon.png"
+            width="40"
+            height="40"
+            alt=""
+          />
+          <span class="brand-text">Case Diary</span>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#features">Features</a>
+          <a href="#how">How it works</a>
+          <a href="#faq">FAQ</a>
+          <a class="nav-cta" href="#download">Download</a>
+        </nav>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mobile-nav"
+          aria-label="Open menu"
+        >
+          <span></span><span></span>
+        </button>
+      </div>
+      <div class="mobile-nav" id="mobile-nav" hidden>
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#faq">FAQ</a>
+        <a href="#download">Download</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-brand">
+        <div class="hero-media" aria-hidden="true">
+          <div class="hero-bg hero-bg--app"></div>
+          <div class="hero-veil"></div>
+        </div>
+        <div class="shell hero-layout">
+        <div class="hero-content">
+          <p class="hero-eyebrow reveal">For advocates &amp; chambers</p>
+          <h1 id="hero-brand" class="hero-brand reveal">
+            Case Diary<br />for Lawyers
+          </h1>
+          <p class="hero-line reveal">
+            Hearings, cause lists, and court notes — organised in your pocket.
+          </p>
+          <div class="store-download reveal">
+            <div class="store-download__col">
+              <a
+                class="store-btn store-btn--play"
+                href="https://play.google.com/store/apps/details?id=com.umairbutt.legaldiary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M3.6 2.4c-.3.2-.5.6-.5 1v17.2c0 .4.2.8.5 1l9.4-9.6L3.6 2.4zm12.1 6.2L5.2 2.1l9.6 9.6 1-.9c.5-.4.8-1 .8-1.6 0-.6-.3-1.2-.9-1.6zM5.2 21.9l10.5-6.5c.6-.4.9-1 .9-1.6 0-.6-.3-1.2-.9-1.6l-1-.9-9.5 9.6zM20.4 12c0-.6-.3-1.2-.9-1.6l-2.2-1.3-2.5 2.5 2.5 2.5 2.2-1.4c.6-.4.9-1 .9-1.7z"
+                  />
+                </svg>
+                <span>
+                  <small>Get it on</small>
+                  <strong>Google Play</strong>
+                </span>
+              </a>
+              <canvas
+                class="store-qr__code"
+                data-store-qr="play"
+                width="150"
+                height="150"
+                role="img"
+                aria-label="QR code to download Case Diary on Google Play"
+              ></canvas>
+              <span class="store-qr__label">Scan for Android</span>
+            </div>
+            <div class="store-download__col">
+              <a
+                class="store-btn store-btn--ios"
+                href="https://apps.apple.com/app/case-diary-for-lawyers/id6786853969"
+                id="ios-store-btn"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M16.4 12.3c0-2.1 1.7-3.1 1.8-3.2-1-1.4-2.5-1.6-3-1.7-1.3-.1-2.5.8-3.1.8-.7 0-1.7-.7-2.8-.7-1.4 0-2.8.9-3.5 2.2-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.6 2.2 2.7 2.1 1.1 0 1.5-.7 2.8-.7s1.6.7 2.8.7c1.1 0 1.9-1 2.6-2 .8-1.2 1.2-2.3 1.2-2.4-.1 0-2.3-.9-2.3-3.7zm-2.2-6.4c.6-.7 1-1.7.9-2.7-0.9.1-1.9.6-2.5 1.3-.6.6-1.1 1.6-1 2.6 1 .1 1.9-.5 2.6-1.2z"
+                  />
+                </svg>
+                <span>
+                  <small>Download on the</small>
+                  <strong>App Store</strong>
+                </span>
+              </a>
+              <canvas
+                class="store-qr__code"
+                data-store-qr="ios"
+                width="150"
+                height="150"
+                role="img"
+                aria-label="QR code to download Case Diary on the App Store"
+              ></canvas>
+              <span class="store-qr__label">Scan for iPhone</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-phone-wrap" aria-hidden="true">
+          <div class="phone phone--shot phone--hero">
+            <div class="phone-glow"></div>
+            <div class="phone-bezel phone-bezel--carousel">
+              <img
+                class="hero-shot is-active"
+                src="/images/screens/dashboard.png"
+                alt=""
+                data-hero-shot
+              />
+              <img
+                class="hero-shot"
+                src="/images/screens/today-cases.png"
+                alt=""
+                data-hero-shot
+              />
+              <img
+                class="hero-shot"
+                src="/images/screens/calendar.png"
+                alt=""
+                data-hero-shot
+              />
+            </div>
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <section class="section features" id="features" aria-labelledby="features-title">
+        <div class="shell">
+          <p class="section-kicker reveal-on-scroll">Features</p>
+          <h2 id="features-title" class="section-title reveal-on-scroll">
+            Everything chambers need in one diary
+          </h2>
+          <p class="section-lede reveal-on-scroll">
+            From tonight’s cause list to fee balances and team access — built for
+            advocates practising in Pakistan.
+          </p>
+
+          
+          
+          <div class="feature-blocks">
+            <article class="feature-block reveal-on-scroll" data-reveal="left">
+              <div class="feature-copy">
+                <h3>Today &amp; tomorrow cause lists</h3>
+                <p>
+                  See today’s hearings from Home. After 8&nbsp;PM Karachi time, the
+                  list flips to Tomorrow Cases so you prepare the night before —
+                  the same screen your nightly reminder opens.
+                </p>
+              </div>
+              <div class="feature-visual feature-visual--phone-html">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/today-cases.png" alt="Today Cases screen from Case Diary" /></div></div>
+              </div>
+            </article>
+
+            <article class="feature-block feature-block--reverse reveal-on-scroll" data-reveal="right">
+              <div class="feature-copy">
+                <h3>Weekly hearings overview</h3>
+                <p>
+                  Switch to Weekly to review every hearing scheduled this week —
+                  same cream case cards, Previous / Next dates, and share from the header.
+                </p>
+              </div>
+              <div class="feature-visual feature-visual--phone-html">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/week-cases.png" alt="This week Cases screen from Case Diary" /></div></div>
+              </div>
+            </article>
+
+            <article class="feature-block reveal-on-scroll" data-reveal="left">
+              <div class="feature-copy">
+                <h3>Hearing calendar</h3>
+                <p>
+                  Month view with hearing counts on each day. Select a date, add it as
+                  the next hearing, and see cases listed for that day.
+                </p>
+              </div>
+              <div class="feature-visual feature-visual--phone-html">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/calendar.png" alt="Calendar screen from Case Diary" /></div></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="feature-grid" aria-label="More product features" data-stagger>
+            <article class="feature-card reveal-on-scroll" data-delay="1">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/add-case.png" alt="Add New Case step 1" /></div></div>
+              </div>
+              <h3>Guided case intake</h3>
+              <p>Multi-step add flow for parties, case type, court, judge, client, and hearing date.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="2">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/all-cases.png" alt="Your cases diary" /></div></div>
+              </div>
+              <h3>Full case diary</h3>
+              <p>Search and browse all active matters with the same Previous / Next case cards.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="3">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/case-fees.png" alt="Case fees screen" /></div></div>
+              </div>
+              <h3>Fee tracking</h3>
+              <p>FEE SUMMARY for billed, received, and remaining — plus per-case totals.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="1">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/team.png" alt="Subordinate Access screen" /></div></div>
+              </div>
+              <h3>Team &amp; subordinates</h3>
+              <p>Invite juniors and toggle permissions for cases, clients, fees, and documents.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="2">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/court-search.png" alt="Court case search sheet" /></div></div>
+              </div>
+              <h3>Court portals</h3>
+              <p>Open Pakistan trial courts, High Courts, and Supreme Court case search sites.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="3">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/notes.png" alt="Notes screen" /></div></div>
+              </div>
+              <h3>Daily notes</h3>
+              <p>Today / All Notes, Active badges, and quick Done / Edit / Delete actions.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="1">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/clients.png" alt="Clients screen" /></div></div>
+              </div>
+              <h3>Clients directory</h3>
+              <p>Save clients with phone, email, and address — reuse them on new matters.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="2">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/judges.png" alt="Judges screen" /></div></div>
+              </div>
+              <h3>Judges directory</h3>
+              <p>Manage judges by court tier and room, with usage counts across cases.</p>
+            </article>
+
+            <article class="feature-card reveal-on-scroll" data-delay="3">
+              <div class="feature-card-media feature-card-media--shot">
+                <div class="phone phone--shot"><div class="phone-bezel"><img src="/images/screens/acts.png" alt="Acts and Laws screen" /></div></div>
+              </div>
+              <h3>Acts &amp; law books</h3>
+              <p>Search Pakistan statutes in-app by title, category, or year.</p>
+            </article>
+          </div>
+
+<ul class="feature-strip reveal-on-scroll" aria-label="Additional capabilities">
+            <li>
+              <strong>Full diary</strong>
+              <span>Search active matters by title or case number</span>
+            </li>
+            <li>
+              <strong>Dispose &amp; trash</strong>
+              <span>Archive finished cases; recover from Trash when needed</span>
+            </li>
+            <li>
+              <strong>Clients &amp; judges</strong>
+              <span>Directories you can reuse across new matters</span>
+            </li>
+            <li>
+              <strong>Documents</strong>
+              <span>Attach files on each case for chamber reference</span>
+            </li>
+            <li>
+              <strong>Light &amp; dark</strong>
+              <span>Appearance that follows system, light, or dark</span>
+            </li>
+            <li>
+              <strong>Secure account</strong>
+              <span>Sign up, login, password reset, and account deletion</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section how" id="how" aria-labelledby="how-title">
+        <div class="shell">
+          <p class="section-kicker reveal-on-scroll">How it works</p>
+          <h2 id="how-title" class="section-title reveal-on-scroll">Three steps to a clearer docket</h2>
+          <ol class="steps" data-stagger>
+            <li class="step reveal-on-scroll" data-delay="1">
+              <span class="step-num">01</span>
+              <h3>Add your cases</h3>
+              <p>
+                Guided intake for parties, court, judge, client, next hearing,
+                documents, and fees.
+              </p>
+            </li>
+            <li class="step reveal-on-scroll" data-delay="2">
+              <span class="step-num">02</span>
+              <h3>Track every date</h3>
+              <p>
+                Home, calendar, and weekly overview keep today and this week in
+                view — even offline.
+              </p>
+            </li>
+            <li class="step reveal-on-scroll" data-delay="3">
+              <span class="step-num">03</span>
+              <h3>Wake up prepared</h3>
+              <p>
+                Nightly reminders open tomorrow’s cause list. Share PDF or image
+                with chambers when you need to.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section faq" id="faq" aria-labelledby="faq-title">
+        <div class="shell shell--narrow">
+          <p class="section-kicker reveal-on-scroll">FAQ</p>
+          <h2 id="faq-title" class="section-title reveal-on-scroll">Questions advocates ask</h2>
+          <div class="faq-list">
+            <details class="faq-item reveal-on-scroll">
+              <summary>Who is Case Diary for?</summary>
+              <p>
+                Advocates, juniors, and chambers in Pakistan who need a reliable
+                digital case diary for hearings and cause lists.
+              </p>
+            </details>
+            <details class="faq-item reveal-on-scroll" data-delay="1">
+              <summary>When do cause list reminders arrive?</summary>
+              <p>
+                Nightly between 8:00&nbsp;PM and 10:59&nbsp;PM Asia/Karachi, covering
+                the next day’s hearings. Tap the notification to open Tomorrow Cases.
+              </p>
+            </details>
+            <details class="faq-item reveal-on-scroll" data-delay="2">
+              <summary>Can my junior use the same diary?</summary>
+              <p>
+                Yes. Owners can invite subordinates with controlled permissions for
+                viewing, editing, fees, clients, and documents.
+              </p>
+            </details>
+            <details class="faq-item reveal-on-scroll">
+              <summary>Does it work offline?</summary>
+              <p>
+                Yes. Cached cases stay available without internet; changes sync when
+                you reconnect.
+              </p>
+            </details>
+            <details class="faq-item reveal-on-scroll" data-delay="1">
+              <summary>Can I track fees and share cause lists?</summary>
+              <p>
+                Record total fee, payments, and balances per matter. Share today’s
+                or this week’s hearings as PDF or image from Home.
+              </p>
+            </details>
+            <details class="faq-item reveal-on-scroll" data-delay="2">
+              <summary>Is my data private?</summary>
+              <p>
+                Your account and case data are handled per our
+                <a
+                  href="https://umairbutt088.github.io/case-diary/privacy.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Privacy Policy</a
+                >. Contact
+                <a href="mailto:info@devorium.com">info@devorium.com</a> for
+                access or deletion requests.
+              </p>
+            </details>
+            <details class="faq-item reveal-on-scroll">
+              <summary>Where can I get help?</summary>
+              <p>
+                Email
+                <a href="mailto:info@devorium.com">info@devorium.com</a>
+                or visit our
+                <a
+                  href="https://umairbutt088.github.io/case-diary/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >support page</a
+                >.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section close-cta" id="download" aria-labelledby="close-title">
+        <div class="shell close-inner reveal-on-scroll">
+          <h2 id="close-title">Carry your diary into every courtroom</h2>
+          <p>Download Case Diary for Lawyers and start with today’s hearings.</p>
+          <div class="store-download">
+            <div class="store-download__col">
+              <a
+                class="store-btn store-btn--play"
+                href="https://play.google.com/store/apps/details?id=com.umairbutt.legaldiary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span>
+                  <small>Get it on</small>
+                  <strong>Google Play</strong>
+                </span>
+              </a>
+              <canvas
+                class="store-qr__code"
+                data-store-qr="play"
+                width="150"
+                height="150"
+                role="img"
+                aria-label="QR code to download Case Diary on Google Play"
+              ></canvas>
+              <span class="store-qr__label">Scan for Android</span>
+            </div>
+            <div class="store-download__col">
+              <a
+                class="store-btn store-btn--ios"
+                href="https://apps.apple.com/app/case-diary-for-lawyers/id6786853969"
+                data-ios-mirror
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span>
+                  <small>Download on the</small>
+                  <strong>App Store</strong>
+                </span>
+              </a>
+              <canvas
+                class="store-qr__code"
+                data-store-qr="ios"
+                width="150"
+                height="150"
+                role="img"
+                aria-label="QR code to download Case Diary on the App Store"
+              ></canvas>
+              <span class="store-qr__label">Scan for iPhone</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div class="footer-brand">
+          <img src="/images/launcher-icon.png" width="36" height="36" alt="" />
+          <div>
+            <strong>Case Diary for Lawyers</strong>
+            <p>By Devorium Technologies</p>
+          </div>
+        </div>
+        <div class="footer-cols">
+          <div>
+            <h3>Product</h3>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#how">How it works</a></li>
+              <li><a href="#download">Download</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Legal &amp; support</h3>
+            <ul>
+              <li>
+                <a
+                  href="https://umairbutt088.github.io/case-diary/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Support</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://umairbutt088.github.io/case-diary/privacy.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Privacy Policy</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://umairbutt088.github.io/case-diary/terms.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Terms &amp; Conditions</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://umairbutt088.github.io/case-diary/delete-account.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Delete account</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3>Contact</h3>
+            <ul>
+              <li>
+                <a href="mailto:info@devorium.com">info@devorium.com</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <p class="footer-copy">
+          © <span id="year"></span> Devorium Technologies. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
